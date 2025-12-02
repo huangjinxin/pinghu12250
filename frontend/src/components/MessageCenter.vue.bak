@@ -1,0 +1,356 @@
+<template>
+  <n-popover trigger="click" placement="bottom-end" :show-arrow="false" style="padding: 0;">
+    <template #trigger>
+      <n-badge :value="totalUnread" :max="99" :dot="totalUnread === 0">
+        <button
+          class="message-center-btn"
+          :class="{ 'has-new-message': hasNewMessage }"
+        >
+          <n-icon :size="20"><ChatbubblesOutline /></n-icon>
+        </button>
+      </n-badge>
+    </template>
+
+    <div class="message-center-panel">
+      <!-- 头部 -->
+      <div class="panel-header">
+        <h3 class="font-semibold text-gray-800">消息中心</h3>
+        <n-button text size="small" @click="markAllRead">全部已读</n-button>
+      </div>
+
+      <!-- 标签页 -->
+      <n-tabs v-model:value="activeTab" type="line" size="small">
+        <!-- 聊天消息 -->
+        <n-tab-pane name="chat" :tab="`聊天 ${chatUnread > 0 ? `(${chatUnread})` : ''}`">
+          <div class="message-list">
+            <div
+              v-if="conversations.length > 0"
+              v-for="conv in conversations"
+              :key="conv.id"
+              class="message-item"
+              @click="openChat(conv)"
+            >
+              <div class="relative">
+                <AvatarText :username="MANUAL_CHECK_USERNAME" size="md" />
+                <div
+                  v-if="isUserOnline(conv.id)"
+                  class="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 border-2 border-white rounded-full"
+                ></div>
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center justify-between">
+                  <span class="font-medium text-sm text-gray-800 truncate">
+                    {{ conv.nickname || conv.username }}
+                  </span>
+                  <span class="text-xs text-gray-400">{{ formatTime(conv.lastMessageTime) }}</span>
+                </div>
+                <div class="flex items-center justify-between mt-1">
+                  <p class="text-xs text-gray-500 truncate flex-1">{{ conv.lastMessage }}</p>
+                  <n-badge v-if="conv.unreadCount > 0" :value="conv.unreadCount" :max="99" size="small" />
+                </div>
+              </div>
+            </div>
+            <n-empty v-else description="暂无聊天消息" size="small" class="py-8" />
+          </div>
+        </n-tab-pane>
+
+        <!-- 好友列表 -->
+        <n-tab-pane name="friends" tab="好友列表">
+          <div class="friend-list">
+            <div
+              v-if="friends.length > 0"
+              v-for="friend in friends"
+              :key="friend.id"
+              class="friend-item"
+              @click="startNewChat(friend)"
+            >
+              <div class="relative">
+                <AvatarText :username="MANUAL_CHECK_USERNAME" size="md" />
+                <div
+                  v-if="isUserOnline(friend.id)"
+                  class="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 border-2 border-white rounded-full"
+                ></div>
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="font-medium text-sm text-gray-800 truncate">
+                  {{ friend.profile?.nickname || friend.username }}
+                </div>
+                <div class="text-xs text-gray-500">
+                  {{ isInConversation(friend.id) ? '最近联系' : '点击开始聊天' }}
+                </div>
+              </div>
+              <div v-if="!isInConversation(friend.id)" class="msg-icon">
+                <n-icon :size="16"><ChatboxEllipsesOutline /></n-icon>
+              </div>
+            </div>
+            <n-empty v-else description="暂无好友" size="small" class="py-8">
+              <template #extra>
+                <n-button text type="primary" @click="$router.push('/friends')">
+                  去添加好友
+                </n-button>
+              </template>
+            </n-empty>
+          </div>
+        </n-tab-pane>
+
+        <!-- 系统消息 -->
+        <n-tab-pane name="system" :tab="`系统 ${systemUnread > 0 ? `(${systemUnread})` : ''}`">
+          <div class="message-list">
+            <div
+              v-if="systemMessages.length > 0"
+              v-for="msg in systemMessages.slice(0, 10)"
+              :key="msg.id"
+              class="message-item"
+              :class="{ 'unread': !msg.isRead }"
+              @click="handleSystemMessage(msg)"
+            >
+              <n-icon :size="32" :color="getSystemMessageColor(msg.messageType)">
+                <component :is="getSystemMessageIcon(msg.messageType)" />
+              </n-icon>
+              <div class="flex-1 min-w-0">
+                <p class="text-sm text-gray-800">{{ msg.content }}</p>
+                <span class="text-xs text-gray-400 mt-1">{{ formatTime(msg.createdAt) }}</span>
+              </div>
+              <div v-if="!msg.isRead" class="w-2 h-2 bg-primary-500 rounded-full flex-shrink-0"></div>
+            </div>
+            <n-empty v-else description="暂无系统消息" size="small" class="py-8" />
+          </div>
+        </n-tab-pane>
+      </n-tabs>
+
+      <!-- 底部 -->
+      <div class="panel-footer">
+        <n-button text size="small" @click="openChatPanel">
+          查看全部会话
+        </n-button>
+      </div>
+    </div>
+  </n-popover>
+</template>
+
+<script setup>
+import AvatarText from '@/components/AvatarText.vue'
+import { ref, computed, watch } from 'vue';
+import { useRouter } from 'vue-router';
+import { useChatStore } from '@/stores/chat';
+import { useMessage } from 'naive-ui';
+import { formatDistanceToNow } from 'date-fns';
+import { zhCN } from 'date-fns/locale';
+import {
+  ChatbubblesOutline,
+  TrophyOutline,
+  Cart,
+  PersonAdd,
+  PeopleOutline,
+  CheckmarkCircleOutline,
+  ChatboxEllipsesOutline
+} from '@vicons/ionicons5';
+
+const router = useRouter();
+const chatStore = useChatStore();
+const message = useMessage();
+
+const activeTab = ref('chat');
+const hasNewMessage = ref(false);
+let flashTimer = null;
+const friends = ref([]);
+const friendsLoading = ref(false);
+
+// 计算属性
+const conversations = computed(() => chatStore.conversations);
+const systemMessages = computed(() => chatStore.systemMessages);
+const chatUnread = computed(() => chatStore.totalUnread);
+const systemUnread = computed(() => chatStore.systemUnread);
+const totalUnread = computed(() => chatStore.allUnread);
+
+// 检查用户是否在线
+const isUserOnline = (userId) => {
+  return chatStore.onlineUsers.has(userId);
+};
+
+// 格式化时间
+const formatTime = (date) => {
+  if (!date) return '';
+  return formatDistanceToNow(new Date(date), { addSuffix: true, locale: zhCN });
+};
+
+// 监听未读消息变化，触发闪动效果
+watch(totalUnread, (newVal, oldVal) => {
+  if (newVal > oldVal && newVal > 0) {
+    // 有新消息，触发闪动
+    hasNewMessage.value = true;
+    if (flashTimer) clearTimeout(flashTimer);
+    flashTimer = setTimeout(() => {
+      hasNewMessage.value = false;
+    }, 3000); // 闪动3秒
+  }
+});
+
+// 监听标签页变化，加载好友列表
+watch(activeTab, (newTab) => {
+  if (newTab === 'friends') {
+    loadFriendsList();
+  }
+});
+
+// 加载好友列表
+const loadFriendsList = async () => {
+  friendsLoading.value = true;
+  try {
+    await chatStore.syncFriends();
+    friends.value = chatStore.allFriends;
+  } catch (error) {
+    console.error('加载好友列表失败:', error);
+    message.error('加载好友列表失败');
+  } finally {
+    friendsLoading.value = false;
+  }
+};
+
+// 检查好友是否在会话列表中
+const isInConversation = (friendId) => {
+  return conversations.value.some(c => c.id === friendId);
+};
+
+// 开始新的聊天
+const startNewChat = async (friend) => {
+  try {
+    await chatStore.startNewChat(friend);
+    message.success('正在打开聊天窗口...');
+    // 关闭弹窗
+    chatStore.closePanel();
+    // 关闭消息中心弹窗
+    activeTab.value = 'chat';
+  } catch (error) {
+    console.error('开始聊天失败:', error);
+    message.error('开始聊天失败，请重试');
+  }
+};
+
+// 打开聊天 - 现在改为打开聊天面板
+const openChat = (conv) => {
+  // 打开聊天面板
+  chatStore.requestOpenPanel();
+};
+
+// 处理系统消息点击
+const handleSystemMessage = async (msg) => {
+  // 标记为已读
+  if (!msg.isRead) {
+    await chatStore.markSystemMessagesRead([msg.id]);
+  }
+
+  // 根据消息类型跳转
+  const metadata = typeof msg.metadata === 'string' ? JSON.parse(msg.metadata) : msg.metadata;
+  if (metadata?.link) {
+    router.push(metadata.link);
+  }
+};
+
+// 全部已读
+const markAllRead = async () => {
+  if (activeTab.value === 'system') {
+    const unreadIds = systemMessages.value
+      .filter(m => !m.isRead)
+      .map(m => m.id);
+    if (unreadIds.length > 0) {
+      await chatStore.markSystemMessagesRead(unreadIds);
+      message.success('已全部标记为已读');
+    }
+  } else {
+    message.info('聊天消息需要打开对话才能标记已读');
+  }
+};
+
+// 获取系统消息图标
+const getSystemMessageIcon = (type) => {
+  const icons = {
+    SYSTEM_ACHIEVEMENT: TrophyOutline,
+    SYSTEM_PURCHASE: Cart,
+    SYSTEM_FOLLOW: PersonAdd,
+    SYSTEM_FRIEND: PeopleOutline,
+    SYSTEM_TASK: CheckmarkCircleOutline
+  };
+  return icons[type] || CheckmarkCircleOutline;
+};
+
+// 获取系统消息颜色
+const getSystemMessageColor = (type) => {
+  const colors = {
+    SYSTEM_ACHIEVEMENT: '#f59e0b',
+    SYSTEM_PURCHASE: '#10b981',
+    SYSTEM_FOLLOW: '#3b82f6',
+    SYSTEM_FRIEND: '#8b5cf6',
+    SYSTEM_TASK: '#6366f1'
+  };
+  return colors[type] || '#6b7280';
+};
+
+// 打开聊天面板
+const openChatPanel = () => {
+  chatStore.requestOpenPanel();
+};
+</script>
+
+<style scoped>
+.message-center-btn {
+  @apply p-2 rounded-lg transition-all duration-200;
+  @apply hover:bg-gray-100;
+}
+
+.message-center-btn.has-new-message {
+  animation: flash 1s ease-in-out infinite;
+}
+
+@keyframes flash {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.1);
+    opacity: 0.8;
+  }
+}
+
+.message-center-panel {
+  width: 380px;
+  max-height: 500px;
+  display: flex;
+  flex-direction: column;
+}
+
+.panel-header {
+  @apply flex items-center justify-between px-4 py-3 border-b border-gray-100;
+}
+
+.message-list {
+  @apply max-h-96 overflow-y-auto;
+}
+
+.message-item {
+  @apply flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors;
+  @apply hover:bg-gray-50;
+}
+
+.message-item.unread {
+  @apply bg-primary-50/30;
+}
+
+.panel-footer {
+  @apply px-4 py-2 border-t border-gray-100 text-center;
+}
+
+.friend-list {
+  @apply max-h-96 overflow-y-auto;
+}
+
+.friend-item {
+  @apply flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors;
+  @apply hover:bg-gray-50;
+}
+
+.friend-item .msg-icon {
+  @apply text-gray-400 hover:text-primary-500 transition-colors;
+}
+</style>
