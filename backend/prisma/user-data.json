@@ -1,0 +1,1756 @@
+{
+  "users": [
+    {
+      "id": "e5318dcd-f786-4092-b79a-eb369704accc",
+      "username": "黄迁巡",
+      "email": "wangdandan2b250@163.com",
+      "password": "$2a$10$IH9HjbJlIywC7qizL5sWdetlnQx7ApMDAUMh4M/PdBfTs.X7v3mMW",
+      "role": "STUDENT",
+      "avatar": "https://api.dicebear.com/7.x/avataaars/svg?seed=黄迁巡",
+      "createdAt": "2025-11-27T12:55:57.843Z",
+      "profile": {
+        "id": "a59f4177-65c4-4c7d-89f4-6229d3f77315",
+        "userId": "e5318dcd-f786-4092-b79a-eb369704accc",
+        "nickname": "黄迁巡",
+        "bio": null,
+        "grade": null,
+        "interests": [],
+        "joinedDays": 0,
+        "profilePublic": true,
+        "showStats": true,
+        "createdAt": "2025-11-27T12:55:57.843Z",
+        "updatedAt": "2025-11-27T12:55:57.843Z"
+      }
+    },
+    {
+      "id": "b43124b2-f848-4f92-8b18-a36fc7ab57af",
+      "username": "任芊浔",
+      "email": "je@rqx.com",
+      "password": "$2a$10$N/hu4N5U/Yd2bNPU5L9dFuXzuDqqBXkUidlmvA39BkgjZGvRlGi.W",
+      "role": "STUDENT",
+      "avatar": "/uploads/avatars/avatar-b43124b2-f848-4f92-8b18-a36fc7ab57af-1764676287256.jpg",
+      "createdAt": "2025-11-25T13:21:18.709Z",
+      "profile": {
+        "id": "454613fd-ac08-4743-b2f7-996cd4ad4514",
+        "userId": "b43124b2-f848-4f92-8b18-a36fc7ab57af",
+        "nickname": "任芊浔",
+        "bio": "",
+        "grade": "三年级",
+        "interests": [],
+        "joinedDays": 7,
+        "profilePublic": true,
+        "showStats": true,
+        "createdAt": "2025-11-25T13:21:18.709Z",
+        "updatedAt": "2025-12-02T13:52:43.329Z"
+      }
+    },
+    {
+      "id": "d1f8988d-37e1-4d40-9b43-61446123d14b",
+      "username": "果果",
+      "email": "gg@zrq.com",
+      "password": "$2a$10$5Kx5StCDBdsQkxPt4WDrpeNUZSwc72F.PWB.DKClcwrF19RLpIpuC",
+      "role": "STUDENT",
+      "avatar": "https://api.dicebear.com/7.x/avataaars/svg?seed=果果",
+      "createdAt": "2025-11-27T11:55:06.675Z",
+      "profile": {
+        "id": "decb044e-5b11-472d-85bb-f94f6aa5bda1",
+        "userId": "d1f8988d-37e1-4d40-9b43-61446123d14b",
+        "nickname": "果果",
+        "bio": null,
+        "grade": null,
+        "interests": [],
+        "joinedDays": 5,
+        "profilePublic": true,
+        "showStats": true,
+        "createdAt": "2025-11-27T11:55:06.675Z",
+        "updatedAt": "2025-12-02T13:26:32.769Z"
+      }
+    },
+    {
+      "id": "7b29e147-6b62-40a3-b70c-48e6d1003514",
+      "username": "迁巡",
+      "email": "fengxuyang428@huangqian.com",
+      "password": "$2a$10$upGqEuEfWyBb/aJwVMUDrOLd8j5ruPHc5gljI5JZpAiXLbNoJGC8e",
+      "role": "STUDENT",
+      "avatar": "https://api.dicebear.com/7.x/avataaars/svg?seed=迁巡",
+      "createdAt": "2025-11-27T13:02:54.454Z",
+      "profile": {
+        "id": "11abfb04-d2c0-439c-9ee6-b46814bcda29",
+        "userId": "7b29e147-6b62-40a3-b70c-48e6d1003514",
+        "nickname": "迁巡",
+        "bio": null,
+        "grade": null,
+        "interests": [],
+        "joinedDays": 0,
+        "profilePublic": true,
+        "showStats": true,
+        "createdAt": "2025-11-27T13:02:54.454Z",
+        "updatedAt": "2025-11-27T13:02:54.454Z"
+      }
+    },
+    {
+      "id": "d13988b9-c521-46d2-b8ea-a5c2820cf6ed",
+      "username": "张蕊琪",
+      "email": "fengxuyang428@icloud.com",
+      "password": "$2a$10$dxh0AVpQGzw8OdM8O4ORcOGTv98/O6kSv2bFgobzVqUWk0.0ooJKq",
+      "role": "STUDENT",
+      "avatar": "https://api.dicebear.com/7.x/avataaars/svg?seed=张蕊琪",
+      "createdAt": "2025-11-25T13:26:07.628Z",
+      "profile": {
+        "id": "88c09154-f130-47cc-bc38-db6e016a71cd",
+        "userId": "d13988b9-c521-46d2-b8ea-a5c2820cf6ed",
+        "nickname": "张蕊琪",
+        "bio": null,
+        "grade": null,
+        "interests": [],
+        "joinedDays": 6,
+        "profilePublic": true,
+        "showStats": true,
+        "createdAt": "2025-11-25T13:26:07.628Z",
+        "updatedAt": "2025-12-02T12:15:58.922Z"
+      }
+    },
+    {
+      "id": "60c70fcd-0cb4-4696-88c7-8cabe7850a98",
+      "username": "xiaohuang",
+      "email": "123@12003.com",
+      "password": "$2a$10$Ey4szSHkuZo2rkGM29g/D.7v71KKVCHac/xFBmqqVhogVES1R4Iry",
+      "role": "STUDENT",
+      "avatar": "https://api.dicebear.com/7.x/avataaars/svg?seed=xiaohuang",
+      "createdAt": "2025-11-26T03:26:21.655Z",
+      "profile": {
+        "id": "dfe61ceb-d063-4214-8495-7624e2e0476b",
+        "userId": "60c70fcd-0cb4-4696-88c7-8cabe7850a98",
+        "nickname": "shgenme",
+        "bio": "",
+        "grade": null,
+        "interests": [],
+        "joinedDays": 0,
+        "profilePublic": true,
+        "showStats": true,
+        "createdAt": "2025-11-26T03:26:21.655Z",
+        "updatedAt": "2025-11-26T03:26:41.759Z"
+      }
+    },
+    {
+      "id": "ec2a6faf-77fc-4ffb-b5e3-868231cbd1f1",
+      "username": "cash",
+      "email": "123@123.com",
+      "password": "$2a$10$HCwgQGENs0pRsS28DrTxj.dKZAiJdm.n9ghUL9.rHqnmsufpn5ZXG",
+      "role": "STUDENT",
+      "avatar": "https://api.dicebear.com/7.x/avataaars/svg?seed=cash",
+      "createdAt": "2025-11-25T13:04:41.963Z",
+      "profile": {
+        "id": "ab9bbe60-75dd-47d4-aeca-f83b62bd22fe",
+        "userId": "ec2a6faf-77fc-4ffb-b5e3-868231cbd1f1",
+        "nickname": "cash",
+        "bio": null,
+        "grade": null,
+        "interests": [],
+        "joinedDays": 0,
+        "profilePublic": true,
+        "showStats": true,
+        "createdAt": "2025-11-25T13:04:41.963Z",
+        "updatedAt": "2025-11-25T13:04:41.963Z"
+      }
+    },
+    {
+      "id": "c5e7945c-c880-4aab-908e-0606d1ae2919",
+      "username": "xiaohong",
+      "email": "student2@example.com",
+      "password": "$2a$10$MvoTXckN70baBLasvqgxcOROdKzRefZ.7iqno9GeeFGZOVV3Z3612",
+      "role": "STUDENT",
+      "avatar": "https://api.dicebear.com/7.x/avataaars/svg?seed=xiaohong",
+      "createdAt": "2025-11-25T12:42:30.410Z",
+      "profile": {
+        "id": "84addaf4-5ede-4423-94e3-2e6e60ff03c8",
+        "userId": "c5e7945c-c880-4aab-908e-0606d1ae2919",
+        "nickname": "小红",
+        "bio": "热爱艺术和创作",
+        "grade": "五年级",
+        "interests": [
+          "绘画",
+          "音乐",
+          "写作"
+        ],
+        "joinedDays": 25,
+        "profilePublic": true,
+        "showStats": true,
+        "createdAt": "2025-11-25T12:42:30.410Z",
+        "updatedAt": "2025-11-25T12:42:30.410Z"
+      }
+    },
+    {
+      "id": "7e96c73a-862e-43a2-b8f0-768f86e704ca",
+      "username": "huang123",
+      "email": "123@12231433.com",
+      "password": "$2a$10$x4lUnAYWOUsJpUcnV/A6XuAww/dggaOBlRFcAlOsAzM.M8YCLCeG2",
+      "role": "STUDENT",
+      "avatar": "https://api.dicebear.com/7.x/avataaars/svg?seed=huang123",
+      "createdAt": "2025-11-26T08:06:41.725Z",
+      "profile": {
+        "id": "4b617922-b2aa-450d-b0e8-977246168c75",
+        "userId": "7e96c73a-862e-43a2-b8f0-768f86e704ca",
+        "nickname": "huang123",
+        "bio": null,
+        "grade": null,
+        "interests": [],
+        "joinedDays": 2,
+        "profilePublic": true,
+        "showStats": true,
+        "createdAt": "2025-11-26T08:06:41.725Z",
+        "updatedAt": "2025-11-28T09:41:04.551Z"
+      }
+    },
+    {
+      "id": "161125d5-1b40-424a-aa0f-3ced880e989a",
+      "username": "chattest2",
+      "email": "chattest2@test.com",
+      "password": "$2a$10$9SxrIHfM6mSNfUOVCuQvAOco3OSkoUAJmjwt7tBgn8wDxEks6aZ7C",
+      "role": "STUDENT",
+      "avatar": null,
+      "createdAt": "2025-12-02T22:04:34.913Z",
+      "profile": {
+        "id": "a69423a0-c7d0-4687-a0ed-5306480cdec0",
+        "userId": "161125d5-1b40-424a-aa0f-3ced880e989a",
+        "nickname": "chattest2",
+        "bio": null,
+        "grade": null,
+        "interests": [],
+        "joinedDays": 0,
+        "profilePublic": true,
+        "showStats": true,
+        "createdAt": "2025-12-02T22:04:34.913Z",
+        "updatedAt": "2025-12-02T22:04:34.913Z"
+      }
+    },
+    {
+      "id": "274836fd-7d4c-4f69-98d3-3f667f5682c3",
+      "username": "chattest1",
+      "email": "chattest1@test.com",
+      "password": "$2a$10$dPw1hHI4s7Q8VWhYwSbdL.h6MpCoAow1/xIbdXl9PArQvLY6UIfxO",
+      "role": "STUDENT",
+      "avatar": null,
+      "createdAt": "2025-12-02T22:04:34.697Z",
+      "profile": {
+        "id": "531c8665-0c2a-463b-9aef-520e06168326",
+        "userId": "274836fd-7d4c-4f69-98d3-3f667f5682c3",
+        "nickname": "chattest1",
+        "bio": null,
+        "grade": null,
+        "interests": [],
+        "joinedDays": 0,
+        "profilePublic": true,
+        "showStats": true,
+        "createdAt": "2025-12-02T22:04:34.697Z",
+        "updatedAt": "2025-12-02T22:04:34.697Z"
+      }
+    },
+    {
+      "id": "3c9d494d-1720-4060-a09d-144016d42bfc",
+      "username": "parent_ming",
+      "email": "parent1@example.com",
+      "password": "$2a$10$MvoTXckN70baBLasvqgxcOROdKzRefZ.7iqno9GeeFGZOVV3Z3612",
+      "role": "PARENT",
+      "avatar": "https://api.dicebear.com/7.x/avataaars/svg?seed=parent1",
+      "createdAt": "2025-11-25T12:42:30.414Z",
+      "profile": {
+        "id": "1f1abc52-39ae-4bcb-8254-3dc0b49f5c31",
+        "userId": "3c9d494d-1720-4060-a09d-144016d42bfc",
+        "nickname": "小明家长",
+        "bio": "关注孩子成长",
+        "grade": null,
+        "interests": [],
+        "joinedDays": 0,
+        "profilePublic": true,
+        "showStats": true,
+        "createdAt": "2025-11-25T12:42:30.414Z",
+        "updatedAt": "2025-11-25T12:42:30.414Z"
+      }
+    },
+    {
+      "id": "3d31906e-6867-4ba3-b825-b436f24944da",
+      "username": "teacher_wang",
+      "email": "teacher1@example.com",
+      "password": "$2a$10$MvoTXckN70baBLasvqgxcOROdKzRefZ.7iqno9GeeFGZOVV3Z3612",
+      "role": "TEACHER",
+      "avatar": "https://api.dicebear.com/7.x/avataaars/svg?seed=teacher1",
+      "createdAt": "2025-11-25T12:42:30.417Z",
+      "profile": {
+        "id": "780fad4a-a7ad-4a10-842e-92a515cd5916",
+        "userId": "3d31906e-6867-4ba3-b825-b436f24944da",
+        "nickname": "王老师",
+        "bio": "计算机科学教师",
+        "grade": null,
+        "interests": [],
+        "joinedDays": 0,
+        "profilePublic": true,
+        "showStats": true,
+        "createdAt": "2025-11-25T12:42:30.417Z",
+        "updatedAt": "2025-11-25T12:42:30.417Z"
+      }
+    },
+    {
+      "id": "ec125d8e-20a6-415e-a4d3-60f1593f1331",
+      "username": "快乐喜",
+      "email": "568@35.一时",
+      "password": "$2a$10$gO3n.3jTxXb60PNYVGbmIuztlhEGLSDjUkjpJcon0nkWCI/uapONe",
+      "role": "STUDENT",
+      "avatar": "https://api.dicebear.com/7.x/avataaars/svg?seed=快乐喜",
+      "createdAt": "2025-11-26T08:11:35.250Z",
+      "profile": {
+        "id": "6b465882-e329-41ef-8735-6f265ce89c36",
+        "userId": "ec125d8e-20a6-415e-a4d3-60f1593f1331",
+        "nickname": "快乐喜",
+        "bio": null,
+        "grade": null,
+        "interests": [],
+        "joinedDays": 0,
+        "profilePublic": true,
+        "showStats": true,
+        "createdAt": "2025-11-26T08:11:35.250Z",
+        "updatedAt": "2025-11-26T08:11:35.250Z"
+      }
+    },
+    {
+      "id": "fdcd65bd-7a1d-40a7-b067-07d991e3d048",
+      "username": "美丽先生女式",
+      "email": "123@132.你们",
+      "password": "$2a$10$094HC.BBsB6maw4Ah4efrOzJ1XffbYaqkStQER4juCBKQ2Mf98gqm",
+      "role": "STUDENT",
+      "avatar": "/uploads/avatars/avatar-fdcd65bd-7a1d-40a7-b067-07d991e3d048-1764145424934.jpg",
+      "createdAt": "2025-11-26T08:14:46.388Z",
+      "profile": {
+        "id": "6c05178e-48d4-4e43-8bdf-5385471cf241",
+        "userId": "fdcd65bd-7a1d-40a7-b067-07d991e3d048",
+        "nickname": "美丽先生女式",
+        "bio": null,
+        "grade": null,
+        "interests": [],
+        "joinedDays": 0,
+        "profilePublic": true,
+        "showStats": true,
+        "createdAt": "2025-11-26T08:14:46.388Z",
+        "updatedAt": "2025-11-26T08:14:46.388Z"
+      }
+    },
+    {
+      "id": "36d7d30a-1068-4f5c-887b-72c6135f54ac",
+      "username": "陈汐蕊",
+      "email": "1234@567.ABC",
+      "password": "$2a$10$kEFwkw7PYQbjwKuU.v5sgOCmX2o9wbC0tu6iVYgHbobbB3WoK54Ge",
+      "role": "STUDENT",
+      "avatar": "https://api.dicebear.com/7.x/avataaars/svg?seed=陈汐蕊",
+      "createdAt": "2025-11-26T08:18:37.135Z",
+      "profile": {
+        "id": "01cb1fa8-4671-46e3-8073-072fdb568d2e",
+        "userId": "36d7d30a-1068-4f5c-887b-72c6135f54ac",
+        "nickname": "陈汐蕊",
+        "bio": null,
+        "grade": null,
+        "interests": [],
+        "joinedDays": 0,
+        "profilePublic": true,
+        "showStats": true,
+        "createdAt": "2025-11-26T08:18:37.135Z",
+        "updatedAt": "2025-11-26T08:18:37.135Z"
+      }
+    },
+    {
+      "id": "98c1637a-7593-419e-ba44-a429a5fc50d2",
+      "username": "甜菜",
+      "email": "250@gb.COM",
+      "password": "$2a$10$CJ9ao4i2qjHNKJDuxmHuVufcdDIGR8lBeuVB9gj13iq9NqR4/xOU.",
+      "role": "STUDENT",
+      "avatar": "https://api.dicebear.com/7.x/avataaars/svg?seed=甜菜",
+      "createdAt": "2025-11-26T08:14:42.197Z",
+      "profile": {
+        "id": "4942a4e6-5161-42ca-ad41-7f039df66d13",
+        "userId": "98c1637a-7593-419e-ba44-a429a5fc50d2",
+        "nickname": "甜菜",
+        "bio": null,
+        "grade": null,
+        "interests": [],
+        "joinedDays": 0,
+        "profilePublic": true,
+        "showStats": true,
+        "createdAt": "2025-11-26T08:14:42.197Z",
+        "updatedAt": "2025-11-26T08:14:42.197Z"
+      }
+    },
+    {
+      "id": "a487fcce-8c60-4b0f-bcdb-d34b4c0235c3",
+      "username": "灵皇神",
+      "email": "666@80.分好",
+      "password": "$2a$10$zvBLLo8l17Amf6aIGt1.CO51hrJHqO7EXVGTNDCBgn4n.P5hNAO52",
+      "role": "STUDENT",
+      "avatar": "https://api.dicebear.com/7.x/avataaars/svg?seed=灵皇神",
+      "createdAt": "2025-11-26T08:15:02.342Z",
+      "profile": {
+        "id": "b556736b-f9dc-4536-a6e6-96fdf36e72e9",
+        "userId": "a487fcce-8c60-4b0f-bcdb-d34b4c0235c3",
+        "nickname": "灵皇神",
+        "bio": null,
+        "grade": null,
+        "interests": [],
+        "joinedDays": 0,
+        "profilePublic": true,
+        "showStats": true,
+        "createdAt": "2025-11-26T08:15:02.342Z",
+        "updatedAt": "2025-11-26T08:15:02.342Z"
+      }
+    },
+    {
+      "id": "d307d127-65c2-4df3-901f-3095fd9beaf0",
+      "username": "黄迁巡2",
+      "email": "235424@2134.com",
+      "password": "$2a$10$tmLVwEdLuh6LckSw80mNiew1W9OE7.caG2R.6mUtvFkOjEyApF6yK",
+      "role": "STUDENT",
+      "avatar": "/uploads/avatars/avatar-d307d127-65c2-4df3-901f-3095fd9beaf0-1764327599028.jpg",
+      "createdAt": "2025-11-27T13:42:24.847Z",
+      "profile": {
+        "id": "5a48cea8-9c89-465f-9c38-5c96def71a3b",
+        "userId": "d307d127-65c2-4df3-901f-3095fd9beaf0",
+        "nickname": "黄迁巡2",
+        "bio": "",
+        "grade": null,
+        "interests": [
+          "6ghuhbgt",
+          "ggyyh"
+        ],
+        "joinedDays": 0,
+        "profilePublic": true,
+        "showStats": true,
+        "createdAt": "2025-11-27T13:42:24.847Z",
+        "updatedAt": "2025-11-28T11:01:41.132Z"
+      }
+    },
+    {
+      "id": "ae11972f-9b49-44dc-96c6-cb00146efd11",
+      "username": "luisiyu",
+      "email": "888@78.们你",
+      "password": "$2a$10$oxqqahX9k/0t5PJm5XyJfuZPd6fFckc6g0IAHyQ0Iw4uGzQIFGxKO",
+      "role": "STUDENT",
+      "avatar": "https://api.dicebear.com/7.x/avataaars/svg?seed=luisiyu",
+      "createdAt": "2025-11-26T08:13:30.508Z",
+      "profile": {
+        "id": "6bf938bd-a31c-43a9-ae57-05d74e4c2340",
+        "userId": "ae11972f-9b49-44dc-96c6-cb00146efd11",
+        "nickname": "luisiyu",
+        "bio": null,
+        "grade": null,
+        "interests": [],
+        "joinedDays": 0,
+        "profilePublic": true,
+        "showStats": true,
+        "createdAt": "2025-11-26T08:13:30.508Z",
+        "updatedAt": "2025-11-26T08:13:30.508Z"
+      }
+    },
+    {
+      "id": "f1e8d470-b990-401e-8303-425330b82ffe",
+      "username": "你爹",
+      "email": "123@12334.com",
+      "password": "$2a$10$7VP7u2gmdaHLQIFB9duW4ePTYHs5eBVe3xMEI6gzdhewL2ZXm7Kbm",
+      "role": "STUDENT",
+      "avatar": "https://api.dicebear.com/7.x/avataaars/svg?seed=你爹",
+      "createdAt": "2025-11-26T08:14:22.295Z",
+      "profile": {
+        "id": "59ff491c-bbe0-43bd-9269-fc78f3dce2c6",
+        "userId": "f1e8d470-b990-401e-8303-425330b82ffe",
+        "nickname": "你爹",
+        "bio": null,
+        "grade": null,
+        "interests": [],
+        "joinedDays": 0,
+        "profilePublic": true,
+        "showStats": true,
+        "createdAt": "2025-11-26T08:14:22.295Z",
+        "updatedAt": "2025-11-26T08:14:22.295Z"
+      }
+    },
+    {
+      "id": "fb01c3d8-ef90-4064-a7e2-7b82c606fa34",
+      "username": "e'e'e'e'e.",
+      "email": "700100@qq.com",
+      "password": "$2a$10$tectLY65A.H47lFa.KS7kOnoE0yjY1VnLm.C6soCEAPumgI2Y6pVC",
+      "role": "STUDENT",
+      "avatar": "https://api.dicebear.com/7.x/avataaars/svg?seed=e'e'e'e'e.",
+      "createdAt": "2025-11-26T08:15:14.824Z",
+      "profile": {
+        "id": "96bb6f1b-8606-48b8-b824-d7c03e84c9d9",
+        "userId": "fb01c3d8-ef90-4064-a7e2-7b82c606fa34",
+        "nickname": "zhao",
+        "bio": "666",
+        "grade": null,
+        "interests": [],
+        "joinedDays": 0,
+        "profilePublic": true,
+        "showStats": true,
+        "createdAt": "2025-11-26T08:15:14.824Z",
+        "updatedAt": "2025-11-26T08:16:49.202Z"
+      }
+    },
+    {
+      "id": "5271bf86-ef1e-4be7-867f-daa579ef7a6e",
+      "username": "带泪的吻",
+      "email": "123@132.我们",
+      "password": "$2a$10$7dq2i1X5O2VKpTiU2pmHQO9WoluH2x.9.56hvxxRkU4UBDYED1RxK",
+      "role": "STUDENT",
+      "avatar": "https://api.dicebear.com/7.x/avataaars/svg?seed=带泪的吻",
+      "createdAt": "2025-11-26T08:23:16.312Z",
+      "profile": {
+        "id": "964266fa-59d9-48e5-86aa-45315939d6db",
+        "userId": "5271bf86-ef1e-4be7-867f-daa579ef7a6e",
+        "nickname": "带泪的吻",
+        "bio": null,
+        "grade": null,
+        "interests": [],
+        "joinedDays": 0,
+        "profilePublic": true,
+        "showStats": true,
+        "createdAt": "2025-11-26T08:23:16.312Z",
+        "updatedAt": "2025-11-26T08:23:16.312Z"
+      }
+    },
+    {
+      "id": "4abdd2d2-07dd-4edd-85c5-33e586040cab",
+      "username": "123",
+      "email": "333@78.吗你",
+      "password": "$2a$10$wTSxPuoaZ3tF4qyoeTnBUevRmD1oIKtu9C5JKLsyLaXICJcedp8LW",
+      "role": "STUDENT",
+      "avatar": "https://api.dicebear.com/7.x/avataaars/svg?seed=123",
+      "createdAt": "2025-11-26T08:22:22.178Z",
+      "profile": {
+        "id": "7d98d57e-ebaa-4541-b77e-e09566bd94d9",
+        "userId": "4abdd2d2-07dd-4edd-85c5-33e586040cab",
+        "nickname": "123",
+        "bio": null,
+        "grade": null,
+        "interests": [],
+        "joinedDays": 0,
+        "profilePublic": true,
+        "showStats": true,
+        "createdAt": "2025-11-26T08:22:22.178Z",
+        "updatedAt": "2025-11-26T08:22:22.178Z"
+      }
+    },
+    {
+      "id": "f775f7a1-9dbd-4144-99c6-c849a578cc12",
+      "username": "神经病",
+      "email": "333@33.毒药",
+      "password": "$2a$10$f9Rx0AiI/SBiPeUX25ADeOr3KgVornUSEWnU5s44PtOyBN.YP69na",
+      "role": "STUDENT",
+      "avatar": "https://api.dicebear.com/7.x/avataaars/svg?seed=神经病",
+      "createdAt": "2025-11-26T08:20:53.640Z",
+      "profile": {
+        "id": "156f383f-b6a1-4dc8-a172-1a1aae135c5c",
+        "userId": "f775f7a1-9dbd-4144-99c6-c849a578cc12",
+        "nickname": "神经病",
+        "bio": null,
+        "grade": null,
+        "interests": [],
+        "joinedDays": 0,
+        "profilePublic": true,
+        "showStats": true,
+        "createdAt": "2025-11-26T08:20:53.640Z",
+        "updatedAt": "2025-11-26T08:20:53.640Z"
+      }
+    },
+    {
+      "id": "8b7655ec-955d-4f48-bd11-65262abc7fa8",
+      "username": "汤鸡磊是你爸",
+      "email": "7788@91.汤欣",
+      "password": "$2a$10$GdfMd74ud..VCs534.RB/udGdAH5yulCJLQuDOAog5xViXceQ9fcW",
+      "role": "STUDENT",
+      "avatar": "https://api.dicebear.com/7.x/avataaars/svg?seed=汤鸡磊是你爸",
+      "createdAt": "2025-11-26T08:20:46.970Z",
+      "profile": {
+        "id": "eff7e147-7cda-4da5-ac47-7464b0059a58",
+        "userId": "8b7655ec-955d-4f48-bd11-65262abc7fa8",
+        "nickname": "汤鸡磊是你爸",
+        "bio": null,
+        "grade": null,
+        "interests": [],
+        "joinedDays": 0,
+        "profilePublic": true,
+        "showStats": true,
+        "createdAt": "2025-11-26T08:20:46.970Z",
+        "updatedAt": "2025-11-26T08:20:46.970Z"
+      }
+    },
+    {
+      "id": "cc1e9ac3-1c64-42d3-b3d9-d2395ff52431",
+      "username": "xiaoming",
+      "email": "student1@example.com",
+      "password": "$2a$10$MvoTXckN70baBLasvqgxcOROdKzRefZ.7iqno9GeeFGZOVV3Z3612",
+      "role": "STUDENT",
+      "avatar": "https://api.dicebear.com/7.x/avataaars/svg?seed=xiaoming",
+      "createdAt": "2025-11-25T12:42:30.404Z",
+      "profile": {
+        "id": "23995e98-843e-40ac-98b1-e72b305ddd41",
+        "userId": "cc1e9ac3-1c64-42d3-b3d9-d2395ff52431",
+        "nickname": "小明",
+        "bio": "我喜欢编程和阅读！",
+        "grade": "五年级",
+        "interests": [
+          "编程",
+          "阅读",
+          "数学"
+        ],
+        "joinedDays": 1,
+        "profilePublic": true,
+        "showStats": true,
+        "createdAt": "2025-11-25T12:42:30.404Z",
+        "updatedAt": "2025-11-27T10:24:55.596Z"
+      }
+    },
+    {
+      "id": "22365e90-5b03-40d3-ae53-715895e9c691",
+      "username": "桐妹",
+      "email": "tm@rqy.com",
+      "password": "$2a$10$iwILB1xMm8nzG8UjyO..fuiZIHHolh91HeVo6FGDYoXEo22vUuTbu",
+      "role": "STUDENT",
+      "avatar": "https://api.dicebear.com/7.x/avataaars/svg?seed=桐妹",
+      "createdAt": "2025-11-25T13:20:10.642Z",
+      "profile": {
+        "id": "0a300aba-e6b3-4193-9556-0580b52a6c77",
+        "userId": "22365e90-5b03-40d3-ae53-715895e9c691",
+        "nickname": "桐妹",
+        "bio": null,
+        "grade": null,
+        "interests": [],
+        "joinedDays": 7,
+        "profilePublic": true,
+        "showStats": true,
+        "createdAt": "2025-11-25T13:20:10.642Z",
+        "updatedAt": "2025-12-02T13:52:44.886Z"
+      }
+    },
+    {
+      "id": "cd60a602-5380-4700-b500-3543bf69c7f7",
+      "username": "郑韵伊",
+      "email": "zyy@123.com",
+      "password": "$2a$10$Gj2tPXm/yMmYy3rVEGumG.n/fCOgQH9U93ahLsxhaqa1gaYp5QenO",
+      "role": "STUDENT",
+      "avatar": "https://api.dicebear.com/7.x/avataaars/svg?seed=郑韵伊",
+      "createdAt": "2025-11-27T12:56:35.647Z",
+      "profile": {
+        "id": "544da71d-2ceb-442f-8374-42e984a1323f",
+        "userId": "cd60a602-5380-4700-b500-3543bf69c7f7",
+        "nickname": "郑韵伊",
+        "bio": null,
+        "grade": null,
+        "interests": [],
+        "joinedDays": 0,
+        "profilePublic": true,
+        "showStats": true,
+        "createdAt": "2025-11-27T12:56:35.647Z",
+        "updatedAt": "2025-11-27T12:56:35.647Z"
+      }
+    },
+    {
+      "id": "b4af25e7-5afc-4365-9fa5-087bff552f77",
+      "username": "admin",
+      "email": "admin@example.com",
+      "password": "$2a$10$MvoTXckN70baBLasvqgxcOROdKzRefZ.7iqno9GeeFGZOVV3Z3612",
+      "role": "ADMIN",
+      "avatar": "https://api.dicebear.com/7.x/avataaars/svg?seed=admin",
+      "createdAt": "2025-11-25T12:42:30.397Z",
+      "profile": {
+        "id": "d2640a2d-76e6-423a-9f1f-54554c00e6a1",
+        "userId": "b4af25e7-5afc-4365-9fa5-087bff552f77",
+        "nickname": "系统管理员",
+        "bio": "",
+        "grade": null,
+        "interests": [
+          "123",
+          "34"
+        ],
+        "joinedDays": 6,
+        "profilePublic": true,
+        "showStats": true,
+        "createdAt": "2025-11-25T12:42:30.397Z",
+        "updatedAt": "2025-12-02T05:46:15.143Z"
+      }
+    }
+  ],
+  "friendships": [
+    {
+      "userId1": "a487fcce-8c60-4b0f-bcdb-d34b4c0235c3",
+      "userId2": "f1e8d470-b990-401e-8303-425330b82ffe",
+      "createdAt": "2025-11-26T08:17:52.318Z"
+    },
+    {
+      "userId1": "ae11972f-9b49-44dc-96c6-cb00146efd11",
+      "userId2": "fdcd65bd-7a1d-40a7-b067-07d991e3d048",
+      "createdAt": "2025-11-26T08:19:57.630Z"
+    },
+    {
+      "userId1": "98c1637a-7593-419e-ba44-a429a5fc50d2",
+      "userId2": "b4af25e7-5afc-4365-9fa5-087bff552f77",
+      "createdAt": "2025-11-26T08:20:04.892Z"
+    },
+    {
+      "userId1": "8b7655ec-955d-4f48-bd11-65262abc7fa8",
+      "userId2": "98c1637a-7593-419e-ba44-a429a5fc50d2",
+      "createdAt": "2025-11-26T08:23:08.383Z"
+    },
+    {
+      "userId1": "8b7655ec-955d-4f48-bd11-65262abc7fa8",
+      "userId2": "f1e8d470-b990-401e-8303-425330b82ffe",
+      "createdAt": "2025-11-26T08:24:05.249Z"
+    },
+    {
+      "userId1": "7e96c73a-862e-43a2-b8f0-768f86e704ca",
+      "userId2": "b4af25e7-5afc-4365-9fa5-087bff552f77",
+      "createdAt": "2025-11-26T14:14:08.316Z"
+    },
+    {
+      "userId1": "22365e90-5b03-40d3-ae53-715895e9c691",
+      "userId2": "cc1e9ac3-1c64-42d3-b3d9-d2395ff52431",
+      "createdAt": "2025-11-27T11:51:43.025Z"
+    },
+    {
+      "userId1": "b43124b2-f848-4f92-8b18-a36fc7ab57af",
+      "userId2": "cc1e9ac3-1c64-42d3-b3d9-d2395ff52431",
+      "createdAt": "2025-11-27T12:58:33.163Z"
+    },
+    {
+      "userId1": "22365e90-5b03-40d3-ae53-715895e9c691",
+      "userId2": "cd60a602-5380-4700-b500-3543bf69c7f7",
+      "createdAt": "2025-11-27T12:59:04.282Z"
+    },
+    {
+      "userId1": "b43124b2-f848-4f92-8b18-a36fc7ab57af",
+      "userId2": "cd60a602-5380-4700-b500-3543bf69c7f7",
+      "createdAt": "2025-11-27T13:01:11.097Z"
+    },
+    {
+      "userId1": "b4af25e7-5afc-4365-9fa5-087bff552f77",
+      "userId2": "d307d127-65c2-4df3-901f-3095fd9beaf0",
+      "createdAt": "2025-11-27T15:11:32.676Z"
+    },
+    {
+      "userId1": "cc1e9ac3-1c64-42d3-b3d9-d2395ff52431",
+      "userId2": "d307d127-65c2-4df3-901f-3095fd9beaf0",
+      "createdAt": "2025-11-28T10:48:21.933Z"
+    },
+    {
+      "userId1": "b43124b2-f848-4f92-8b18-a36fc7ab57af",
+      "userId2": "d307d127-65c2-4df3-901f-3095fd9beaf0",
+      "createdAt": "2025-11-28T11:38:12.554Z"
+    },
+    {
+      "userId1": "d1f8988d-37e1-4d40-9b43-61446123d14b",
+      "userId2": "d307d127-65c2-4df3-901f-3095fd9beaf0",
+      "createdAt": "2025-11-28T11:50:16.647Z"
+    },
+    {
+      "userId1": "b43124b2-f848-4f92-8b18-a36fc7ab57af",
+      "userId2": "d1f8988d-37e1-4d40-9b43-61446123d14b",
+      "createdAt": "2025-11-28T11:50:53.279Z"
+    },
+    {
+      "userId1": "22365e90-5b03-40d3-ae53-715895e9c691",
+      "userId2": "b4af25e7-5afc-4365-9fa5-087bff552f77",
+      "createdAt": "2025-12-01T04:53:08.058Z"
+    },
+    {
+      "userId1": "22365e90-5b03-40d3-ae53-715895e9c691",
+      "userId2": "b43124b2-f848-4f92-8b18-a36fc7ab57af",
+      "createdAt": "2025-12-02T11:54:24.172Z"
+    },
+    {
+      "userId1": "161125d5-1b40-424a-aa0f-3ced880e989a",
+      "userId2": "274836fd-7d4c-4f69-98d3-3f667f5682c3",
+      "createdAt": "2025-12-02T22:07:35.548Z"
+    }
+  ],
+  "follows": [
+    {
+      "followerId": "cc1e9ac3-1c64-42d3-b3d9-d2395ff52431",
+      "followingId": "22365e90-5b03-40d3-ae53-715895e9c691",
+      "createdAt": "2025-11-26T07:52:36.768Z"
+    },
+    {
+      "followerId": "cc1e9ac3-1c64-42d3-b3d9-d2395ff52431",
+      "followingId": "b43124b2-f848-4f92-8b18-a36fc7ab57af",
+      "createdAt": "2025-11-26T08:04:46.668Z"
+    },
+    {
+      "followerId": "b4af25e7-5afc-4365-9fa5-087bff552f77",
+      "followingId": "ec125d8e-20a6-415e-a4d3-60f1593f1331",
+      "createdAt": "2025-11-26T08:17:08.984Z"
+    },
+    {
+      "followerId": "a487fcce-8c60-4b0f-bcdb-d34b4c0235c3",
+      "followingId": "f1e8d470-b990-401e-8303-425330b82ffe",
+      "createdAt": "2025-11-26T08:17:38.755Z"
+    },
+    {
+      "followerId": "f1e8d470-b990-401e-8303-425330b82ffe",
+      "followingId": "a487fcce-8c60-4b0f-bcdb-d34b4c0235c3",
+      "createdAt": "2025-11-26T08:17:52.298Z"
+    },
+    {
+      "followerId": "b4af25e7-5afc-4365-9fa5-087bff552f77",
+      "followingId": "98c1637a-7593-419e-ba44-a429a5fc50d2",
+      "createdAt": "2025-11-26T08:18:58.081Z"
+    },
+    {
+      "followerId": "ae11972f-9b49-44dc-96c6-cb00146efd11",
+      "followingId": "fdcd65bd-7a1d-40a7-b067-07d991e3d048",
+      "createdAt": "2025-11-26T08:19:40.736Z"
+    },
+    {
+      "followerId": "98c1637a-7593-419e-ba44-a429a5fc50d2",
+      "followingId": "7e96c73a-862e-43a2-b8f0-768f86e704ca",
+      "createdAt": "2025-11-26T08:19:41.604Z"
+    },
+    {
+      "followerId": "fdcd65bd-7a1d-40a7-b067-07d991e3d048",
+      "followingId": "ae11972f-9b49-44dc-96c6-cb00146efd11",
+      "createdAt": "2025-11-26T08:19:57.607Z"
+    },
+    {
+      "followerId": "98c1637a-7593-419e-ba44-a429a5fc50d2",
+      "followingId": "b4af25e7-5afc-4365-9fa5-087bff552f77",
+      "createdAt": "2025-11-26T08:20:04.871Z"
+    },
+    {
+      "followerId": "fb01c3d8-ef90-4064-a7e2-7b82c606fa34",
+      "followingId": "8b7655ec-955d-4f48-bd11-65262abc7fa8",
+      "createdAt": "2025-11-26T08:22:30.621Z"
+    },
+    {
+      "followerId": "fb01c3d8-ef90-4064-a7e2-7b82c606fa34",
+      "followingId": "a487fcce-8c60-4b0f-bcdb-d34b4c0235c3",
+      "createdAt": "2025-11-26T08:22:49.333Z"
+    },
+    {
+      "followerId": "98c1637a-7593-419e-ba44-a429a5fc50d2",
+      "followingId": "8b7655ec-955d-4f48-bd11-65262abc7fa8",
+      "createdAt": "2025-11-26T08:23:02.331Z"
+    },
+    {
+      "followerId": "36d7d30a-1068-4f5c-887b-72c6135f54ac",
+      "followingId": "8b7655ec-955d-4f48-bd11-65262abc7fa8",
+      "createdAt": "2025-11-26T08:23:08.040Z"
+    },
+    {
+      "followerId": "8b7655ec-955d-4f48-bd11-65262abc7fa8",
+      "followingId": "98c1637a-7593-419e-ba44-a429a5fc50d2",
+      "createdAt": "2025-11-26T08:23:08.365Z"
+    },
+    {
+      "followerId": "fb01c3d8-ef90-4064-a7e2-7b82c606fa34",
+      "followingId": "98c1637a-7593-419e-ba44-a429a5fc50d2",
+      "createdAt": "2025-11-26T08:23:14.582Z"
+    },
+    {
+      "followerId": "36d7d30a-1068-4f5c-887b-72c6135f54ac",
+      "followingId": "98c1637a-7593-419e-ba44-a429a5fc50d2",
+      "createdAt": "2025-11-26T08:23:28.809Z"
+    },
+    {
+      "followerId": "f1e8d470-b990-401e-8303-425330b82ffe",
+      "followingId": "8b7655ec-955d-4f48-bd11-65262abc7fa8",
+      "createdAt": "2025-11-26T08:23:52.452Z"
+    },
+    {
+      "followerId": "8b7655ec-955d-4f48-bd11-65262abc7fa8",
+      "followingId": "f1e8d470-b990-401e-8303-425330b82ffe",
+      "createdAt": "2025-11-26T08:24:05.231Z"
+    },
+    {
+      "followerId": "a487fcce-8c60-4b0f-bcdb-d34b4c0235c3",
+      "followingId": "98c1637a-7593-419e-ba44-a429a5fc50d2",
+      "createdAt": "2025-11-26T08:24:15.390Z"
+    },
+    {
+      "followerId": "36d7d30a-1068-4f5c-887b-72c6135f54ac",
+      "followingId": "f1e8d470-b990-401e-8303-425330b82ffe",
+      "createdAt": "2025-11-26T08:24:25.340Z"
+    },
+    {
+      "followerId": "a487fcce-8c60-4b0f-bcdb-d34b4c0235c3",
+      "followingId": "36d7d30a-1068-4f5c-887b-72c6135f54ac",
+      "createdAt": "2025-11-26T08:24:48.202Z"
+    },
+    {
+      "followerId": "b4af25e7-5afc-4365-9fa5-087bff552f77",
+      "followingId": "7e96c73a-862e-43a2-b8f0-768f86e704ca",
+      "createdAt": "2025-11-26T14:12:58.131Z"
+    },
+    {
+      "followerId": "7e96c73a-862e-43a2-b8f0-768f86e704ca",
+      "followingId": "b4af25e7-5afc-4365-9fa5-087bff552f77",
+      "createdAt": "2025-11-26T14:14:08.308Z"
+    },
+    {
+      "followerId": "22365e90-5b03-40d3-ae53-715895e9c691",
+      "followingId": "cc1e9ac3-1c64-42d3-b3d9-d2395ff52431",
+      "createdAt": "2025-11-27T11:51:43.007Z"
+    },
+    {
+      "followerId": "22365e90-5b03-40d3-ae53-715895e9c691",
+      "followingId": "7e96c73a-862e-43a2-b8f0-768f86e704ca",
+      "createdAt": "2025-11-27T11:52:51.146Z"
+    },
+    {
+      "followerId": "b43124b2-f848-4f92-8b18-a36fc7ab57af",
+      "followingId": "cc1e9ac3-1c64-42d3-b3d9-d2395ff52431",
+      "createdAt": "2025-11-27T12:58:33.147Z"
+    },
+    {
+      "followerId": "cd60a602-5380-4700-b500-3543bf69c7f7",
+      "followingId": "22365e90-5b03-40d3-ae53-715895e9c691",
+      "createdAt": "2025-11-27T12:58:47.755Z"
+    },
+    {
+      "followerId": "22365e90-5b03-40d3-ae53-715895e9c691",
+      "followingId": "cd60a602-5380-4700-b500-3543bf69c7f7",
+      "createdAt": "2025-11-27T12:59:04.256Z"
+    },
+    {
+      "followerId": "cd60a602-5380-4700-b500-3543bf69c7f7",
+      "followingId": "b43124b2-f848-4f92-8b18-a36fc7ab57af",
+      "createdAt": "2025-11-27T13:01:05.643Z"
+    },
+    {
+      "followerId": "b43124b2-f848-4f92-8b18-a36fc7ab57af",
+      "followingId": "cd60a602-5380-4700-b500-3543bf69c7f7",
+      "createdAt": "2025-11-27T13:01:11.071Z"
+    },
+    {
+      "followerId": "d307d127-65c2-4df3-901f-3095fd9beaf0",
+      "followingId": "cd60a602-5380-4700-b500-3543bf69c7f7",
+      "createdAt": "2025-11-27T14:14:19.037Z"
+    },
+    {
+      "followerId": "d307d127-65c2-4df3-901f-3095fd9beaf0",
+      "followingId": "d1f8988d-37e1-4d40-9b43-61446123d14b",
+      "createdAt": "2025-11-27T14:14:38.604Z"
+    },
+    {
+      "followerId": "d307d127-65c2-4df3-901f-3095fd9beaf0",
+      "followingId": "b43124b2-f848-4f92-8b18-a36fc7ab57af",
+      "createdAt": "2025-11-27T14:14:50.665Z"
+    },
+    {
+      "followerId": "b4af25e7-5afc-4365-9fa5-087bff552f77",
+      "followingId": "d307d127-65c2-4df3-901f-3095fd9beaf0",
+      "createdAt": "2025-11-27T15:10:49.091Z"
+    },
+    {
+      "followerId": "d307d127-65c2-4df3-901f-3095fd9beaf0",
+      "followingId": "b4af25e7-5afc-4365-9fa5-087bff552f77",
+      "createdAt": "2025-11-27T15:11:32.649Z"
+    },
+    {
+      "followerId": "b4af25e7-5afc-4365-9fa5-087bff552f77",
+      "followingId": "22365e90-5b03-40d3-ae53-715895e9c691",
+      "createdAt": "2025-11-28T10:41:47.821Z"
+    },
+    {
+      "followerId": "cc1e9ac3-1c64-42d3-b3d9-d2395ff52431",
+      "followingId": "d307d127-65c2-4df3-901f-3095fd9beaf0",
+      "createdAt": "2025-11-28T10:47:55.445Z"
+    },
+    {
+      "followerId": "d307d127-65c2-4df3-901f-3095fd9beaf0",
+      "followingId": "cc1e9ac3-1c64-42d3-b3d9-d2395ff52431",
+      "createdAt": "2025-11-28T10:48:21.919Z"
+    },
+    {
+      "followerId": "b43124b2-f848-4f92-8b18-a36fc7ab57af",
+      "followingId": "d307d127-65c2-4df3-901f-3095fd9beaf0",
+      "createdAt": "2025-11-28T11:38:12.540Z"
+    },
+    {
+      "followerId": "d1f8988d-37e1-4d40-9b43-61446123d14b",
+      "followingId": "d307d127-65c2-4df3-901f-3095fd9beaf0",
+      "createdAt": "2025-11-28T11:50:16.641Z"
+    },
+    {
+      "followerId": "d1f8988d-37e1-4d40-9b43-61446123d14b",
+      "followingId": "b43124b2-f848-4f92-8b18-a36fc7ab57af",
+      "createdAt": "2025-11-28T11:50:40.089Z"
+    },
+    {
+      "followerId": "b43124b2-f848-4f92-8b18-a36fc7ab57af",
+      "followingId": "d1f8988d-37e1-4d40-9b43-61446123d14b",
+      "createdAt": "2025-11-28T11:50:53.254Z"
+    },
+    {
+      "followerId": "22365e90-5b03-40d3-ae53-715895e9c691",
+      "followingId": "d307d127-65c2-4df3-901f-3095fd9beaf0",
+      "createdAt": "2025-11-28T12:14:42.184Z"
+    },
+    {
+      "followerId": "22365e90-5b03-40d3-ae53-715895e9c691",
+      "followingId": "b43124b2-f848-4f92-8b18-a36fc7ab57af",
+      "createdAt": "2025-12-01T04:52:48.736Z"
+    },
+    {
+      "followerId": "22365e90-5b03-40d3-ae53-715895e9c691",
+      "followingId": "b4af25e7-5afc-4365-9fa5-087bff552f77",
+      "createdAt": "2025-12-01T04:53:08.045Z"
+    },
+    {
+      "followerId": "b4af25e7-5afc-4365-9fa5-087bff552f77",
+      "followingId": "cd60a602-5380-4700-b500-3543bf69c7f7",
+      "createdAt": "2025-12-02T07:14:54.765Z"
+    },
+    {
+      "followerId": "b43124b2-f848-4f92-8b18-a36fc7ab57af",
+      "followingId": "e5318dcd-f786-4092-b79a-eb369704accc",
+      "createdAt": "2025-12-02T11:53:24.922Z"
+    },
+    {
+      "followerId": "b43124b2-f848-4f92-8b18-a36fc7ab57af",
+      "followingId": "22365e90-5b03-40d3-ae53-715895e9c691",
+      "createdAt": "2025-12-02T11:54:24.167Z"
+    },
+    {
+      "followerId": "22365e90-5b03-40d3-ae53-715895e9c691",
+      "followingId": "d1f8988d-37e1-4d40-9b43-61446123d14b",
+      "createdAt": "2025-12-02T13:53:09.360Z"
+    },
+    {
+      "followerId": "274836fd-7d4c-4f69-98d3-3f667f5682c3",
+      "followingId": "161125d5-1b40-424a-aa0f-3ced880e989a",
+      "createdAt": "2025-12-02T22:06:41.734Z"
+    },
+    {
+      "followerId": "161125d5-1b40-424a-aa0f-3ced880e989a",
+      "followingId": "274836fd-7d4c-4f69-98d3-3f667f5682c3",
+      "createdAt": "2025-12-02T22:07:35.537Z"
+    }
+  ],
+  "chatMessages": [
+    {
+      "fromUserId": "b4af25e7-5afc-4365-9fa5-087bff552f77",
+      "toUserId": "22365e90-5b03-40d3-ae53-715895e9c691",
+      "content": "测试",
+      "messageType": "CHAT",
+      "isRead": false,
+      "createdAt": "2025-12-02T23:14:56.836Z"
+    },
+    {
+      "fromUserId": "161125d5-1b40-424a-aa0f-3ced880e989a",
+      "toUserId": "274836fd-7d4c-4f69-98d3-3f667f5682c3",
+      "content": "你好，chattest1！很高兴收到你的消息！",
+      "messageType": "CHAT",
+      "isRead": true,
+      "createdAt": "2025-12-02T22:44:04.678Z"
+    },
+    {
+      "fromUserId": "274836fd-7d4c-4f69-98d3-3f667f5682c3",
+      "toUserId": "161125d5-1b40-424a-aa0f-3ced880e989a",
+      "content": "你好，chattest2！这是第一条测试消息。",
+      "messageType": "CHAT",
+      "isRead": false,
+      "createdAt": "2025-12-02T22:44:04.678Z"
+    },
+    {
+      "fromUserId": "274836fd-7d4c-4f69-98d3-3f667f5682c3",
+      "toUserId": "161125d5-1b40-424a-aa0f-3ced880e989a",
+      "content": "聊天系统重构完成了，我们来测试一下新的UI组件！",
+      "messageType": "CHAT",
+      "isRead": false,
+      "createdAt": "2025-12-02T22:44:04.678Z"
+    },
+    {
+      "fromUserId": "22365e90-5b03-40d3-ae53-715895e9c691",
+      "toUserId": "b4af25e7-5afc-4365-9fa5-087bff552f77",
+      "content": "！",
+      "messageType": "CHAT",
+      "isRead": true,
+      "createdAt": "2025-12-01T05:03:03.451Z"
+    },
+    {
+      "fromUserId": "22365e90-5b03-40d3-ae53-715895e9c691",
+      "toUserId": "b4af25e7-5afc-4365-9fa5-087bff552f77",
+      "content": "气死我了",
+      "messageType": "CHAT",
+      "isRead": true,
+      "createdAt": "2025-12-01T05:03:02.090Z"
+    },
+    {
+      "fromUserId": "22365e90-5b03-40d3-ae53-715895e9c691",
+      "toUserId": "b4af25e7-5afc-4365-9fa5-087bff552f77",
+      "content": "你说我是傻子",
+      "messageType": "CHAT",
+      "isRead": true,
+      "createdAt": "2025-12-01T05:02:59.956Z"
+    },
+    {
+      "fromUserId": "22365e90-5b03-40d3-ae53-715895e9c691",
+      "toUserId": "b4af25e7-5afc-4365-9fa5-087bff552f77",
+      "content": "我好生气",
+      "messageType": "CHAT",
+      "isRead": true,
+      "createdAt": "2025-12-01T05:02:55.805Z"
+    },
+    {
+      "fromUserId": "22365e90-5b03-40d3-ae53-715895e9c691",
+      "toUserId": "b4af25e7-5afc-4365-9fa5-087bff552f77",
+      "content": "哼哼",
+      "messageType": "CHAT",
+      "isRead": true,
+      "createdAt": "2025-12-01T05:02:51.933Z"
+    },
+    {
+      "fromUserId": "22365e90-5b03-40d3-ae53-715895e9c691",
+      "toUserId": "b4af25e7-5afc-4365-9fa5-087bff552f77",
+      "content": "{\"share_type\":\"achievement\",\"share_id\":\"13ebc455-a4e4-4135-b65e-22d764244351\",\"share_data\":{}}",
+      "messageType": "CHAT",
+      "isRead": true,
+      "createdAt": "2025-12-01T05:02:43.021Z"
+    },
+    {
+      "fromUserId": "b4af25e7-5afc-4365-9fa5-087bff552f77",
+      "toUserId": "22365e90-5b03-40d3-ae53-715895e9c691",
+      "content": "傻子",
+      "messageType": "CHAT",
+      "isRead": true,
+      "createdAt": "2025-12-01T05:02:42.340Z"
+    },
+    {
+      "fromUserId": "22365e90-5b03-40d3-ae53-715895e9c691",
+      "toUserId": "b4af25e7-5afc-4365-9fa5-087bff552f77",
+      "content": "Hello, my name is Ren Qianyu. Nice to meet you!",
+      "messageType": "CHAT",
+      "isRead": true,
+      "createdAt": "2025-12-01T04:55:26.265Z"
+    },
+    {
+      "fromUserId": "22365e90-5b03-40d3-ae53-715895e9c691",
+      "toUserId": "b4af25e7-5afc-4365-9fa5-087bff552f77",
+      "content": "Hello, my name is Ren Qianyu. Nice to meet you!",
+      "messageType": "CHAT",
+      "isRead": true,
+      "createdAt": "2025-12-01T04:55:25.465Z"
+    },
+    {
+      "fromUserId": "22365e90-5b03-40d3-ae53-715895e9c691",
+      "toUserId": "b4af25e7-5afc-4365-9fa5-087bff552f77",
+      "content": "Hello, my name is Ren Qianyu. Nice to meet you!",
+      "messageType": "CHAT",
+      "isRead": true,
+      "createdAt": "2025-12-01T04:55:25.465Z"
+    },
+    {
+      "fromUserId": "22365e90-5b03-40d3-ae53-715895e9c691",
+      "toUserId": "b4af25e7-5afc-4365-9fa5-087bff552f77",
+      "content": "Hello, my name is Ren Qianyu. Nice to meet you!",
+      "messageType": "CHAT",
+      "isRead": true,
+      "createdAt": "2025-12-01T04:55:25.457Z"
+    },
+    {
+      "fromUserId": "22365e90-5b03-40d3-ae53-715895e9c691",
+      "toUserId": "b4af25e7-5afc-4365-9fa5-087bff552f77",
+      "content": "Hello, my name is Ren Qianyu. Nice to meet you!",
+      "messageType": "CHAT",
+      "isRead": true,
+      "createdAt": "2025-12-01T04:55:25.446Z"
+    },
+    {
+      "fromUserId": "22365e90-5b03-40d3-ae53-715895e9c691",
+      "toUserId": "b4af25e7-5afc-4365-9fa5-087bff552f77",
+      "content": "你好，我叫任芊羽，很高心认识你！",
+      "messageType": "CHAT",
+      "isRead": true,
+      "createdAt": "2025-12-01T04:53:55.792Z"
+    },
+    {
+      "fromUserId": "22365e90-5b03-40d3-ae53-715895e9c691",
+      "toUserId": "cd60a602-5380-4700-b500-3543bf69c7f7",
+      "content": "hahah",
+      "messageType": "CHAT",
+      "isRead": false,
+      "createdAt": "2025-12-01T04:52:36.973Z"
+    },
+    {
+      "fromUserId": "22365e90-5b03-40d3-ae53-715895e9c691",
+      "toUserId": "cc1e9ac3-1c64-42d3-b3d9-d2395ff52431",
+      "content": "{\"share_type\":\"homework\",\"share_id\":\"4aa510f4-d010-4fb5-8157-ddba8b8e421c\",\"share_data\":{\"title\":\"复习语文书第五单元内容。\",\"description\":\"复习语文书第五单元内容。\"}}",
+      "messageType": "CHAT",
+      "isRead": false,
+      "createdAt": "2025-12-01T04:52:20.979Z"
+    },
+    {
+      "fromUserId": "22365e90-5b03-40d3-ae53-715895e9c691",
+      "toUserId": "cc1e9ac3-1c64-42d3-b3d9-d2395ff52431",
+      "content": "haha",
+      "messageType": "CHAT",
+      "isRead": false,
+      "createdAt": "2025-12-01T04:52:15.218Z"
+    },
+    {
+      "fromUserId": "22365e90-5b03-40d3-ae53-715895e9c691",
+      "toUserId": "cc1e9ac3-1c64-42d3-b3d9-d2395ff52431",
+      "content": "nihao",
+      "messageType": "CHAT",
+      "isRead": false,
+      "createdAt": "2025-12-01T04:52:11.712Z"
+    },
+    {
+      "fromUserId": "d307d127-65c2-4df3-901f-3095fd9beaf0",
+      "toUserId": "b4af25e7-5afc-4365-9fa5-087bff552f77",
+      "content": "终于正常了",
+      "messageType": "CHAT",
+      "isRead": true,
+      "createdAt": "2025-11-28T15:03:25.805Z"
+    },
+    {
+      "fromUserId": "d307d127-65c2-4df3-901f-3095fd9beaf0",
+      "toUserId": "b4af25e7-5afc-4365-9fa5-087bff552f77",
+      "content": "🤣",
+      "messageType": "CHAT",
+      "isRead": true,
+      "createdAt": "2025-11-28T15:03:22.432Z"
+    },
+    {
+      "fromUserId": "d307d127-65c2-4df3-901f-3095fd9beaf0",
+      "toUserId": "cc1e9ac3-1c64-42d3-b3d9-d2395ff52431",
+      "content": "你好呀",
+      "messageType": "CHAT",
+      "isRead": true,
+      "createdAt": "2025-11-28T15:03:10.928Z"
+    },
+    {
+      "fromUserId": "d307d127-65c2-4df3-901f-3095fd9beaf0",
+      "toUserId": "cc1e9ac3-1c64-42d3-b3d9-d2395ff52431",
+      "content": "？",
+      "messageType": "CHAT",
+      "isRead": true,
+      "createdAt": "2025-11-28T15:03:03.556Z"
+    },
+    {
+      "fromUserId": "cc1e9ac3-1c64-42d3-b3d9-d2395ff52431",
+      "toUserId": "d307d127-65c2-4df3-901f-3095fd9beaf0",
+      "content": "？",
+      "messageType": "CHAT",
+      "isRead": false,
+      "createdAt": "2025-11-28T15:02:16.088Z"
+    },
+    {
+      "fromUserId": "b4af25e7-5afc-4365-9fa5-087bff552f77",
+      "toUserId": "d307d127-65c2-4df3-901f-3095fd9beaf0",
+      "content": "？",
+      "messageType": "CHAT",
+      "isRead": false,
+      "createdAt": "2025-11-28T15:01:06.248Z"
+    },
+    {
+      "fromUserId": "cc1e9ac3-1c64-42d3-b3d9-d2395ff52431",
+      "toUserId": "d307d127-65c2-4df3-901f-3095fd9beaf0",
+      "content": "测试",
+      "messageType": "CHAT",
+      "isRead": false,
+      "createdAt": "2025-11-28T10:49:01.442Z"
+    },
+    {
+      "fromUserId": "cc1e9ac3-1c64-42d3-b3d9-d2395ff52431",
+      "toUserId": "22365e90-5b03-40d3-ae53-715895e9c691",
+      "content": "what",
+      "messageType": "CHAT",
+      "isRead": false,
+      "createdAt": "2025-11-28T10:47:30.184Z"
+    },
+    {
+      "fromUserId": "b4af25e7-5afc-4365-9fa5-087bff552f77",
+      "toUserId": "22365e90-5b03-40d3-ae53-715895e9c691",
+      "content": "😪",
+      "messageType": "CHAT",
+      "isRead": true,
+      "createdAt": "2025-11-28T10:42:45.997Z"
+    },
+    {
+      "fromUserId": "b4af25e7-5afc-4365-9fa5-087bff552f77",
+      "toUserId": "22365e90-5b03-40d3-ae53-715895e9c691",
+      "content": "你好",
+      "messageType": "CHAT",
+      "isRead": true,
+      "createdAt": "2025-11-28T10:42:38.315Z"
+    },
+    {
+      "fromUserId": "b4af25e7-5afc-4365-9fa5-087bff552f77",
+      "toUserId": "7e96c73a-862e-43a2-b8f0-768f86e704ca",
+      "content": "{\"share_type\":\"achievement\",\"share_id\":\"2fef6dd4-c6b8-46b4-829e-0c5ffcfa6dcf\",\"share_data\":{}}",
+      "messageType": "CHAT",
+      "isRead": false,
+      "createdAt": "2025-11-28T02:33:11.961Z"
+    },
+    {
+      "fromUserId": "b4af25e7-5afc-4365-9fa5-087bff552f77",
+      "toUserId": "98c1637a-7593-419e-ba44-a429a5fc50d2",
+      "content": "🤢",
+      "messageType": "CHAT",
+      "isRead": false,
+      "createdAt": "2025-11-28T02:32:39.286Z"
+    },
+    {
+      "fromUserId": "b4af25e7-5afc-4365-9fa5-087bff552f77",
+      "toUserId": "d307d127-65c2-4df3-901f-3095fd9beaf0",
+      "content": "你好呀",
+      "messageType": "CHAT",
+      "isRead": false,
+      "createdAt": "2025-11-28T02:25:23.411Z"
+    },
+    {
+      "fromUserId": "b4af25e7-5afc-4365-9fa5-087bff552f77",
+      "toUserId": "98c1637a-7593-419e-ba44-a429a5fc50d2",
+      "content": "{\"share_type\":\"homework\",\"share_id\":\"3fa7f0be-ece1-4d75-bd70-585c4c99ceee\",\"share_data\":{\"title\":\"1234\",\"description\":\"1234\"}}",
+      "messageType": "CHAT",
+      "isRead": false,
+      "createdAt": "2025-11-27T06:30:54.076Z"
+    },
+    {
+      "fromUserId": "7e96c73a-862e-43a2-b8f0-768f86e704ca",
+      "toUserId": "b4af25e7-5afc-4365-9fa5-087bff552f77",
+      "content": "哦哦哦",
+      "messageType": "CHAT",
+      "isRead": true,
+      "createdAt": "2025-11-26T15:28:35.149Z"
+    },
+    {
+      "fromUserId": "b4af25e7-5afc-4365-9fa5-087bff552f77",
+      "toUserId": "7e96c73a-862e-43a2-b8f0-768f86e704ca",
+      "content": "🤣",
+      "messageType": "CHAT",
+      "isRead": false,
+      "createdAt": "2025-11-26T14:15:02.353Z"
+    },
+    {
+      "fromUserId": "7e96c73a-862e-43a2-b8f0-768f86e704ca",
+      "toUserId": "b4af25e7-5afc-4365-9fa5-087bff552f77",
+      "content": "你好啊🤔",
+      "messageType": "CHAT",
+      "isRead": true,
+      "createdAt": "2025-11-26T14:14:35.154Z"
+    },
+    {
+      "fromUserId": "b4af25e7-5afc-4365-9fa5-087bff552f77",
+      "toUserId": "98c1637a-7593-419e-ba44-a429a5fc50d2",
+      "content": "测试",
+      "messageType": "CHAT",
+      "isRead": false,
+      "createdAt": "2025-11-26T14:10:22.022Z"
+    },
+    {
+      "fromUserId": "b4af25e7-5afc-4365-9fa5-087bff552f77",
+      "toUserId": "98c1637a-7593-419e-ba44-a429a5fc50d2",
+      "content": "测试",
+      "messageType": "CHAT",
+      "isRead": false,
+      "createdAt": "2025-11-26T13:52:47.252Z"
+    }
+  ],
+  "systemMessages": [
+    {
+      "toUserId": "161125d5-1b40-424a-aa0f-3ced880e989a",
+      "content": "🤝 你和 User 成为了好友",
+      "messageType": "SYSTEM_FRIEND",
+      "metadata": "{\"userId\":\"274836fd-7d4c-4f69-98d3-3f667f5682c3\",\"link\":\"/users/274836fd-7d4c-4f69-98d3-3f667f5682c3\"}",
+      "isRead": false,
+      "createdAt": "2025-12-02T22:07:35.567Z"
+    },
+    {
+      "toUserId": "274836fd-7d4c-4f69-98d3-3f667f5682c3",
+      "content": "🤝 你和 chattest2 成为了好友",
+      "messageType": "SYSTEM_FRIEND",
+      "metadata": "{\"userId\":\"161125d5-1b40-424a-aa0f-3ced880e989a\",\"link\":\"/users/161125d5-1b40-424a-aa0f-3ced880e989a\"}",
+      "isRead": false,
+      "createdAt": "2025-12-02T22:07:35.565Z"
+    },
+    {
+      "toUserId": "161125d5-1b40-424a-aa0f-3ced880e989a",
+      "content": "👤 chattest1 关注了你",
+      "messageType": "SYSTEM_FOLLOW",
+      "metadata": "{\"userId\":\"274836fd-7d4c-4f69-98d3-3f667f5682c3\",\"link\":\"/users/274836fd-7d4c-4f69-98d3-3f667f5682c3\"}",
+      "isRead": false,
+      "createdAt": "2025-12-02T22:06:41.824Z"
+    },
+    {
+      "toUserId": "d1f8988d-37e1-4d40-9b43-61446123d14b",
+      "content": "👤 桐妹 关注了你",
+      "messageType": "SYSTEM_FOLLOW",
+      "metadata": "{\"userId\":\"22365e90-5b03-40d3-ae53-715895e9c691\",\"link\":\"/users/22365e90-5b03-40d3-ae53-715895e9c691\"}",
+      "isRead": false,
+      "createdAt": "2025-12-02T13:53:09.398Z"
+    },
+    {
+      "toUserId": "b43124b2-f848-4f92-8b18-a36fc7ab57af",
+      "content": "🤝 你和 User 成为了好友",
+      "messageType": "SYSTEM_FRIEND",
+      "metadata": "{\"userId\":\"22365e90-5b03-40d3-ae53-715895e9c691\",\"link\":\"/users/22365e90-5b03-40d3-ae53-715895e9c691\"}",
+      "isRead": false,
+      "createdAt": "2025-12-02T11:54:24.178Z"
+    },
+    {
+      "toUserId": "22365e90-5b03-40d3-ae53-715895e9c691",
+      "content": "🤝 你和 任芊浔 成为了好友",
+      "messageType": "SYSTEM_FRIEND",
+      "metadata": "{\"userId\":\"b43124b2-f848-4f92-8b18-a36fc7ab57af\",\"link\":\"/users/b43124b2-f848-4f92-8b18-a36fc7ab57af\"}",
+      "isRead": false,
+      "createdAt": "2025-12-02T11:54:24.176Z"
+    },
+    {
+      "toUserId": "ec2a6faf-77fc-4ffb-b5e3-868231cbd1f1",
+      "content": "👤 任芊浔 关注了你",
+      "messageType": "SYSTEM_FOLLOW",
+      "metadata": "{\"userId\":\"b43124b2-f848-4f92-8b18-a36fc7ab57af\",\"link\":\"/users/b43124b2-f848-4f92-8b18-a36fc7ab57af\"}",
+      "isRead": false,
+      "createdAt": "2025-12-02T11:53:48.167Z"
+    },
+    {
+      "toUserId": "60c70fcd-0cb4-4696-88c7-8cabe7850a98",
+      "content": "👤 任芊浔 关注了你",
+      "messageType": "SYSTEM_FOLLOW",
+      "metadata": "{\"userId\":\"b43124b2-f848-4f92-8b18-a36fc7ab57af\",\"link\":\"/users/b43124b2-f848-4f92-8b18-a36fc7ab57af\"}",
+      "isRead": false,
+      "createdAt": "2025-12-02T11:53:47.448Z"
+    },
+    {
+      "toUserId": "7e96c73a-862e-43a2-b8f0-768f86e704ca",
+      "content": "👤 任芊浔 关注了你",
+      "messageType": "SYSTEM_FOLLOW",
+      "metadata": "{\"userId\":\"b43124b2-f848-4f92-8b18-a36fc7ab57af\",\"link\":\"/users/b43124b2-f848-4f92-8b18-a36fc7ab57af\"}",
+      "isRead": false,
+      "createdAt": "2025-12-02T11:53:46.776Z"
+    },
+    {
+      "toUserId": "c5e7945c-c880-4aab-908e-0606d1ae2919",
+      "content": "👤 任芊浔 关注了你",
+      "messageType": "SYSTEM_FOLLOW",
+      "metadata": "{\"userId\":\"b43124b2-f848-4f92-8b18-a36fc7ab57af\",\"link\":\"/users/b43124b2-f848-4f92-8b18-a36fc7ab57af\"}",
+      "isRead": false,
+      "createdAt": "2025-12-02T11:53:46.166Z"
+    },
+    {
+      "toUserId": "e5318dcd-f786-4092-b79a-eb369704accc",
+      "content": "👤 任芊浔 关注了你",
+      "messageType": "SYSTEM_FOLLOW",
+      "metadata": "{\"userId\":\"b43124b2-f848-4f92-8b18-a36fc7ab57af\",\"link\":\"/users/b43124b2-f848-4f92-8b18-a36fc7ab57af\"}",
+      "isRead": false,
+      "createdAt": "2025-12-02T11:53:24.957Z"
+    },
+    {
+      "toUserId": "cd60a602-5380-4700-b500-3543bf69c7f7",
+      "content": "👤 admin 关注了你",
+      "messageType": "SYSTEM_FOLLOW",
+      "metadata": "{\"userId\":\"b4af25e7-5afc-4365-9fa5-087bff552f77\",\"link\":\"/users/b4af25e7-5afc-4365-9fa5-087bff552f77\"}",
+      "isRead": false,
+      "createdAt": "2025-12-02T07:14:54.821Z"
+    },
+    {
+      "toUserId": "22365e90-5b03-40d3-ae53-715895e9c691",
+      "content": "🤝 你和 User 成为了好友",
+      "messageType": "SYSTEM_FRIEND",
+      "metadata": "{\"userId\":\"b4af25e7-5afc-4365-9fa5-087bff552f77\",\"link\":\"/users/b4af25e7-5afc-4365-9fa5-087bff552f77\"}",
+      "isRead": true,
+      "createdAt": "2025-12-01T04:53:08.064Z"
+    },
+    {
+      "toUserId": "b4af25e7-5afc-4365-9fa5-087bff552f77",
+      "content": "🤝 你和 桐妹 成为了好友",
+      "messageType": "SYSTEM_FRIEND",
+      "metadata": "{\"userId\":\"22365e90-5b03-40d3-ae53-715895e9c691\",\"link\":\"/users/22365e90-5b03-40d3-ae53-715895e9c691\"}",
+      "isRead": true,
+      "createdAt": "2025-12-01T04:53:08.062Z"
+    },
+    {
+      "toUserId": "22365e90-5b03-40d3-ae53-715895e9c691",
+      "content": "🤝 你和 User 成为了好友",
+      "messageType": "SYSTEM_FRIEND",
+      "metadata": "{\"userId\":\"b43124b2-f848-4f92-8b18-a36fc7ab57af\",\"link\":\"/users/b43124b2-f848-4f92-8b18-a36fc7ab57af\"}",
+      "isRead": true,
+      "createdAt": "2025-12-01T04:52:48.815Z"
+    },
+    {
+      "toUserId": "b43124b2-f848-4f92-8b18-a36fc7ab57af",
+      "content": "🤝 你和 桐妹 成为了好友",
+      "messageType": "SYSTEM_FRIEND",
+      "metadata": "{\"userId\":\"22365e90-5b03-40d3-ae53-715895e9c691\",\"link\":\"/users/22365e90-5b03-40d3-ae53-715895e9c691\"}",
+      "isRead": false,
+      "createdAt": "2025-12-01T04:52:48.808Z"
+    },
+    {
+      "toUserId": "22365e90-5b03-40d3-ae53-715895e9c691",
+      "content": "👤 任芊浔 关注了你",
+      "messageType": "SYSTEM_FOLLOW",
+      "metadata": "{\"userId\":\"b43124b2-f848-4f92-8b18-a36fc7ab57af\",\"link\":\"/users/b43124b2-f848-4f92-8b18-a36fc7ab57af\"}",
+      "isRead": true,
+      "createdAt": "2025-11-28T14:05:25.219Z"
+    },
+    {
+      "toUserId": "d307d127-65c2-4df3-901f-3095fd9beaf0",
+      "content": "👤 桐妹 关注了你",
+      "messageType": "SYSTEM_FOLLOW",
+      "metadata": "{\"userId\":\"22365e90-5b03-40d3-ae53-715895e9c691\",\"link\":\"/users/22365e90-5b03-40d3-ae53-715895e9c691\"}",
+      "isRead": false,
+      "createdAt": "2025-11-28T12:14:42.219Z"
+    },
+    {
+      "toUserId": "b43124b2-f848-4f92-8b18-a36fc7ab57af",
+      "content": "🤝 你和 User 成为了好友",
+      "messageType": "SYSTEM_FRIEND",
+      "metadata": "{\"userId\":\"d1f8988d-37e1-4d40-9b43-61446123d14b\",\"link\":\"/users/d1f8988d-37e1-4d40-9b43-61446123d14b\"}",
+      "isRead": false,
+      "createdAt": "2025-11-28T11:50:53.307Z"
+    },
+    {
+      "toUserId": "d1f8988d-37e1-4d40-9b43-61446123d14b",
+      "content": "🤝 你和 任芊浔 成为了好友",
+      "messageType": "SYSTEM_FRIEND",
+      "metadata": "{\"userId\":\"b43124b2-f848-4f92-8b18-a36fc7ab57af\",\"link\":\"/users/b43124b2-f848-4f92-8b18-a36fc7ab57af\"}",
+      "isRead": false,
+      "createdAt": "2025-11-28T11:50:53.300Z"
+    },
+    {
+      "toUserId": "b43124b2-f848-4f92-8b18-a36fc7ab57af",
+      "content": "👤 果果 关注了你",
+      "messageType": "SYSTEM_FOLLOW",
+      "metadata": "{\"userId\":\"d1f8988d-37e1-4d40-9b43-61446123d14b\",\"link\":\"/users/d1f8988d-37e1-4d40-9b43-61446123d14b\"}",
+      "isRead": false,
+      "createdAt": "2025-11-28T11:50:40.102Z"
+    },
+    {
+      "toUserId": "d1f8988d-37e1-4d40-9b43-61446123d14b",
+      "content": "🤝 你和 User 成为了好友",
+      "messageType": "SYSTEM_FRIEND",
+      "metadata": "{\"userId\":\"d307d127-65c2-4df3-901f-3095fd9beaf0\",\"link\":\"/users/d307d127-65c2-4df3-901f-3095fd9beaf0\"}",
+      "isRead": false,
+      "createdAt": "2025-11-28T11:50:16.677Z"
+    },
+    {
+      "toUserId": "d307d127-65c2-4df3-901f-3095fd9beaf0",
+      "content": "🤝 你和 果果 成为了好友",
+      "messageType": "SYSTEM_FRIEND",
+      "metadata": "{\"userId\":\"d1f8988d-37e1-4d40-9b43-61446123d14b\",\"link\":\"/users/d1f8988d-37e1-4d40-9b43-61446123d14b\"}",
+      "isRead": false,
+      "createdAt": "2025-11-28T11:50:16.674Z"
+    },
+    {
+      "toUserId": "b43124b2-f848-4f92-8b18-a36fc7ab57af",
+      "content": "🤝 你和 User 成为了好友",
+      "messageType": "SYSTEM_FRIEND",
+      "metadata": "{\"userId\":\"d307d127-65c2-4df3-901f-3095fd9beaf0\",\"link\":\"/users/d307d127-65c2-4df3-901f-3095fd9beaf0\"}",
+      "isRead": true,
+      "createdAt": "2025-11-28T11:38:12.599Z"
+    },
+    {
+      "toUserId": "d307d127-65c2-4df3-901f-3095fd9beaf0",
+      "content": "🤝 你和 任芊浔 成为了好友",
+      "messageType": "SYSTEM_FRIEND",
+      "metadata": "{\"userId\":\"b43124b2-f848-4f92-8b18-a36fc7ab57af\",\"link\":\"/users/b43124b2-f848-4f92-8b18-a36fc7ab57af\"}",
+      "isRead": false,
+      "createdAt": "2025-11-28T11:38:12.592Z"
+    },
+    {
+      "toUserId": "b43124b2-f848-4f92-8b18-a36fc7ab57af",
+      "content": "🎉 恭喜解锁成就【小有成就】！获得 50 积分 + 30 金币",
+      "messageType": "SYSTEM_ACHIEVEMENT",
+      "metadata": "{\"achievementId\":\"7dfe466f-bc0d-443e-af65-09adcdc118da\",\"achievementCode\":\"WORK_CREATOR_10\",\"link\":\"/achievements/7dfe466f-bc0d-443e-af65-09adcdc118da\"}",
+      "isRead": true,
+      "createdAt": "2025-11-28T11:29:19.272Z"
+    },
+    {
+      "toUserId": "d307d127-65c2-4df3-901f-3095fd9beaf0",
+      "content": "🤝 你和 User 成为了好友",
+      "messageType": "SYSTEM_FRIEND",
+      "metadata": "{\"userId\":\"cc1e9ac3-1c64-42d3-b3d9-d2395ff52431\",\"link\":\"/users/cc1e9ac3-1c64-42d3-b3d9-d2395ff52431\"}",
+      "isRead": false,
+      "createdAt": "2025-11-28T10:48:21.956Z"
+    },
+    {
+      "toUserId": "cc1e9ac3-1c64-42d3-b3d9-d2395ff52431",
+      "content": "🤝 你和 黄迁巡2 成为了好友",
+      "messageType": "SYSTEM_FRIEND",
+      "metadata": "{\"userId\":\"d307d127-65c2-4df3-901f-3095fd9beaf0\",\"link\":\"/users/d307d127-65c2-4df3-901f-3095fd9beaf0\"}",
+      "isRead": false,
+      "createdAt": "2025-11-28T10:48:21.951Z"
+    },
+    {
+      "toUserId": "d307d127-65c2-4df3-901f-3095fd9beaf0",
+      "content": "👤 xiaoming 关注了你",
+      "messageType": "SYSTEM_FOLLOW",
+      "metadata": "{\"userId\":\"cc1e9ac3-1c64-42d3-b3d9-d2395ff52431\",\"link\":\"/users/cc1e9ac3-1c64-42d3-b3d9-d2395ff52431\"}",
+      "isRead": false,
+      "createdAt": "2025-11-28T10:47:55.475Z"
+    },
+    {
+      "toUserId": "22365e90-5b03-40d3-ae53-715895e9c691",
+      "content": "🤝 你和 User 成为了好友",
+      "messageType": "SYSTEM_FRIEND",
+      "metadata": "{\"userId\":\"b4af25e7-5afc-4365-9fa5-087bff552f77\",\"link\":\"/users/b4af25e7-5afc-4365-9fa5-087bff552f77\"}",
+      "isRead": true,
+      "createdAt": "2025-11-28T10:42:18.218Z"
+    },
+    {
+      "toUserId": "b4af25e7-5afc-4365-9fa5-087bff552f77",
+      "content": "🤝 你和 桐妹 成为了好友",
+      "messageType": "SYSTEM_FRIEND",
+      "metadata": "{\"userId\":\"22365e90-5b03-40d3-ae53-715895e9c691\",\"link\":\"/users/22365e90-5b03-40d3-ae53-715895e9c691\"}",
+      "isRead": true,
+      "createdAt": "2025-11-28T10:42:18.214Z"
+    },
+    {
+      "toUserId": "22365e90-5b03-40d3-ae53-715895e9c691",
+      "content": "👤 admin 关注了你",
+      "messageType": "SYSTEM_FOLLOW",
+      "metadata": "{\"userId\":\"b4af25e7-5afc-4365-9fa5-087bff552f77\",\"link\":\"/users/b4af25e7-5afc-4365-9fa5-087bff552f77\"}",
+      "isRead": true,
+      "createdAt": "2025-11-28T10:41:47.871Z"
+    },
+    {
+      "toUserId": "d307d127-65c2-4df3-901f-3095fd9beaf0",
+      "content": "🤝 你和 User 成为了好友",
+      "messageType": "SYSTEM_FRIEND",
+      "metadata": "{\"userId\":\"b4af25e7-5afc-4365-9fa5-087bff552f77\",\"link\":\"/users/b4af25e7-5afc-4365-9fa5-087bff552f77\"}",
+      "isRead": true,
+      "createdAt": "2025-11-27T15:11:32.704Z"
+    },
+    {
+      "toUserId": "b4af25e7-5afc-4365-9fa5-087bff552f77",
+      "content": "🤝 你和 黄迁巡2 成为了好友",
+      "messageType": "SYSTEM_FRIEND",
+      "metadata": "{\"userId\":\"d307d127-65c2-4df3-901f-3095fd9beaf0\",\"link\":\"/users/d307d127-65c2-4df3-901f-3095fd9beaf0\"}",
+      "isRead": true,
+      "createdAt": "2025-11-27T15:11:32.699Z"
+    },
+    {
+      "toUserId": "d307d127-65c2-4df3-901f-3095fd9beaf0",
+      "content": "👤 admin 关注了你",
+      "messageType": "SYSTEM_FOLLOW",
+      "metadata": "{\"userId\":\"b4af25e7-5afc-4365-9fa5-087bff552f77\",\"link\":\"/users/b4af25e7-5afc-4365-9fa5-087bff552f77\"}",
+      "isRead": false,
+      "createdAt": "2025-11-27T15:10:49.148Z"
+    },
+    {
+      "toUserId": "b43124b2-f848-4f92-8b18-a36fc7ab57af",
+      "content": "👤 黄迁巡2 关注了你",
+      "messageType": "SYSTEM_FOLLOW",
+      "metadata": "{\"userId\":\"d307d127-65c2-4df3-901f-3095fd9beaf0\",\"link\":\"/users/d307d127-65c2-4df3-901f-3095fd9beaf0\"}",
+      "isRead": true,
+      "createdAt": "2025-11-27T14:14:50.676Z"
+    },
+    {
+      "toUserId": "d1f8988d-37e1-4d40-9b43-61446123d14b",
+      "content": "👤 黄迁巡2 关注了你",
+      "messageType": "SYSTEM_FOLLOW",
+      "metadata": "{\"userId\":\"d307d127-65c2-4df3-901f-3095fd9beaf0\",\"link\":\"/users/d307d127-65c2-4df3-901f-3095fd9beaf0\"}",
+      "isRead": false,
+      "createdAt": "2025-11-27T14:14:38.613Z"
+    },
+    {
+      "toUserId": "cd60a602-5380-4700-b500-3543bf69c7f7",
+      "content": "👤 黄迁巡2 关注了你",
+      "messageType": "SYSTEM_FOLLOW",
+      "metadata": "{\"userId\":\"d307d127-65c2-4df3-901f-3095fd9beaf0\",\"link\":\"/users/d307d127-65c2-4df3-901f-3095fd9beaf0\"}",
+      "isRead": false,
+      "createdAt": "2025-11-27T14:14:19.048Z"
+    },
+    {
+      "toUserId": "cd60a602-5380-4700-b500-3543bf69c7f7",
+      "content": "👤 黄迁巡2 关注了你",
+      "messageType": "SYSTEM_FOLLOW",
+      "metadata": "{\"userId\":\"d307d127-65c2-4df3-901f-3095fd9beaf0\",\"link\":\"/users/d307d127-65c2-4df3-901f-3095fd9beaf0\"}",
+      "isRead": false,
+      "createdAt": "2025-11-27T14:14:10.788Z"
+    },
+    {
+      "toUserId": "cd60a602-5380-4700-b500-3543bf69c7f7",
+      "content": "👤 黄迁巡2 关注了你",
+      "messageType": "SYSTEM_FOLLOW",
+      "metadata": "{\"userId\":\"d307d127-65c2-4df3-901f-3095fd9beaf0\",\"link\":\"/users/d307d127-65c2-4df3-901f-3095fd9beaf0\"}",
+      "isRead": false,
+      "createdAt": "2025-11-27T14:13:45.292Z"
+    },
+    {
+      "toUserId": "d307d127-65c2-4df3-901f-3095fd9beaf0",
+      "content": "🎉 恭喜解锁成就【记录生活】！获得 5 积分 + 3 金币",
+      "messageType": "SYSTEM_ACHIEVEMENT",
+      "metadata": "{\"achievementId\":\"fa066f97-947f-493a-9717-7f0da3c5b0db\",\"achievementCode\":\"FIRST_DIARY\",\"link\":\"/achievements/fa066f97-947f-493a-9717-7f0da3c5b0db\"}",
+      "isRead": true,
+      "createdAt": "2025-11-27T14:13:18.050Z"
+    },
+    {
+      "toUserId": "cd60a602-5380-4700-b500-3543bf69c7f7",
+      "content": "🎉 恭喜解锁成就【记录生活】！获得 5 积分 + 3 金币",
+      "messageType": "SYSTEM_ACHIEVEMENT",
+      "metadata": "{\"achievementId\":\"fa066f97-947f-493a-9717-7f0da3c5b0db\",\"achievementCode\":\"FIRST_DIARY\",\"link\":\"/achievements/fa066f97-947f-493a-9717-7f0da3c5b0db\"}",
+      "isRead": false,
+      "createdAt": "2025-11-27T13:04:31.408Z"
+    },
+    {
+      "toUserId": "b43124b2-f848-4f92-8b18-a36fc7ab57af",
+      "content": "🤝 你和 User 成为了好友",
+      "messageType": "SYSTEM_FRIEND",
+      "metadata": "{\"userId\":\"cd60a602-5380-4700-b500-3543bf69c7f7\",\"link\":\"/users/cd60a602-5380-4700-b500-3543bf69c7f7\"}",
+      "isRead": true,
+      "createdAt": "2025-11-27T13:01:11.126Z"
+    },
+    {
+      "toUserId": "cd60a602-5380-4700-b500-3543bf69c7f7",
+      "content": "🤝 你和 任芊浔 成为了好友",
+      "messageType": "SYSTEM_FRIEND",
+      "metadata": "{\"userId\":\"b43124b2-f848-4f92-8b18-a36fc7ab57af\",\"link\":\"/users/b43124b2-f848-4f92-8b18-a36fc7ab57af\"}",
+      "isRead": false,
+      "createdAt": "2025-11-27T13:01:11.120Z"
+    },
+    {
+      "toUserId": "b43124b2-f848-4f92-8b18-a36fc7ab57af",
+      "content": "👤 郑韵伊 关注了你",
+      "messageType": "SYSTEM_FOLLOW",
+      "metadata": "{\"userId\":\"cd60a602-5380-4700-b500-3543bf69c7f7\",\"link\":\"/users/cd60a602-5380-4700-b500-3543bf69c7f7\"}",
+      "isRead": true,
+      "createdAt": "2025-11-27T13:01:05.671Z"
+    },
+    {
+      "toUserId": "22365e90-5b03-40d3-ae53-715895e9c691",
+      "content": "🤝 你和 User 成为了好友",
+      "messageType": "SYSTEM_FRIEND",
+      "metadata": "{\"userId\":\"cd60a602-5380-4700-b500-3543bf69c7f7\",\"link\":\"/users/cd60a602-5380-4700-b500-3543bf69c7f7\"}",
+      "isRead": true,
+      "createdAt": "2025-11-27T12:59:04.306Z"
+    },
+    {
+      "toUserId": "cd60a602-5380-4700-b500-3543bf69c7f7",
+      "content": "🤝 你和 桐妹 成为了好友",
+      "messageType": "SYSTEM_FRIEND",
+      "metadata": "{\"userId\":\"22365e90-5b03-40d3-ae53-715895e9c691\",\"link\":\"/users/22365e90-5b03-40d3-ae53-715895e9c691\"}",
+      "isRead": false,
+      "createdAt": "2025-11-27T12:59:04.302Z"
+    },
+    {
+      "toUserId": "22365e90-5b03-40d3-ae53-715895e9c691",
+      "content": "👤 郑韵伊 关注了你",
+      "messageType": "SYSTEM_FOLLOW",
+      "metadata": "{\"userId\":\"cd60a602-5380-4700-b500-3543bf69c7f7\",\"link\":\"/users/cd60a602-5380-4700-b500-3543bf69c7f7\"}",
+      "isRead": true,
+      "createdAt": "2025-11-27T12:58:47.766Z"
+    },
+    {
+      "toUserId": "b43124b2-f848-4f92-8b18-a36fc7ab57af",
+      "content": "🤝 你和 User 成为了好友",
+      "messageType": "SYSTEM_FRIEND",
+      "metadata": "{\"userId\":\"cc1e9ac3-1c64-42d3-b3d9-d2395ff52431\",\"link\":\"/users/cc1e9ac3-1c64-42d3-b3d9-d2395ff52431\"}",
+      "isRead": true,
+      "createdAt": "2025-11-27T12:58:33.214Z"
+    },
+    {
+      "toUserId": "cc1e9ac3-1c64-42d3-b3d9-d2395ff52431",
+      "content": "🤝 你和 任芊浔 成为了好友",
+      "messageType": "SYSTEM_FRIEND",
+      "metadata": "{\"userId\":\"b43124b2-f848-4f92-8b18-a36fc7ab57af\",\"link\":\"/users/b43124b2-f848-4f92-8b18-a36fc7ab57af\"}",
+      "isRead": false,
+      "createdAt": "2025-11-27T12:58:33.210Z"
+    }
+  ]
+}
