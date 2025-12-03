@@ -21,54 +21,39 @@
     </div>
 
     <!-- 日记列表 -->
-    <div v-if="loading" class="space-y-4">
-      <n-skeleton v-for="i in 3" :key="i" height="120px" :sharp="false" />
+    <div class="card">
+      <n-data-table
+        :columns="columns"
+        :data="diaries"
+        :loading="loading"
+        :pagination="false"
+      />
     </div>
 
-    <n-empty v-else-if="!diaries.length" description="还没有日记，开始记录吧" />
-
-    <div v-else class="space-y-4">
-      <div v-for="diary in diaries" :key="diary.id" class="card hover:shadow-md transition-shadow">
-        <div class="flex items-start justify-between mb-3">
-          <div class="flex items-center space-x-3">
-            <span class="text-2xl">{{ getMoodEmoji(diary.mood) }}</span>
-            <div>
-              <div class="font-bold text-gray-800">{{ diary.title }}</div>
-              <div class="text-sm text-gray-500">{{ formatDate(diary.createdAt) }} · {{ diary.weather }}</div>
-            </div>
-          </div>
-        </div>
-        <p class="text-gray-700 whitespace-pre-wrap mb-3">{{ diary.content }}</p>
-        <div class="flex items-center justify-between">
-          <div class="flex items-center space-x-2">
-            <div v-if="diary.tags?.length" class="flex items-center space-x-1">
-              <n-tag v-for="tag in diary.tags" :key="tag.tag.id" size="small">
-                {{ tag.tag.name }}
-              </n-tag>
-            </div>
-            <span class="text-xs text-gray-400">· {{ getDiaryStats(diary.content) }}</span>
-          </div>
-          <n-space size="small">
-            <n-button size="small" quaternary @click="copyDiaryContent(diary)">
-              <template #icon><n-icon><CopyOutline /></n-icon></template>
-              复制
-            </n-button>
-            <n-button size="small" quaternary @click="handleEdit(diary)">
-              <template #icon><n-icon><CreateOutline /></n-icon></template>
-              编辑
-            </n-button>
-            <n-button size="small" quaternary type="error" @click="handleDelete(diary)">
-              <template #icon><n-icon><TrashOutline /></n-icon></template>
-              删除
-            </n-button>
-          </n-space>
-        </div>
-      </div>
+    <!-- 分页 -->
+    <div v-if="pagination.total > 0" class="flex justify-center">
+      <n-pagination
+        v-model:page="pagination.page"
+        :page-count="pagination.pageCount"
+        :page-size="pagination.pageSize"
+        show-size-picker
+        :page-sizes="[10, 20, 50]"
+        @update:page="handlePageChange"
+        @update:page-size="handlePageSizeChange"
+      />
     </div>
 
     <!-- 创建/编辑弹窗 -->
     <n-modal v-model:show="showModal" preset="card" :title="editingDiary ? '编辑日记' : '写日记'" style="width: 600px">
       <n-form :model="form" label-placement="top">
+        <n-form-item label="日期">
+          <n-date-picker
+            v-model:value="form.diaryDate"
+            type="date"
+            style="width: 100%"
+            :is-date-disabled="(timestamp) => timestamp > Date.now()"
+          />
+        </n-form-item>
         <n-form-item label="标题">
           <n-input v-model:value="form.title" placeholder="给日记起个标题..." />
         </n-form-item>
@@ -82,64 +67,69 @@
         </div>
         <n-form-item label="内容">
           <n-input v-model:value="form.content" type="textarea" placeholder="今天发生了什么..." :rows="8" />
-          <!-- 字数统计 -->
-          <div class="mt-3 p-3 bg-gray-50 rounded-lg">
-            <div class="flex items-center justify-between mb-2">
-              <span class="text-sm font-medium text-gray-700">字数统计</span>
-              <n-button size="tiny" quaternary @click="copyStatistics">
-                <template #icon><n-icon><CopyOutline /></n-icon></template>
-                复制统计
-              </n-button>
+        </n-form-item>
+        <!-- 字数统计 -->
+        <div class="mb-4 p-3 bg-gray-50 rounded-lg">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-sm font-medium text-gray-700">字数统计</span>
+            <n-button size="tiny" quaternary @click="copyStatistics">
+              <template #icon><n-icon><CopyOutline /></n-icon></template>
+              复制统计
+            </n-button>
+          </div>
+          <div class="grid grid-cols-4 gap-2 mb-3">
+            <div class="text-center">
+              <div class="text-xs text-gray-500">总字符</div>
+              <div class="text-lg font-bold text-gray-800">{{ contentStats.total }}</div>
             </div>
-            <div class="grid grid-cols-4 gap-2 mb-3">
-              <div class="text-center">
-                <div class="text-xs text-gray-500">总字符</div>
-                <div class="text-lg font-bold text-gray-800">{{ contentStats.total }}</div>
-              </div>
-              <div class="text-center">
-                <div class="text-xs text-gray-500">文字</div>
-                <div class="text-lg font-bold text-primary-600">{{ contentStats.chars }}</div>
-              </div>
-              <div class="text-center">
-                <div class="text-xs text-gray-500">标点</div>
-                <div class="text-lg font-bold text-gray-600">{{ contentStats.punctuation }}</div>
-              </div>
-              <div class="text-center">
-                <div class="text-xs text-gray-500">空格</div>
-                <div class="text-lg font-bold text-gray-600">{{ contentStats.spaces }}</div>
-              </div>
+            <div class="text-center">
+              <div class="text-xs text-gray-500">文字</div>
+              <div class="text-lg font-bold text-primary-600">{{ contentStats.chars }}</div>
             </div>
-            <!-- 等级进度 -->
-            <div class="space-y-2">
-              <div class="flex items-center justify-between text-xs">
-                <span :class="contentStats.level >= 1 ? 'text-primary-600 font-medium' : 'text-gray-400'">
-                  {{ contentStats.level >= 1 ? '✓' : '○' }} 入门 (800字)
-                </span>
-                <span :class="contentStats.level >= 2 ? 'text-primary-600 font-medium' : 'text-gray-400'">
-                  {{ contentStats.level >= 2 ? '✓' : '○' }} 良好 (1000字)
-                </span>
-                <span :class="contentStats.level >= 3 ? 'text-primary-600 font-medium' : 'text-gray-400'">
-                  {{ contentStats.level >= 3 ? '✓' : '○' }} 优秀 (1200字)
-                </span>
-                <span :class="contentStats.level >= 4 ? 'text-primary-600 font-medium' : 'text-gray-400'">
-                  {{ contentStats.level >= 4 ? '✓' : '○' }} 卓越 (1500字)
-                </span>
-                <span :class="contentStats.level >= 5 ? 'text-primary-600 font-medium' : 'text-gray-400'">
-                  {{ contentStats.level >= 5 ? '✓' : '○' }} 大师 (2000字)
-                </span>
-              </div>
-              <n-progress
-                type="line"
-                :percentage="contentStats.progress"
-                :color="contentStats.levelColor"
-                :height="8"
-                :border-radius="4"
-              />
-              <div class="text-xs text-center text-gray-500">
-                {{ contentStats.levelText }}
-              </div>
+            <div class="text-center">
+              <div class="text-xs text-gray-500">标点</div>
+              <div class="text-lg font-bold text-gray-600">{{ contentStats.punctuation }}</div>
+            </div>
+            <div class="text-center">
+              <div class="text-xs text-gray-500">空格</div>
+              <div class="text-lg font-bold text-gray-600">{{ contentStats.spaces }}</div>
             </div>
           </div>
+          <!-- 等级进度 -->
+          <div class="space-y-2">
+            <div class="flex items-center justify-between text-xs">
+              <span :class="contentStats.level >= 1 ? 'text-primary-600 font-medium' : 'text-gray-400'">
+                {{ contentStats.level >= 1 ? '✓' : '○' }} 入门 (800字)
+              </span>
+              <span :class="contentStats.level >= 2 ? 'text-primary-600 font-medium' : 'text-gray-400'">
+                {{ contentStats.level >= 2 ? '✓' : '○' }} 良好 (1000字)
+              </span>
+              <span :class="contentStats.level >= 3 ? 'text-primary-600 font-medium' : 'text-gray-400'">
+                {{ contentStats.level >= 3 ? '✓' : '○' }} 优秀 (1200字)
+              </span>
+              <span :class="contentStats.level >= 4 ? 'text-primary-600 font-medium' : 'text-gray-400'">
+                {{ contentStats.level >= 4 ? '✓' : '○' }} 卓越 (1500字)
+              </span>
+              <span :class="contentStats.level >= 5 ? 'text-primary-600 font-medium' : 'text-gray-400'">
+                {{ contentStats.level >= 5 ? '✓' : '○' }} 大师 (2000字)
+              </span>
+            </div>
+            <n-progress
+              type="line"
+              :percentage="contentStats.progress"
+              :color="contentStats.levelColor"
+              :height="8"
+              :border-radius="4"
+            />
+            <div class="text-xs text-center text-gray-500">
+              {{ contentStats.levelText }}
+            </div>
+          </div>
+        </div>
+        <n-form-item label="隐私设置">
+          <n-checkbox v-model:checked="form.isPrivate">
+            不公开到个人主页（仅自己可见）
+          </n-checkbox>
         </n-form-item>
         <n-form-item label="付费设置">
           <n-input-number
@@ -172,8 +162,8 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue';
-import { useMessage, useDialog } from 'naive-ui';
+import { ref, computed, onMounted, h, reactive } from 'vue';
+import { useMessage, useDialog, NButton, NSpace, NTag } from 'naive-ui';
 import { diaryAPI } from '@/api';
 import { format } from 'date-fns';
 import { AddOutline, CopyOutline, CreateOutline, TrashOutline } from '@vicons/ionicons5';
@@ -190,7 +180,23 @@ const editingDiary = ref(null);
 
 const filters = ref({ dateRange: null, mood: null });
 
-const form = ref({ title: '', content: '', mood: 'happy', weather: 'sunny', tagIds: [], price: null });
+const pagination = reactive({
+  page: 1,
+  pageSize: 20,
+  pageCount: 1,
+  total: 0,
+});
+
+const form = ref({
+  title: '',
+  content: '',
+  mood: 'happy',
+  weather: 'sunny',
+  tagIds: [],
+  price: null,
+  diaryDate: Date.now(),
+  isPrivate: false
+});
 
 const moodOptions = [
   { label: '😊 开心', value: 'happy' },
@@ -213,6 +219,87 @@ const getMoodEmoji = (mood) => {
 };
 
 const formatDate = (date) => format(new Date(date), 'yyyy年M月d日 HH:mm');
+
+// 表格列定义
+const columns = [
+  {
+    title: '日期',
+    key: 'createdAt',
+    width: 180,
+    render: (row) => format(new Date(row.createdAt), 'yyyy-MM-dd HH:mm'),
+  },
+  {
+    title: '心情',
+    key: 'mood',
+    width: 80,
+    align: 'center',
+    render: (row) => getMoodEmoji(row.mood),
+  },
+  {
+    title: '标题',
+    key: 'title',
+    ellipsis: { tooltip: true },
+  },
+  {
+    title: '天气',
+    key: 'weather',
+    width: 100,
+  },
+  {
+    title: '字数',
+    key: 'content',
+    width: 100,
+    render: (row) => getDiaryStats(row.content),
+  },
+  {
+    title: '标签',
+    key: 'tags',
+    width: 200,
+    render: (row) => {
+      if (!row.tags?.length) return '-';
+      return h(NSpace, { size: 'small' }, () =>
+        row.tags.map((tag) => h(NTag, { size: 'small' }, () => tag.tag.name))
+      );
+    },
+  },
+  {
+    title: '操作',
+    key: 'actions',
+    width: 220,
+    render: (row) => {
+      return h(NSpace, { size: 'small' }, () => [
+        h(
+          NButton,
+          {
+            size: 'small',
+            quaternary: true,
+            onClick: () => copyDiaryContent(row),
+          },
+          { default: () => '复制', icon: () => h(CopyOutline) }
+        ),
+        h(
+          NButton,
+          {
+            size: 'small',
+            quaternary: true,
+            onClick: () => handleEdit(row),
+          },
+          { default: () => '编辑', icon: () => h(CreateOutline) }
+        ),
+        h(
+          NButton,
+          {
+            size: 'small',
+            quaternary: true,
+            type: 'error',
+            onClick: () => handleDelete(row),
+          },
+          { default: () => '删除', icon: () => h(TrashOutline) }
+        ),
+      ]);
+    },
+  },
+];
 
 // 字数统计
 const contentStats = computed(() => {
@@ -329,10 +416,17 @@ ${formatDate(diary.createdAt)} · ${getMoodEmoji(diary.mood)} ${diary.weather}`;
 const loadDiaries = async () => {
   loading.value = true;
   try {
-    const params = {};
+    const params = {
+      page: pagination.page,
+      limit: pagination.pageSize,
+    };
     if (filters.value.mood) params.mood = filters.value.mood;
     const data = await diaryAPI.getDiaries(params);
     diaries.value = data.diaries || data;
+    if (data.pagination) {
+      pagination.total = data.pagination.total;
+      pagination.pageCount = Math.ceil(data.pagination.total / pagination.pageSize);
+    }
   } catch (error) {
     message.error('加载日记失败');
   } finally {
@@ -340,9 +434,29 @@ const loadDiaries = async () => {
   }
 };
 
+const handlePageChange = (page) => {
+  pagination.page = page;
+  loadDiaries();
+};
+
+const handlePageSizeChange = (pageSize) => {
+  pagination.pageSize = pageSize;
+  pagination.page = 1;
+  loadDiaries();
+};
+
 const openCreateModal = () => {
   editingDiary.value = null;
-  form.value = { title: '', content: '', mood: 'happy', weather: 'sunny', tagIds: [], price: null };
+  form.value = {
+    title: '',
+    content: '',
+    mood: 'happy',
+    weather: 'sunny',
+    tagIds: [],
+    price: null,
+    diaryDate: Date.now(),
+    isPrivate: false
+  };
   showModal.value = true;
 };
 
@@ -354,6 +468,8 @@ const handleEdit = (diary) => {
     mood: diary.mood,
     weather: diary.weather,
     tagIds: diary.tags?.map(t => t.tag.id) || [],
+    diaryDate: new Date(diary.createdAt).getTime(),
+    isPrivate: !diary.isPublic
   };
   showModal.value = true;
 };
@@ -388,10 +504,22 @@ const handleSubmit = async () => {
   submitting.value = true;
   try {
     if (editingDiary.value) {
-      await diaryAPI.updateDiary(editingDiary.value.id, form.value);
+      const updateData = {
+        ...form.value,
+        isPublic: !form.value.isPrivate
+      };
+      delete updateData.isPrivate;
+      await diaryAPI.updateDiary(editingDiary.value.id, updateData);
       message.success('保存成功');
     } else {
-      await diaryAPI.createDiary(form.value);
+      // 转换时间戳为Date对象，创建时传递给后端
+      const submitData = {
+        ...form.value,
+        diaryDate: form.value.diaryDate ? new Date(form.value.diaryDate) : new Date(),
+        isPublic: !form.value.isPrivate
+      };
+      delete submitData.isPrivate;
+      await diaryAPI.createDiary(submitData);
       message.success('发布成功');
     }
     showModal.value = false;

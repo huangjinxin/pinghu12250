@@ -84,41 +84,193 @@
               <n-spin />
             </div>
             <div v-else-if="dynamics.length > 0" class="space-y-4">
-              <div v-for="dynamic in dynamics" :key="dynamic.id" class="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+              <div v-for="dynamic in dynamics" :key="dynamic.id + dynamic.type" class="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
                 <div class="flex gap-3">
                   <AvatarText :username="userInfo.username" size="md" />
                   <div class="flex-1">
-                    <div class="font-medium">{{ userInfo.profile?.nickname || userInfo.username }}</div>
+                    <div class="flex items-center gap-2">
+                      <div class="font-medium">{{ userInfo.profile?.nickname || userInfo.username }}</div>
+                      <n-tag size="small" :type="getTypeColor(dynamic.type)">
+                        {{ getTypeName(dynamic.type) }}
+                      </n-tag>
+                    </div>
                     <div class="text-sm text-gray-500">{{ formatTime(dynamic.createdAt) }}</div>
-                    <div class="mt-2 text-gray-700">{{ dynamic.content }}</div>
 
-                    <!-- 图片展示 -->
-                    <div v-if="dynamic.images && dynamic.images.length" class="grid grid-cols-3 gap-2 mt-3">
-                      <img
-                        v-for="(img, idx) in dynamic.images"
-                        :key="idx"
-                        :src="img"
-                        class="w-full h-32 object-cover rounded-lg cursor-pointer hover:opacity-90"
-                        @click="previewImage(img)"
-                      />
+                    <!-- 日记 -->
+                    <div v-if="dynamic.type === 'diary'" class="mt-2">
+                      <div class="font-medium text-gray-800">{{ dynamic.title }}</div>
+                      <div class="text-sm text-gray-600 mt-1 line-clamp-3">{{ dynamic.content }}</div>
                     </div>
 
-                    <!-- 互动数据 -->
-                    <div class="flex gap-4 mt-3 text-sm text-gray-500">
-                      <span class="flex items-center gap-1">
-                        <n-icon><HeartOutline /></n-icon>
-                        {{ dynamic._count?.likes || 0 }}
-                      </span>
-                      <span class="flex items-center gap-1">
-                        <n-icon><ChatbubbleOutline /></n-icon>
-                        {{ dynamic._count?.comments || 0 }}
-                      </span>
+                    <!-- 作业 -->
+                    <div v-if="dynamic.type === 'homework'" class="mt-2">
+                      <div class="font-medium text-gray-800">{{ dynamic.title }}</div>
+                      <div class="text-xs text-gray-500">{{ dynamic.subject }}</div>
+                      <div class="text-sm text-gray-600 mt-1 line-clamp-2">{{ dynamic.content }}</div>
+                    </div>
+
+                    <!-- 笔记 -->
+                    <div v-if="dynamic.type === 'note'" class="mt-2">
+                      <div class="font-medium text-gray-800">{{ dynamic.title }}</div>
+                      <div class="text-xs text-gray-500">{{ dynamic.subject }}</div>
+                      <div class="text-sm text-gray-600 mt-1 line-clamp-2">{{ dynamic.content }}</div>
+                    </div>
+
+                    <!-- 作品 -->
+                    <div v-if="dynamic.type === 'work'" class="mt-2">
+                      <div class="font-medium text-gray-800">{{ dynamic.title }}</div>
+                      <div class="text-sm text-gray-600 mt-1">{{ dynamic.description }}</div>
+                      <div class="flex gap-3 mt-2 text-xs text-gray-500">
+                        <span>❤️ {{ dynamic._count?.likes || 0 }}</span>
+                        <span>🔀 {{ dynamic._count?.forks || 0 }}</span>
+                      </div>
+                    </div>
+
+                    <!-- 读书笔记 -->
+                    <div v-if="dynamic.type === 'reading'" class="mt-2">
+                      <div class="font-medium text-gray-800">📚 {{ dynamic.book?.title }}</div>
+                      <div class="text-xs text-gray-500">{{ dynamic.chapterInfo || '全书' }} · 阅读 {{ dynamic.readPages }} 页</div>
+                      <div class="text-sm text-gray-600 mt-1 line-clamp-2">{{ dynamic.content }}</div>
                     </div>
                   </div>
                 </div>
               </div>
             </div>
             <n-empty v-else description="暂无动态" class="py-10" />
+          </n-tab-pane>
+
+          <n-tab-pane name="diaries" tab="日记">
+            <div v-if="loadingDiaries" class="flex justify-center py-10">
+              <n-spin />
+            </div>
+            <div v-else-if="diaries.length > 0" class="space-y-3">
+              <div v-for="diary in diaries" :key="diary.id" class="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+                <div class="flex items-start justify-between">
+                  <div class="flex items-center gap-2">
+                    <span class="text-2xl">{{ getMoodEmoji(diary.mood) }}</span>
+                    <div>
+                      <div class="font-medium text-gray-800">{{ diary.title }}</div>
+                      <div class="text-xs text-gray-500">{{ formatTime(diary.createdAt) }} · {{ diary.weather }}</div>
+                    </div>
+                  </div>
+                </div>
+                <p class="text-sm text-gray-600 mt-2 line-clamp-3">{{ diary.content }}</p>
+              </div>
+            </div>
+            <n-empty v-else description="暂无日记" class="py-10" />
+          </n-tab-pane>
+
+          <n-tab-pane name="homeworks" tab="作业">
+            <div v-if="loadingHomeworks" class="flex justify-center py-10">
+              <n-spin />
+            </div>
+            <div v-else-if="homeworks.length > 0" class="space-y-3">
+              <div v-for="homework in homeworks" :key="homework.id" class="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+                <div class="font-medium text-gray-800">{{ homework.title }}</div>
+                <div class="text-xs text-gray-500 mt-1">{{ homework.subject }} · {{ formatTime(homework.createdAt) }}</div>
+                <p class="text-sm text-gray-600 mt-2 line-clamp-2">{{ homework.content }}</p>
+                <div v-if="homework.images && homework.images.length" class="grid grid-cols-3 gap-2 mt-2">
+                  <img v-for="(img, idx) in homework.images.slice(0, 3)" :key="idx" :src="img" class="w-full h-20 object-cover rounded" />
+                </div>
+              </div>
+            </div>
+            <n-empty v-else description="暂无作业" class="py-10" />
+          </n-tab-pane>
+
+          <n-tab-pane name="notes" tab="笔记">
+            <div v-if="loadingNotes" class="flex justify-center py-10">
+              <n-spin />
+            </div>
+            <div v-else-if="notes.length > 0" class="space-y-3">
+              <div v-for="note in notes" :key="note.id" class="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+                <div class="font-medium text-gray-800">{{ note.title }}</div>
+                <div class="text-xs text-gray-500 mt-1">{{ note.subject }} · {{ formatTime(note.createdAt) }}</div>
+                <p class="text-sm text-gray-600 mt-2 line-clamp-3">{{ note.content }}</p>
+              </div>
+            </div>
+            <n-empty v-else description="暂无笔记" class="py-10" />
+          </n-tab-pane>
+
+          <n-tab-pane name="readings" tab="读书">
+            <div v-if="loadingReadings" class="flex justify-center py-10">
+              <n-spin />
+            </div>
+            <div v-else-if="readingLogs.length > 0" class="space-y-3">
+              <div v-for="log in readingLogs" :key="log.id" class="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+                <div class="flex gap-3">
+                  <img v-if="log.book?.cover" :src="log.book.cover" class="w-16 h-20 object-cover rounded" />
+                  <div class="flex-1">
+                    <div class="font-medium text-gray-800">{{ log.book?.title }}</div>
+                    <div class="text-xs text-gray-500 mt-1">{{ log.book?.author }} · {{ formatTime(log.createdAt) }}</div>
+                    <div class="text-xs text-gray-500 mt-1">{{ log.chapterInfo || '全书' }} · 阅读 {{ log.readPages }} 页</div>
+                    <p class="text-sm text-gray-600 mt-2 line-clamp-2">{{ log.content }}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <n-empty v-else description="暂无读书笔记" class="py-10" />
+          </n-tab-pane>
+
+          <n-tab-pane name="games" tab="游戏">
+            <div v-if="loadingGames" class="flex justify-center py-10">
+              <n-spin />
+            </div>
+            <div v-else-if="games.length > 0" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div v-for="game in games" :key="game.id" class="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+                <div class="flex gap-3">
+                  <img v-if="game.game?.coverImage" :src="game.game.coverImage" class="w-20 h-20 object-cover rounded" />
+                  <div class="flex-1">
+                    <div class="font-medium text-gray-800">{{ game.game?.title }}</div>
+                    <div class="text-xs text-gray-500 mt-1">{{ game.game?.developer }}</div>
+                    <div class="flex gap-2 mt-2">
+                      <n-tag size="small" :type="game.status === 'COMPLETED' ? 'success' : 'info'">
+                        {{ game.status === 'COMPLETED' ? '已通关' : game.status === 'PLAYING' ? '在玩' : '想玩' }}
+                      </n-tag>
+                      <n-tag v-if="game.rating" size="small">⭐ {{ game.rating }}/10</n-tag>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <n-empty v-else description="暂无游戏记录" class="py-10" />
+          </n-tab-pane>
+
+          <n-tab-pane name="music" tab="音乐">
+            <div v-if="loadingMusicLogs" class="flex justify-center py-10">
+              <n-spin />
+            </div>
+            <div v-else-if="musicLogs.length > 0" class="space-y-3">
+              <div v-for="log in musicLogs" :key="log.id" class="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+                <div class="flex gap-3">
+                  <img v-if="log.music?.coverUrl" :src="log.music.coverUrl" class="w-16 h-16 object-cover rounded" />
+                  <div class="flex-1">
+                    <div class="font-medium text-gray-800">{{ log.music?.title }}</div>
+                    <div class="text-xs text-gray-500 mt-1">{{ log.music?.artist }} · {{ formatTime(log.createdAt) }}</div>
+                    <p class="text-sm text-gray-600 mt-2 line-clamp-2">{{ log.content }}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <n-empty v-else description="暂无音乐记录" class="py-10" />
+          </n-tab-pane>
+
+          <n-tab-pane name="movies" tab="影视">
+            <div v-if="loadingMovieLogs" class="flex justify-center py-10">
+              <n-spin />
+            </div>
+            <div v-else-if="movieLogs.length > 0" class="space-y-3">
+              <div v-for="log in movieLogs" :key="log.id" class="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+                <div class="flex gap-3">
+                  <img v-if="log.movie?.posterUrl" :src="log.movie.posterUrl" class="w-16 h-20 object-cover rounded" />
+                  <div class="flex-1">
+                    <div class="font-medium text-gray-800">{{ log.movie?.title }}</div>
+                    <div class="text-xs text-gray-500 mt-1">{{ log.movie?.director }} · {{ formatTime(log.createdAt) }}</div>
+                    <p class="text-sm text-gray-600 mt-2 line-clamp-2">{{ log.content }}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <n-empty v-else description="暂无影视记录" class="py-10" />
           </n-tab-pane>
 
           <n-tab-pane name="works" tab="作品">
@@ -202,7 +354,7 @@
 import AvatarText from '@/components/AvatarText.vue'
 import { ref, computed, onMounted, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { useMessage } from 'naive-ui';
+import { useMessage, NTag } from 'naive-ui';
 import { useAuthStore } from '@/stores/auth';
 import { useChatStore } from '@/stores/chat';
 import api from '@/api';
@@ -237,9 +389,23 @@ const followLoading = ref(false);
 const dynamics = ref([]);
 const works = ref([]);
 const achievements = ref([]);
+const diaries = ref([]);
+const homeworks = ref([]);
+const notes = ref([]);
+const readingLogs = ref([]);
+const games = ref([]);
+const musicLogs = ref([]);
+const movieLogs = ref([]);
 const loadingDynamics = ref(false);
 const loadingWorks = ref(false);
 const loadingAchievements = ref(false);
+const loadingDiaries = ref(false);
+const loadingHomeworks = ref(false);
+const loadingNotes = ref(false);
+const loadingReadings = ref(false);
+const loadingGames = ref(false);
+const loadingMusicLogs = ref(false);
+const loadingMovieLogs = ref(false);
 
 const isCurrentUser = computed(() => userInfo.value?.id === authStore.user?.id);
 const isFriend = computed(() => relationshipStatus.value.isFriend);
@@ -271,17 +437,115 @@ async function loadRelationshipStatus() {
   }
 }
 
-// 加载动态
+// 加载动态（聚合所有内容）
 async function loadDynamics() {
   loadingDynamics.value = true;
   try {
     const data = await api.get(`/users/${userId.value}/dynamics`);
-    dynamics.value = data.dynamics || data.posts || data || [];
+    dynamics.value = data.dynamics || [];
   } catch (error) {
     console.error('加载动态失败:', error);
     dynamics.value = [];
   } finally {
     loadingDynamics.value = false;
+  }
+}
+
+// 加载日记
+async function loadDiaries() {
+  loadingDiaries.value = true;
+  try {
+    const data = await api.get(`/users/${userId.value}/diaries`);
+    diaries.value = data.diaries || [];
+  } catch (error) {
+    console.error('加载日记失败:', error);
+    diaries.value = [];
+  } finally {
+    loadingDiaries.value = false;
+  }
+}
+
+// 加载作业
+async function loadHomeworks() {
+  loadingHomeworks.value = true;
+  try {
+    const data = await api.get(`/users/${userId.value}/homeworks`);
+    homeworks.value = data.homeworks || [];
+  } catch (error) {
+    console.error('加载作业失败:', error);
+    homeworks.value = [];
+  } finally {
+    loadingHomeworks.value = false;
+  }
+}
+
+// 加载笔记
+async function loadNotes() {
+  loadingNotes.value = true;
+  try {
+    const data = await api.get(`/users/${userId.value}/notes`);
+    notes.value = data.notes || [];
+  } catch (error) {
+    console.error('加载笔记失败:', error);
+    notes.value = [];
+  } finally {
+    loadingNotes.value = false;
+  }
+}
+
+// 加载读书笔记
+async function loadReadingLogs() {
+  loadingReadings.value = true;
+  try {
+    const data = await api.get(`/users/${userId.value}/reading-logs`);
+    readingLogs.value = data.readingLogs || [];
+  } catch (error) {
+    console.error('加载读书笔记失败:', error);
+    readingLogs.value = [];
+  } finally {
+    loadingReadings.value = false;
+  }
+}
+
+// 加载游戏记录
+async function loadGames() {
+  loadingGames.value = true;
+  try {
+    const data = await api.get(`/users/${userId.value}/games`);
+    games.value = data.games || [];
+  } catch (error) {
+    console.error('加载游戏记录失败:', error);
+    games.value = [];
+  } finally {
+    loadingGames.value = false;
+  }
+}
+
+// 加载音乐记录
+async function loadMusicLogs() {
+  loadingMusicLogs.value = true;
+  try {
+    const data = await api.get(`/users/${userId.value}/music-logs`);
+    musicLogs.value = data.musicLogs || [];
+  } catch (error) {
+    console.error('加载音乐记录失败:', error);
+    musicLogs.value = [];
+  } finally {
+    loadingMusicLogs.value = false;
+  }
+}
+
+// 加载影视记录
+async function loadMovieLogs() {
+  loadingMovieLogs.value = true;
+  try {
+    const data = await api.get(`/users/${userId.value}/movie-logs`);
+    movieLogs.value = data.movieLogs || [];
+  } catch (error) {
+    console.error('加载影视记录失败:', error);
+    movieLogs.value = [];
+  } finally {
+    loadingMovieLogs.value = false;
   }
 }
 
@@ -388,10 +652,60 @@ function getPreviewHtml(work) {
   return `<!DOCTYPE html><html><head><style>${work.cssCode || ''}</style></head><body>${work.htmlCode || ''}</body></html>`;
 }
 
+// 获取内容类型名称
+function getTypeName(type) {
+  const names = {
+    diary: '日记',
+    homework: '作业',
+    note: '笔记',
+    work: '作品',
+    reading: '读书'
+  };
+  return names[type] || type;
+}
+
+// 获取内容类型颜色
+function getTypeColor(type) {
+  const colors = {
+    diary: 'warning',
+    homework: 'info',
+    note: 'success',
+    work: 'primary',
+    reading: 'default'
+  };
+  return colors[type] || 'default';
+}
+
+// 获取心情emoji
+function getMoodEmoji(mood) {
+  const emojis = {
+    happy: '😊',
+    neutral: '😐',
+    sad: '😢',
+    angry: '😠',
+    tired: '😴'
+  };
+  return emojis[mood] || '😊';
+}
+
 // 监听Tab切换
 watch(activeTab, (newTab) => {
   if (newTab === 'dynamics' && dynamics.value.length === 0) {
     loadDynamics();
+  } else if (newTab === 'diaries' && diaries.value.length === 0) {
+    loadDiaries();
+  } else if (newTab === 'homeworks' && homeworks.value.length === 0) {
+    loadHomeworks();
+  } else if (newTab === 'notes' && notes.value.length === 0) {
+    loadNotes();
+  } else if (newTab === 'readings' && readingLogs.value.length === 0) {
+    loadReadingLogs();
+  } else if (newTab === 'games' && games.value.length === 0) {
+    loadGames();
+  } else if (newTab === 'music' && musicLogs.value.length === 0) {
+    loadMusicLogs();
+  } else if (newTab === 'movies' && movieLogs.value.length === 0) {
+    loadMovieLogs();
   } else if (newTab === 'works' && works.value.length === 0) {
     loadWorks();
   } else if (newTab === 'achievements' && achievements.value.length === 0) {
@@ -407,6 +721,13 @@ watch(userId, () => {
   dynamics.value = [];
   works.value = [];
   achievements.value = [];
+  diaries.value = [];
+  homeworks.value = [];
+  notes.value = [];
+  readingLogs.value = [];
+  games.value = [];
+  musicLogs.value = [];
+  movieLogs.value = [];
   activeTab.value = 'dynamics';
 });
 

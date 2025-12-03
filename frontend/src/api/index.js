@@ -194,6 +194,7 @@ export const payAPI = {
   createPayCode: (data) => api.post('/pay/codes', data),
   getPayCodes: (params) => api.get('/pay/codes', { params }),
   getPayCode: (id) => api.get(`/pay/codes/${id}`),
+  updatePayCode: (id, data) => api.put(`/pay/codes/${id}`, data),
   togglePayCode: (id) => api.put(`/pay/codes/${id}/toggle`),
   deletePayCode: (id) => api.delete(`/pay/codes/${id}`),
   getAllOrders: (params) => api.get('/pay/orders', { params }),
@@ -482,6 +483,56 @@ export const questionAPI = {
 
   // 管理员强制删除问题
   adminDeleteQuestion: (id) => api.delete(`/questions/${id}`),
+};
+
+// 音乐API
+export const musicAPI = {
+  // 音乐搜索
+  searchMusic: (params) => api.get('/music/search', { params }),
+
+  // 音乐详情
+  getMusicDetail: (id) => api.get(`/music/${id}`),
+
+  // 添加音乐到音乐库
+  addMusic: (data) => api.post('/music', data),
+  updateMusic: (id, data) => api.put(`/music/${id}`, data),
+  deleteMusic: (id) => api.delete(`/music/${id}`),
+
+  // 我的音乐库
+  getMyMusicLibrary: (params) => api.get('/music/library/my', { params }),
+  addToLibrary: (data) => api.post('/music/library', data),
+  updateLibraryStatus: (id, data) => api.put(`/music/library/${id}`, data),
+
+  // 听后感记录
+  getMusicLogs: (params) => api.get('/music/logs', { params }),
+  createMusicLog: (data) => api.post('/music/logs', data),
+  deleteMusicLog: (id) => api.delete(`/music/logs/${id}`),
+  toggleMusicLogLike: (id, data) => api.post(`/music/logs/${id}/like`, data),
+};
+
+// 影视API
+export const movieAPI = {
+  // 影视搜索
+  searchMovies: (params) => api.get('/movies/search', { params }),
+
+  // 影视详情
+  getMovieDetail: (id) => api.get(`/movies/${id}`),
+
+  // 添加影视到影视库
+  addMovie: (data) => api.post('/movies', data),
+  updateMovie: (id, data) => api.put(`/movies/${id}`, data),
+  deleteMovie: (id) => api.delete(`/movies/${id}`),
+
+  // 我的影视库
+  getMyMovieLibrary: (params) => api.get('/movies/library/my', { params }),
+  addToLibrary: (data) => api.post('/movies/library', data),
+  updateLibraryStatus: (id, data) => api.put(`/movies/library/${id}`, data),
+
+  // 观后感记录
+  getMovieLogs: (params) => api.get('/movies/logs', { params }),
+  createMovieLog: (data) => api.post('/movies/logs', data),
+  deleteMovieLog: (id) => api.delete(`/movies/logs/${id}`),
+  toggleMovieLogLike: (id, data) => api.post(`/movies/logs/${id}/like`, data),
 };
 
 export default api;

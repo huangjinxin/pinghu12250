@@ -47,19 +47,28 @@ router.get('/', authenticate, async (req, res, next) => {
 // POST /api/diaries - 创建日记
 router.post('/', authenticate, async (req, res, next) => {
   try {
-    const { title, content, mood, weather, tags = [], price } = req.body;
+    const { title, content, mood, weather, tags = [], price, diaryDate, isPublic = true } = req.body;
+
+    // 准备创建数据
+    const createData = {
+      authorId: req.user.id,
+      title,
+      content,
+      mood,
+      weather,
+      isPublic,
+      tags: {
+        create: tags.map(tagId => ({ tagId })),
+      },
+    };
+
+    // 如果提供了自定义日期，使用它；否则使用默认的now()
+    if (diaryDate) {
+      createData.createdAt = new Date(diaryDate);
+    }
 
     const diary = await prisma.diary.create({
-      data: {
-        authorId: req.user.id,
-        title,
-        content,
-        mood,
-        weather,
-        tags: {
-          create: tags.map(tagId => ({ tagId })),
-        },
-      },
+      data: createData,
     });
 
     // 如果设置了价格，创建付费内容记录
@@ -123,16 +132,21 @@ router.post('/', authenticate, async (req, res, next) => {
 router.put('/:id', authenticate, async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { title, content, mood, weather } = req.body;
+    const { title, content, mood, weather, isPublic } = req.body;
 
     const diary = await prisma.diary.findUnique({ where: { id } });
 
     if (!diary) return res.status(404).json({ error: '日记不存在' });
     if (diary.authorId !== req.user.id) return res.status(403).json({ error: '无权修改' });
 
+    const updateData = { title, content, mood, weather };
+    if (isPublic !== undefined) {
+      updateData.isPublic = isPublic;
+    }
+
     const updated = await prisma.diary.update({
       where: { id },
-      data: { title, content, mood, weather },
+      data: updateData,
     });
 
     res.json({ message: '更新成功', diary: updated });

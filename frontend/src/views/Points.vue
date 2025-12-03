@@ -249,7 +249,7 @@
                   </div>
 
                   <!-- 用户信息 -->
-                  <AvatarText :username="authStore.user?.username" size="md" />
+                  <AvatarText :username="user.username" size="md" />
                   <div>
                     <div class="font-medium text-gray-800">
                       {{ user.displayName }}
@@ -328,7 +328,7 @@
                       size="20"
                     />
                   </div>
-                  <AvatarText :username="authStore.user?.username" size="md" />
+                  <AvatarText :username="log.user?.username" size="md" />
                   <div class="flex-1">
                     <div class="text-sm font-medium text-gray-800">
                       {{ log.user?.username }} - {{ getActionName(log.actionKey) }}

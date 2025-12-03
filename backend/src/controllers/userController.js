@@ -431,3 +431,441 @@ exports.getTeachers = async (req, res, next) => {
     next(error);
   }
 };
+
+/**
+ * 获取用户动态（聚合所有公开内容）
+ */
+exports.getUserDynamics = async (req, res, next) => {
+  try {
+    const { id: userId } = req.params;
+    const { page = 1, limit = 20 } = req.query;
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+
+    // 判断是否为本人查看
+    const isSelf = req.user.id === userId;
+
+    // 查询条件：公开内容，或本人查看
+    const whereCondition = isSelf ? { authorId: userId } : { authorId: userId, isPublic: true };
+
+    // 获取各种内容
+    const [diaries, homeworks, notes, works, readingLogs, musicLogs, movieLogs] = await Promise.all([
+      prisma.diary.findMany({
+        where: whereCondition,
+        select: {
+          id: true,
+          title: true,
+          content: true,
+          mood: true,
+          weather: true,
+          createdAt: true,
+          isPublic: true,
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 50,
+      }),
+      prisma.homework.findMany({
+        where: whereCondition,
+        select: {
+          id: true,
+          title: true,
+          subject: true,
+          content: true,
+          images: true,
+          createdAt: true,
+          isPublic: true,
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 50,
+      }),
+      prisma.note.findMany({
+        where: whereCondition,
+        select: {
+          id: true,
+          title: true,
+          subject: true,
+          content: true,
+          createdAt: true,
+          isPublic: true,
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 50,
+      }),
+      prisma.hTMLWork.findMany({
+        where: whereCondition,
+        select: {
+          id: true,
+          title: true,
+          description: true,
+          category: true,
+          createdAt: true,
+          isPublic: true,
+          _count: {
+            select: { likes: true, forks: true },
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 50,
+      }),
+      prisma.readingLog.findMany({
+        where: isSelf ? { userId } : { userId, isPublic: true },
+        select: {
+          id: true,
+          content: true,
+          chapterInfo: true,
+          readPages: true,
+          createdAt: true,
+          book: {
+            select: {
+              title: true,
+              author: true,
+              cover: true,
+            },
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 50,
+      }),
+      prisma.musicLog.findMany({
+        where: isSelf ? { userId } : { userId, isPublic: true },
+        select: {
+          id: true,
+          content: true,
+          createdAt: true,
+          music: {
+            select: {
+              title: true,
+              artist: true,
+              coverUrl: true,
+            },
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 50,
+      }),
+      prisma.movieLog.findMany({
+        where: isSelf ? { userId } : { userId, isPublic: true },
+        select: {
+          id: true,
+          content: true,
+          createdAt: true,
+          movie: {
+            select: {
+              title: true,
+              director: true,
+              posterUrl: true,
+            },
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 50,
+      }),
+    ]);
+
+    // 合并并添加类型标识
+    const allDynamics = [
+      ...diaries.map((d) => ({ ...d, type: 'diary', _createdAt: d.createdAt })),
+      ...homeworks.map((h) => ({ ...h, type: 'homework', _createdAt: h.createdAt })),
+      ...notes.map((n) => ({ ...n, type: 'note', _createdAt: n.createdAt })),
+      ...works.map((w) => ({ ...w, type: 'work', _createdAt: w.createdAt })),
+      ...readingLogs.map((r) => ({ ...r, type: 'reading', _createdAt: r.createdAt })),
+      ...musicLogs.map((m) => ({ ...m, type: 'music', _createdAt: m.createdAt })),
+      ...movieLogs.map((m) => ({ ...m, type: 'movie', _createdAt: m.createdAt })),
+    ];
+
+    // 按时间排序
+    allDynamics.sort((a, b) => new Date(b._createdAt) - new Date(a._createdAt));
+
+    // 分页
+    const paginatedDynamics = allDynamics.slice(skip, skip + parseInt(limit));
+
+    res.json({
+      dynamics: paginatedDynamics,
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total: allDynamics.length,
+        totalPages: Math.ceil(allDynamics.length / parseInt(limit)),
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * 获取用户日记
+ */
+exports.getUserDiaries = async (req, res, next) => {
+  try {
+    const { id: userId } = req.params;
+    const { page = 1, limit = 20 } = req.query;
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+
+    const isSelf = req.user.id === userId;
+    const whereCondition = isSelf ? { authorId: userId } : { authorId: userId, isPublic: true };
+
+    const [diaries, total] = await Promise.all([
+      prisma.diary.findMany({
+        where: whereCondition,
+        include: {
+          tags: {
+            include: { tag: true },
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: parseInt(limit),
+      }),
+      prisma.diary.count({ where: whereCondition }),
+    ]);
+
+    res.json({
+      diaries,
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total,
+        totalPages: Math.ceil(total / parseInt(limit)),
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * 获取用户作业
+ */
+exports.getUserHomeworks = async (req, res, next) => {
+  try {
+    const { id: userId } = req.params;
+    const { page = 1, limit = 20 } = req.query;
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+
+    const isSelf = req.user.id === userId;
+    const whereCondition = isSelf ? { authorId: userId } : { authorId: userId, isPublic: true };
+
+    const [homeworks, total] = await Promise.all([
+      prisma.homework.findMany({
+        where: whereCondition,
+        include: {
+          tags: {
+            include: { tag: true },
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: parseInt(limit),
+      }),
+      prisma.homework.count({ where: whereCondition }),
+    ]);
+
+    res.json({
+      homeworks,
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total,
+        totalPages: Math.ceil(total / parseInt(limit)),
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * 获取用户笔记
+ */
+exports.getUserNotes = async (req, res, next) => {
+  try {
+    const { id: userId } = req.params;
+    const { page = 1, limit = 20 } = req.query;
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+
+    const isSelf = req.user.id === userId;
+    const whereCondition = isSelf ? { authorId: userId } : { authorId: userId, isPublic: true };
+
+    const [notes, total] = await Promise.all([
+      prisma.note.findMany({
+        where: whereCondition,
+        include: {
+          tags: {
+            include: { tag: true },
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: parseInt(limit),
+      }),
+      prisma.note.count({ where: whereCondition }),
+    ]);
+
+    res.json({
+      notes,
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total,
+        totalPages: Math.ceil(total / parseInt(limit)),
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * 获取用户读书笔记
+ */
+exports.getUserReadingLogs = async (req, res, next) => {
+  try {
+    const { id: userId } = req.params;
+    const { page = 1, limit = 20 } = req.query;
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+
+    const isSelf = req.user.id === userId;
+    const whereCondition = isSelf ? { userId } : { userId, isPublic: true };
+
+    const [readingLogs, total] = await Promise.all([
+      prisma.readingLog.findMany({
+        where: whereCondition,
+        include: {
+          book: true,
+        },
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: parseInt(limit),
+      }),
+      prisma.readingLog.count({ where: whereCondition }),
+    ]);
+
+    res.json({
+      readingLogs,
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total,
+        totalPages: Math.ceil(total / parseInt(limit)),
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * 获取用户游戏记录
+ */
+exports.getUserGames = async (req, res, next) => {
+  try {
+    const { id: userId } = req.params;
+    const { page = 1, limit = 20 } = req.query;
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+
+    const [games, total] = await Promise.all([
+      prisma.gameLibrary.findMany({
+        where: { userId },
+        include: {
+          game: true,
+          shortReview: true,
+          longReviews: true,
+        },
+        orderBy: { updatedAt: 'desc' },
+        skip,
+        take: parseInt(limit),
+      }),
+      prisma.gameLibrary.count({ where: { userId } }),
+    ]);
+
+    res.json({
+      games,
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total,
+        totalPages: Math.ceil(total / parseInt(limit)),
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * 获取用户音乐记录
+ */
+exports.getUserMusicLogs = async (req, res, next) => {
+  try {
+    const { id: userId } = req.params;
+    const { page = 1, limit = 20 } = req.query;
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+
+    const isSelf = req.user.id === userId;
+    const whereCondition = isSelf ? { userId } : { userId, isPublic: true };
+
+    const [musicLogs, total] = await Promise.all([
+      prisma.musicLog.findMany({
+        where: whereCondition,
+        include: {
+          music: true,
+        },
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: parseInt(limit),
+      }),
+      prisma.musicLog.count({ where: whereCondition }),
+    ]);
+
+    res.json({
+      musicLogs,
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total,
+        totalPages: Math.ceil(total / parseInt(limit)),
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * 获取用户影视记录
+ */
+exports.getUserMovieLogs = async (req, res, next) => {
+  try {
+    const { id: userId } = req.params;
+    const { page = 1, limit = 20 } = req.query;
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+
+    const isSelf = req.user.id === userId;
+    const whereCondition = isSelf ? { userId } : { userId, isPublic: true };
+
+    const [movieLogs, total] = await Promise.all([
+      prisma.movieLog.findMany({
+        where: whereCondition,
+        include: {
+          movie: true,
+        },
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: parseInt(limit),
+      }),
+      prisma.movieLog.count({ where: whereCondition }),
+    ]);
+
+    res.json({
+      movieLogs,
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total,
+        totalPages: Math.ceil(total / parseInt(limit)),
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};

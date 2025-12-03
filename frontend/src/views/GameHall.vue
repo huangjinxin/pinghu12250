@@ -169,6 +169,13 @@
         </div>
       </n-tab-pane>
 
+      <!-- 重温经典 -->
+      <n-tab-pane name="classic" tab="重温经典">
+        <div class="mt-4">
+          <ClassicGames />
+        </div>
+      </n-tab-pane>
+
       <!-- 游戏搜索 -->
       <n-tab-pane name="search" tab="游戏搜索">
         <div class="mt-4 space-y-4">
@@ -401,6 +408,7 @@
 
 <script setup>
 import AvatarText from '@/components/AvatarText.vue'
+import ClassicGames from '@/views/ClassicGames.vue'
 import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useMessage, useDialog } from 'naive-ui';

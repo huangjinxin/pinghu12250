@@ -45,6 +45,20 @@ enum ReadingStatus {
   DROPPED // 已放弃
 }
 
+enum ListeningStatus {
+  WANT_TO_LISTEN // 想听
+  LISTENING // 在听
+  COMPLETED // 已听完
+  DROPPED // 已放弃
+}
+
+enum WatchingStatus {
+  WANT_TO_WATCH // 想看
+  WATCHING // 在看
+  COMPLETED // 已看完
+  DROPPED // 已放弃
+}
+
 // ========== 用户系统 ==========
 
 model User {
@@ -106,6 +120,18 @@ model User {
   bookshelves     UserBookshelf[]
   booksCreated    Book[]           @relation("BookCreator")
   readingLogLikes ReadingLogLike[]
+
+  // 音乐系统
+  musicLibrary    UserMusicLibrary[]
+  musicsCreated   Music[]            @relation("MusicCreator")
+  musicLogs       MusicLog[]         @relation("MusicLog")
+  musicLogLikes   MusicLogLike[]
+
+  // 影视系统
+  movieLibrary    UserMovieLibrary[]
+  moviesCreated   Movie[]            @relation("MovieCreator")
+  movieLogs       MovieLog[]         @relation("MovieLog")
+  movieLogLikes   MovieLogLike[]
 
   // 积分系统
   totalPoints     Int         @default(0)
@@ -264,6 +290,7 @@ model Diary {
   content   String          @db.Text
   mood      String?
   weather   String?
+  isPublic  Boolean         @default(true) // 是否公开到个人主页
   tags      OldContentTag[] // 旧的标签关联，迁移后可删除
   dynamicId String?         @unique
   dynamic   Dynamic?        @relation(fields: [dynamicId], references: [id])
@@ -272,6 +299,7 @@ model Diary {
 
   @@index([authorId])
   @@index([createdAt])
+  @@index([isPublic])
 }
 
 model Homework {
@@ -284,6 +312,7 @@ model Homework {
   images     String[]
   difficulty Int?            @default(3)
   timeSpent  Int?
+  isPublic   Boolean         @default(true) // 是否公开到个人主页
   tags       OldContentTag[] // 旧的标签关联，迁移后可删除
   dynamicId  String?         @unique
   dynamic    Dynamic?        @relation(fields: [dynamicId], references: [id])
@@ -292,6 +321,7 @@ model Homework {
 
   @@index([authorId])
   @@index([createdAt])
+  @@index([isPublic])
 }
 
 model Note {
@@ -301,12 +331,14 @@ model Note {
   title     String
   subject   String
   content   String          @db.Text
+  isPublic  Boolean         @default(true) // 是否公开到个人主页
   tags      OldContentTag[] // 旧的标签关联，迁移后可删除
   createdAt DateTime        @default(now())
   updatedAt DateTime        @updatedAt
 
   @@index([authorId])
   @@index([createdAt])
+  @@index([isPublic])
 }
 
 // ========== 全局标签系统 ==========
@@ -406,6 +438,10 @@ model OldContentTag {
   note         Note?       @relation(fields: [noteId], references: [id], onDelete: Cascade)
   readingLogId String?
   readingLog   ReadingLog? @relation(fields: [readingLogId], references: [id], onDelete: Cascade)
+  musicLogId   String?
+  musicLog     MusicLog?   @relation(fields: [musicLogId], references: [id], onDelete: Cascade)
+  movieLogId   String?
+  movieLog     MovieLog?   @relation(fields: [movieLogId], references: [id], onDelete: Cascade)
   createdAt    DateTime    @default(now())
 
   @@index([tagId])
@@ -496,6 +532,167 @@ model ReadingLogLike {
   @@index([userId])
 }
 
+// ========== 音乐系统 ==========
+
+model Music {
+  id            String             @id @default(uuid())
+  title         String
+  artist        String?
+  album         String?
+  coverUrl      String?
+  genre         String?
+  releaseDate   DateTime?
+  duration      Int? // 时长（秒）
+  spotifyUrl    String?
+  description   String?            @db.Text
+  createdBy     String
+  createdByUser User               @relation("MusicCreator", fields: [createdBy], references: [id], onDelete: Cascade)
+  musicLibrary  UserMusicLibrary[]
+  musicLogs     MusicLog[]
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+
+  @@index([title])
+  @@index([artist])
+  @@index([genre])
+  @@index([createdBy])
+}
+
+model UserMusicLibrary {
+  id        String          @id @default(uuid())
+  userId    String
+  user      User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  musicId   String
+  music     Music           @relation(fields: [musicId], references: [id], onDelete: Cascade)
+  status    ListeningStatus @default(WANT_TO_LISTEN)
+  playCount Int             @default(0) // 播放次数
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+
+  @@unique([userId, musicId])
+  @@index([userId])
+  @@index([musicId])
+  @@index([status])
+}
+
+model MusicLog {
+  id            String          @id @default(uuid())
+  userId        String
+  user          User            @relation("MusicLog", fields: [userId], references: [id], onDelete: Cascade)
+  musicId       String
+  music         Music           @relation(fields: [musicId], references: [id], onDelete: Cascade)
+  content       String          @db.Text // 听后感想（必填）
+  likesCount    Int             @default(0) // 点赞数
+  dislikesCount Int             @default(0) // 点踩数
+  isPublic      Boolean         @default(true)
+  likes         MusicLogLike[]
+  tags          OldContentTag[] // 旧的标签关联，迁移后可删除
+  dynamicId     String?         @unique
+  dynamic       Dynamic?        @relation(fields: [dynamicId], references: [id])
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  @@index([userId])
+  @@index([musicId])
+  @@index([createdAt])
+  @@index([isPublic])
+}
+
+model MusicLogLike {
+  id         String   @id @default(uuid())
+  musicLogId String
+  musicLog   MusicLog @relation(fields: [musicLogId], references: [id], onDelete: Cascade)
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  isLike     Boolean // true=点赞，false=点踩
+  createdAt  DateTime @default(now())
+
+  @@unique([musicLogId, userId])
+  @@index([musicLogId])
+  @@index([userId])
+}
+
+// ========== 影视系统 ==========
+
+model Movie {
+  id            String             @id @default(uuid())
+  title         String
+  director      String?
+  actors        String? // 主要演员
+  posterUrl     String?
+  genre         String?
+  releaseDate   DateTime?
+  duration      Int? // 时长（分钟）
+  imdbUrl       String?
+  doubanUrl     String?
+  description   String?            @db.Text
+  createdBy     String
+  createdByUser User               @relation("MovieCreator", fields: [createdBy], references: [id], onDelete: Cascade)
+  movieLibrary  UserMovieLibrary[]
+  movieLogs     MovieLog[]
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+
+  @@index([title])
+  @@index([director])
+  @@index([genre])
+  @@index([createdBy])
+}
+
+model UserMovieLibrary {
+  id         String         @id @default(uuid())
+  userId     String
+  user       User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  movieId    String
+  movie      Movie          @relation(fields: [movieId], references: [id], onDelete: Cascade)
+  status     WatchingStatus @default(WANT_TO_WATCH)
+  watchCount Int            @default(0) // 观看次数
+  createdAt  DateTime       @default(now())
+  updatedAt  DateTime       @updatedAt
+
+  @@unique([userId, movieId])
+  @@index([userId])
+  @@index([movieId])
+  @@index([status])
+}
+
+model MovieLog {
+  id            String          @id @default(uuid())
+  userId        String
+  user          User            @relation("MovieLog", fields: [userId], references: [id], onDelete: Cascade)
+  movieId       String
+  movie         Movie           @relation(fields: [movieId], references: [id], onDelete: Cascade)
+  content       String          @db.Text // 观后感想（必填）
+  likesCount    Int             @default(0) // 点赞数
+  dislikesCount Int             @default(0) // 点踩数
+  isPublic      Boolean         @default(true)
+  likes         MovieLogLike[]
+  tags          OldContentTag[] // 旧的标签关联，迁移后可删除
+  dynamicId     String?         @unique
+  dynamic       Dynamic?        @relation(fields: [dynamicId], references: [id])
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  @@index([userId])
+  @@index([movieId])
+  @@index([createdAt])
+  @@index([isPublic])
+}
+
+model MovieLogLike {
+  id         String   @id @default(uuid())
+  movieLogId String
+  movieLog   MovieLog @relation(fields: [movieLogId], references: [id], onDelete: Cascade)
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  isLike     Boolean // true=点赞，false=点踩
+  createdAt  DateTime @default(now())
+
+  @@unique([movieLogId, userId])
+  @@index([movieLogId])
+  @@index([userId])
+}
+
 // ========== HTML作品 ==========
 
 model HTMLWork {
@@ -509,6 +706,7 @@ model HTMLWork {
   jsCode       String     @db.Text
   thumbnail    String?
   category     String?    // 作品类型/分类，用户自定义
+  isPublic     Boolean    @default(true) // 是否公开到个人主页
   forkedFromId String?
   forkedFrom   HTMLWork?  @relation("WorkForks", fields: [forkedFromId], references: [id], onDelete: SetNull)
   forks        HTMLWork[] @relation("WorkForks")
@@ -522,6 +720,7 @@ model HTMLWork {
   @@index([authorId])
   @@index([createdAt])
   @@index([category])
+  @@index([isPublic])
 }
 
 // ========== 游戏评测系统 ==========
@@ -651,6 +850,8 @@ model Dynamic {
   homework   Homework?
   htmlWork   HTMLWork?
   readingLog ReadingLog?
+  musicLog   MusicLog?
+  movieLog   MovieLog?
   likes      Like[]
   comments   Comment[]
   createdAt  DateTime    @default(now())

@@ -25,8 +25,8 @@
       />
     </div>
 
-    <!-- 创建收款码对话框 -->
-    <n-modal v-model:show="showCreateModal" preset="dialog" title="创建收款码">
+    <!-- 创建/编辑收款码对话框 -->
+    <n-modal v-model:show="showCreateModal" preset="dialog" :title="isEditing ? '编辑收款码' : '创建收款码'">
       <n-form ref="formRef" :model="form" :rules="rules" label-placement="top">
         <n-form-item label="商品名称" path="title">
           <n-input v-model:value="form.title" placeholder="请输入商品或服务名称" />
@@ -39,6 +39,7 @@
             :precision="2"
             placeholder="请输入金额（最小0.01）"
             style="width: 100%"
+            :show-button="false"
           />
         </n-form-item>
         <n-form-item label="描述（可选）">
@@ -49,12 +50,38 @@
             :rows="3"
           />
         </n-form-item>
+        <n-form-item v-if="isEditing" label="状态">
+          <n-switch v-model:value="form.isActive">
+            <template #checked>启用</template>
+            <template #unchecked>禁用</template>
+          </n-switch>
+        </n-form-item>
       </n-form>
       <template #action>
-        <n-button @click="showCreateModal = false">取消</n-button>
-        <n-button type="primary" :loading="submitting" @click="handleCreate">
-          创建
-        </n-button>
+        <div class="flex justify-between w-full">
+          <div>
+            <n-popconfirm
+              v-if="isEditing && currentEditPayCode && currentEditPayCode._count?.orders === 0"
+              @positive-click="handleDelete(currentEditPayCode)"
+            >
+              <template #trigger>
+                <n-button type="error" ghost>
+                  <template #icon>
+                    <n-icon><TrashOutline /></n-icon>
+                  </template>
+                  删除
+                </n-button>
+              </template>
+              确定要删除这个收款码吗？
+            </n-popconfirm>
+          </div>
+          <div class="flex gap-2">
+            <n-button @click="showCreateModal = false">取消</n-button>
+            <n-button type="primary" :loading="submitting" @click="isEditing ? handleUpdate() : handleCreate()">
+              {{ isEditing ? '保存' : '创建' }}
+            </n-button>
+          </div>
+        </div>
       </template>
     </n-modal>
 
@@ -63,7 +90,7 @@
       <div v-if="currentPayCode" class="flex flex-col items-center space-y-4">
         <div class="text-center">
           <h3 class="text-lg font-semibold mb-2">{{ currentPayCode.title }}</h3>
-          <p class="text-gray-600">金额: {{ Number(currentPayCode.amount).toFixed(2) }} 学习币</p>
+          <p class="text-gray-600">金额: {{ parseFloat(currentPayCode.amount).toFixed(2) }} 学习币</p>
           <p v-if="currentPayCode.description" class="text-sm text-gray-500 mt-1">
             {{ currentPayCode.description }}
           </p>
@@ -108,11 +135,11 @@
 </template>
 
 <script setup>
-import { ref, h, onMounted, reactive } from 'vue';
+import { ref, h, onMounted, reactive, watch } from 'vue';
 import { useMessage, NButton, NSpace, NTag, NPopconfirm } from 'naive-ui';
 import { payAPI } from '@/api';
 import { format } from 'date-fns';
-import { AddOutline, QrCodeOutline, CopyOutline, TrashOutline, ListOutline } from '@vicons/ionicons5';
+import { AddOutline, QrCodeOutline, CopyOutline, TrashOutline, ListOutline, CreateOutline } from '@vicons/ionicons5';
 
 const message = useMessage();
 
@@ -127,11 +154,14 @@ const qrcodeDataURL = ref('');
 const orders = ref([]);
 const ordersLoading = ref(false);
 const formRef = ref(null);
+const isEditing = ref(false);
+const currentEditPayCode = ref(null);
 
 const form = ref({
   title: '',
   amount: null,
   description: '',
+  isActive: true,
 });
 
 const pagination = reactive({
@@ -160,7 +190,10 @@ const columns = [
     title: '金额',
     key: 'amount',
     width: 120,
-    render: (row) => `${Number(row.amount).toFixed(2)} 币`,
+    render: (row) => {
+      const amount = parseFloat(row.amount);
+      return `${amount.toFixed(2)} 币`;
+    },
   },
   {
     title: '收款码',
@@ -199,7 +232,7 @@ const columns = [
   {
     title: '操作',
     key: 'actions',
-    width: 280,
+    width: 240,
     render: (row) => {
       return h(NSpace, { size: 'small' }, () => [
         h(
@@ -222,29 +255,10 @@ const columns = [
           NButton,
           {
             size: 'small',
-            type: row.isActive ? 'warning' : 'success',
-            onClick: () => toggleStatus(row),
+            type: 'primary',
+            onClick: () => handleEdit(row),
           },
-          () => (row.isActive ? '禁用' : '启用')
-        ),
-        h(
-          NPopconfirm,
-          {
-            onPositiveClick: () => handleDelete(row),
-          },
-          {
-            trigger: () =>
-              h(
-                NButton,
-                {
-                  size: 'small',
-                  type: 'error',
-                  disabled: row._count?.orders > 0,
-                },
-                { default: () => '删除', icon: () => h(TrashOutline) }
-              ),
-            default: () => '确定要删除这个收款码吗？',
-          }
+          { default: () => '编辑', icon: () => h(CreateOutline) }
         ),
       ]);
     },
@@ -267,7 +281,10 @@ const orderColumns = [
     title: '金额',
     key: 'amount',
     width: 100,
-    render: (row) => `${Number(row.amount).toFixed(2)} 币`,
+    render: (row) => {
+      const amount = parseFloat(row.amount);
+      return `${amount.toFixed(2)} 币`;
+    },
   },
   {
     title: '状态',
@@ -311,10 +328,14 @@ const handleCreate = async () => {
 
   submitting.value = true;
   try {
-    const result = await payAPI.createPayCode(form.value);
+    const result = await payAPI.createPayCode({
+      title: form.value.title,
+      amount: Number(form.value.amount),
+      description: form.value.description,
+    });
     message.success('收款码创建成功');
     showCreateModal.value = false;
-    form.value = { title: '', amount: null, description: '' };
+    resetForm();
     loadPayCodes();
 
     // 显示二维码
@@ -326,6 +347,50 @@ const handleCreate = async () => {
   } finally {
     submitting.value = false;
   }
+};
+
+const handleEdit = (payCode) => {
+  isEditing.value = true;
+  currentEditPayCode.value = payCode;
+  form.value = {
+    title: payCode.title,
+    amount: parseFloat(payCode.amount), // 确保转换为数字
+    description: payCode.description || '',
+    isActive: payCode.isActive,
+  };
+  showCreateModal.value = true;
+};
+
+const handleUpdate = async () => {
+  try {
+    await formRef.value?.validate();
+  } catch {
+    return;
+  }
+
+  submitting.value = true;
+  try {
+    await payAPI.updatePayCode(currentEditPayCode.value.id, {
+      title: form.value.title,
+      amount: Number(form.value.amount),
+      description: form.value.description,
+      isActive: form.value.isActive,
+    });
+    message.success('收款码更新成功');
+    showCreateModal.value = false;
+    resetForm();
+    loadPayCodes();
+  } catch (error) {
+    message.error(error.error || '更新失败');
+  } finally {
+    submitting.value = false;
+  }
+};
+
+const resetForm = () => {
+  form.value = { title: '', amount: null, description: '', isActive: true };
+  isEditing.value = false;
+  currentEditPayCode.value = null;
 };
 
 const showQRCode = async (payCode) => {
@@ -352,20 +417,12 @@ const viewOrders = async (payCode) => {
   }
 };
 
-const toggleStatus = async (payCode) => {
-  try {
-    await payAPI.togglePayCode(payCode.id);
-    message.success(payCode.isActive ? '收款码已禁用' : '收款码已启用');
-    loadPayCodes();
-  } catch (error) {
-    message.error('操作失败');
-  }
-};
-
 const handleDelete = async (payCode) => {
   try {
     await payAPI.deletePayCode(payCode.id);
     message.success('删除成功');
+    showCreateModal.value = false;
+    resetForm();
     loadPayCodes();
   } catch (error) {
     message.error(error.error || '删除失败');
@@ -381,6 +438,13 @@ const handlePageChange = (page) => {
   pagination.page = page;
   loadPayCodes();
 };
+
+// 监听弹窗关闭，重置表单
+watch(showCreateModal, (newVal) => {
+  if (!newVal) {
+    resetForm();
+  }
+});
 
 onMounted(() => {
   loadPayCodes();

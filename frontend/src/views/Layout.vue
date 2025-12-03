@@ -356,6 +356,8 @@ import {
   StorefrontOutline,
   HelpCircleOutline,
   QrCodeOutline,
+  MusicalNotesOutline,
+  FilmOutline,
 } from '@vicons/ionicons5';
 
 const router = useRouter();
@@ -408,6 +410,8 @@ const baseMenuItems = [
       { key: 'diaries', path: '/diaries', icon: BookOutline, label: '日记' },
       { key: 'homeworks', path: '/homeworks', icon: DocumentTextOutline, label: '作业' },
       { key: 'books', path: '/books', icon: BookOutline, label: '读书' },
+      { key: 'music', path: '/music', icon: MusicalNotesOutline, label: '音乐' },
+      { key: 'movies', path: '/movies', icon: FilmOutline, label: '影视' },
       { key: 'learning-tracker', path: '/learning-tracker', icon: TimerOutline, label: '学习追踪' },
     ]
   },

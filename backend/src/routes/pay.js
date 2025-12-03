@@ -139,6 +139,61 @@ router.get('/codes/:id', authenticate, isAdmin, async (req, res, next) => {
   }
 });
 
+// PUT /api/pay/codes/:id - 更新收款码（管理员）
+router.put('/codes/:id', authenticate, isAdmin, async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { title, amount, description, isActive } = req.body;
+
+    const payCode = await prisma.payCode.findUnique({ where: { id } });
+    if (!payCode) {
+      return res.status(404).json({ error: '收款码不存在' });
+    }
+
+    // 验证参数
+    if (title !== undefined && !title) {
+      return res.status(400).json({ error: '商品名称不能为空' });
+    }
+
+    if (amount !== undefined) {
+      const amountNum = parseFloat(amount);
+      if (isNaN(amountNum) || amountNum < 0.01) {
+        return res.status(400).json({ error: '金额必须大于等于0.01' });
+      }
+    }
+
+    // 构建更新数据
+    const updateData = {};
+    if (title !== undefined) updateData.title = title;
+    if (amount !== undefined) updateData.amount = parseFloat(amount);
+    if (description !== undefined) updateData.description = description || null;
+    if (isActive !== undefined) updateData.isActive = isActive;
+
+    const updated = await prisma.payCode.update({
+      where: { id },
+      data: updateData,
+    });
+
+    // 记录活动日志
+    await prisma.activityLog.create({
+      data: {
+        userId: req.user.id,
+        action: 'update_paycode',
+        targetType: 'paycode',
+        targetId: id,
+        description: `更新收款码: ${updated.title}`,
+      },
+    });
+
+    res.json({
+      message: '收款码更新成功',
+      payCode: updated,
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
 // PUT /api/pay/codes/:id/toggle - 启用/禁用收款码（管理员）
 router.put('/codes/:id/toggle', authenticate, isAdmin, async (req, res, next) => {
   try {

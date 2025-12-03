@@ -59,6 +59,16 @@ const routes = [
         component: () => import('@/views/BookDetail.vue'),
       },
       {
+        path: 'music',
+        name: 'Music',
+        component: () => import('@/views/Music.vue'),
+      },
+      {
+        path: 'movies',
+        name: 'Movies',
+        component: () => import('@/views/Movies.vue'),
+      },
+      {
         path: 'works',
         name: 'Works',
         component: () => import('@/views/Works.vue'),
@@ -153,6 +163,11 @@ const routes = [
         path: 'games/review/:id',
         name: 'LongReviewDetail',
         component: () => import('@/views/LongReviewDetail.vue'),
+      },
+      {
+        path: 'games/classic/mario',
+        name: 'MarioGame',
+        component: () => import('@/views/MarioGame.vue'),
       },
       // 每日挑战
       {

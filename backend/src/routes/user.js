@@ -35,4 +35,28 @@ router.get('/me/children', authenticate, userController.getChildren);
 // GET /api/users/teachers - 获取所有老师列表
 router.get('/teachers', authenticate, userController.getTeachers);
 
+// GET /api/users/:id/dynamics - 获取用户动态（聚合各种内容）
+router.get('/:id/dynamics', authenticate, userController.getUserDynamics);
+
+// GET /api/users/:id/diaries - 获取用户日记
+router.get('/:id/diaries', authenticate, userController.getUserDiaries);
+
+// GET /api/users/:id/homeworks - 获取用户作业
+router.get('/:id/homeworks', authenticate, userController.getUserHomeworks);
+
+// GET /api/users/:id/notes - 获取用户笔记
+router.get('/:id/notes', authenticate, userController.getUserNotes);
+
+// GET /api/users/:id/reading-logs - 获取用户读书笔记
+router.get('/:id/reading-logs', authenticate, userController.getUserReadingLogs);
+
+// GET /api/users/:id/games - 获取用户游戏记录
+router.get('/:id/games', authenticate, userController.getUserGames);
+
+// GET /api/users/:id/music-logs - 获取用户音乐记录
+router.get('/:id/music-logs', authenticate, userController.getUserMusicLogs);
+
+// GET /api/users/:id/movie-logs - 获取用户影视记录
+router.get('/:id/movie-logs', authenticate, userController.getUserMovieLogs);
+
 module.exports = router;
