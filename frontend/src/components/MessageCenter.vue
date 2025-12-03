@@ -1,5 +1,5 @@
 <template>
-  <n-popover trigger="click" placement="bottom-end" :show-arrow="false" style="padding: 0;">
+  <n-popover v-model:show="showPopover" trigger="click" placement="bottom-end" :show-arrow="false" style="padding: 0;">
     <template #trigger>
       <n-badge :value="totalUnread" :max="99" :dot="totalUnread === 0">
         <button
@@ -15,7 +15,14 @@
       <!-- 头部 -->
       <div class="panel-header">
         <h3 class="font-semibold text-gray-800">消息中心</h3>
-        <n-button text size="small" @click="markAllRead">全部已读</n-button>
+        <div class="flex items-center gap-2">
+          <n-button text size="small" @click="markAllRead">全部已读</n-button>
+          <n-button text circle size="small" @click="closePanel" title="关闭">
+            <template #icon>
+              <n-icon :size="18"><CloseOutline /></n-icon>
+            </template>
+          </n-button>
+        </div>
       </div>
 
       <!-- 标签页 -->
@@ -23,33 +30,34 @@
         <!-- 聊天消息 -->
         <n-tab-pane name="chat" :tab="`聊天 ${chatUnread > 0 ? `(${chatUnread})` : ''}`">
           <div class="message-list">
-            <div
-              v-if="conversations.length > 0"
-              v-for="conv in conversations"
-              :key="conv.id"
-              class="message-item"
-              @click="openChat(conv)"
-            >
-              <div class="relative">
-                <AvatarText :username="conv.username" size="md" />
-                <div
-                  v-if="isUserOnline(conv.id)"
-                  class="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 border-2 border-white rounded-full"
-                ></div>
-              </div>
-              <div class="flex-1 min-w-0">
-                <div class="flex items-center justify-between">
-                  <span class="font-medium text-sm text-gray-800 truncate">
-                    {{ conv.nickname || conv.username }}
-                  </span>
-                  <span class="text-xs text-gray-400">{{ formatTime(conv.lastMessageTime) }}</span>
+            <template v-if="conversations.length > 0">
+              <div
+                v-for="conv in conversations"
+                :key="conv.id"
+                class="message-item"
+                @click="openChat(conv)"
+              >
+                <div class="relative">
+                  <AvatarText :username="conv.username" size="md" />
+                  <div
+                    v-if="isUserOnline(conv.id)"
+                    class="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 border-2 border-white rounded-full"
+                  ></div>
                 </div>
-                <div class="flex items-center justify-between mt-1">
-                  <p class="text-xs text-gray-500 truncate flex-1">{{ conv.lastMessage }}</p>
-                  <n-badge v-if="conv.unreadCount > 0" :value="conv.unreadCount" :max="99" size="small" />
+                <div class="flex-1 min-w-0">
+                  <div class="flex items-center justify-between">
+                    <span class="font-medium text-sm text-gray-800 truncate">
+                      {{ conv.nickname || conv.username }}
+                    </span>
+                    <span class="text-xs text-gray-400">{{ formatTime(conv.lastMessageTime) }}</span>
+                  </div>
+                  <div class="flex items-center justify-between mt-1">
+                    <p class="text-xs text-gray-500 truncate flex-1">{{ conv.lastMessage }}</p>
+                    <n-badge v-if="conv.unreadCount > 0" :value="conv.unreadCount" :max="99" size="small" />
+                  </div>
                 </div>
               </div>
-            </div>
+            </template>
             <n-empty v-else description="暂无聊天消息" size="small" class="py-8" />
           </div>
         </n-tab-pane>
@@ -57,35 +65,36 @@
         <!-- 好友列表 -->
         <n-tab-pane name="friends" tab="好友列表">
           <div class="friend-list">
-            <div
-              v-if="friends.length > 0"
-              v-for="friend in friends"
-              :key="friend.id"
-              class="friend-item"
-              @click="startNewChat(friend)"
-            >
-              <div class="relative">
-                <AvatarText :username="conv.username" size="md" />
-                <div
-                  v-if="isUserOnline(friend.id)"
-                  class="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 border-2 border-white rounded-full"
-                ></div>
-              </div>
-              <div class="flex-1 min-w-0">
-                <div class="font-medium text-sm text-gray-800 truncate">
-                  {{ friend.profile?.nickname || friend.username }}
+            <template v-if="friends.length > 0">
+              <div
+                v-for="friend in friends"
+                :key="friend.id"
+                class="friend-item"
+                @click="startNewChat(friend)"
+              >
+                <div class="relative">
+                  <AvatarText :username="friend.username" size="md" />
+                  <div
+                    v-if="isUserOnline(friend.id)"
+                    class="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 border-2 border-white rounded-full"
+                  ></div>
                 </div>
-                <div class="text-xs text-gray-500">
-                  {{ isInConversation(friend.id) ? '最近联系' : '点击开始聊天' }}
+                <div class="flex-1 min-w-0">
+                  <div class="font-medium text-sm text-gray-800 truncate">
+                    {{ friend.profile?.nickname || friend.username }}
+                  </div>
+                  <div class="text-xs text-gray-500">
+                    {{ isInConversation(friend.id) ? '最近联系' : '点击开始聊天' }}
+                  </div>
+                </div>
+                <div v-if="!isInConversation(friend.id)" class="msg-icon">
+                  <n-icon :size="16"><ChatboxEllipsesOutline /></n-icon>
                 </div>
               </div>
-              <div v-if="!isInConversation(friend.id)" class="msg-icon">
-                <n-icon :size="16"><ChatboxEllipsesOutline /></n-icon>
-              </div>
-            </div>
+            </template>
             <n-empty v-else description="暂无好友" size="small" class="py-8">
               <template #extra>
-                <n-button text type="primary" @click="$router.push('/friends')">
+                <n-button text type="primary" @click="goToFriends">
                   去添加好友
                 </n-button>
               </template>
@@ -96,23 +105,24 @@
         <!-- 系统消息 -->
         <n-tab-pane name="system" :tab="`系统 ${systemUnread > 0 ? `(${systemUnread})` : ''}`">
           <div class="message-list">
-            <div
-              v-if="systemMessages.length > 0"
-              v-for="msg in systemMessages.slice(0, 10)"
-              :key="msg.id"
-              class="message-item"
-              :class="{ 'unread': !msg.isRead }"
-              @click="handleSystemMessage(msg)"
-            >
-              <n-icon :size="32" :color="getSystemMessageColor(msg.messageType)">
-                <component :is="getSystemMessageIcon(msg.messageType)" />
-              </n-icon>
-              <div class="flex-1 min-w-0">
-                <p class="text-sm text-gray-800">{{ msg.content }}</p>
-                <span class="text-xs text-gray-400 mt-1">{{ formatTime(msg.createdAt) }}</span>
+            <template v-if="systemMessages.length > 0">
+              <div
+                v-for="msg in systemMessages.slice(0, 10)"
+                :key="msg.id"
+                class="message-item"
+                :class="{ 'unread': !msg.isRead }"
+                @click="handleSystemMessage(msg)"
+              >
+                <n-icon :size="32" :color="getSystemMessageColor(msg.messageType)">
+                  <component :is="getSystemMessageIcon(msg.messageType)" />
+                </n-icon>
+                <div class="flex-1 min-w-0">
+                  <p class="text-sm text-gray-800">{{ msg.content }}</p>
+                  <span class="text-xs text-gray-400 mt-1">{{ formatTime(msg.createdAt) }}</span>
+                </div>
+                <div v-if="!msg.isRead" class="w-2 h-2 bg-primary-500 rounded-full flex-shrink-0"></div>
               </div>
-              <div v-if="!msg.isRead" class="w-2 h-2 bg-primary-500 rounded-full flex-shrink-0"></div>
-            </div>
+            </template>
             <n-empty v-else description="暂无系统消息" size="small" class="py-8" />
           </div>
         </n-tab-pane>
@@ -143,13 +153,15 @@ import {
   PersonAdd,
   PeopleOutline,
   CheckmarkCircleOutline,
-  ChatboxEllipsesOutline
+  ChatboxEllipsesOutline,
+  CloseOutline
 } from '@vicons/ionicons5';
 
 const router = useRouter();
 const chatStore = useChatStore();
 const message = useMessage();
 
+const showPopover = ref(false);
 const activeTab = ref('chat');
 const hasNewMessage = ref(false);
 let flashTimer = null;
@@ -217,10 +229,8 @@ const startNewChat = async (friend) => {
   try {
     await chatStore.startNewChat(friend);
     message.success('正在打开聊天窗口...');
-    // 关闭弹窗
-    chatStore.closePanel();
     // 关闭消息中心弹窗
-    activeTab.value = 'chat';
+    showPopover.value = false;
   } catch (error) {
     console.error('开始聊天失败:', error);
     message.error('开始聊天失败，请重试');
@@ -231,6 +241,8 @@ const startNewChat = async (friend) => {
 const openChat = (conv) => {
   // 打开聊天面板
   chatStore.requestOpenPanel();
+  // 关闭消息中心弹窗
+  showPopover.value = false;
 };
 
 // 处理系统消息点击
@@ -244,6 +256,8 @@ const handleSystemMessage = async (msg) => {
   const metadata = typeof msg.metadata === 'string' ? JSON.parse(msg.metadata) : msg.metadata;
   if (metadata?.link) {
     router.push(metadata.link);
+    // 关闭消息中心弹窗
+    showPopover.value = false;
   }
 };
 
@@ -289,6 +303,18 @@ const getSystemMessageColor = (type) => {
 // 打开聊天面板
 const openChatPanel = () => {
   chatStore.requestOpenPanel();
+  showPopover.value = false;
+};
+
+// 关闭消息中心弹窗
+const closePanel = () => {
+  showPopover.value = false;
+};
+
+// 跳转到好友页面
+const goToFriends = () => {
+  router.push('/friends');
+  showPopover.value = false;
 };
 </script>
 

@@ -170,6 +170,12 @@ onBeforeUnmount(() => {
   box-shadow: -4px 0 16px rgba(0, 0, 0, 0.1);
   z-index: 1500;
   display: flex;
+  flex-direction: row;
+}
+
+.chat-panel-pinned > :not(.resize-handle) {
+  flex: 1;
+  overflow: hidden;
 }
 
 .resize-handle {
