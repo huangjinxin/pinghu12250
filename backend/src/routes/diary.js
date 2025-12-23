@@ -4,13 +4,14 @@
 
 const express = require('express');
 const router = express.Router();
-const { PrismaClient } = require('@prisma/client');
 const { authenticate } = require('../middleware/auth');
 const pointService = require('../services/pointService');
 const challengeService = require('../services/challengeService');
 const achievementService = require('../services/achievementService');
+const { sendCommentNotification } = require('../services/notificationService');
 
-const prisma = new PrismaClient();
+// 使用 Prisma 单例
+const prisma = require('../lib/prisma');
 
 // GET /api/diaries - 获取日记列表
 router.get('/', authenticate, async (req, res, next) => {
@@ -175,6 +176,77 @@ router.delete('/:id', authenticate, async (req, res, next) => {
     await prisma.diary.delete({ where: { id } });
 
     res.json({ message: '删除成功' });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// GET /api/diaries/:id/public - 公开访问日记详情（无需登录）
+router.get('/:id/public', async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    const diary = await prisma.diary.findUnique({
+      where: { id },
+      include: {
+        author: {
+          select: { id: true, username: true, avatar: true },
+        },
+      },
+    });
+
+    if (!diary) {
+      return res.status(404).json({ error: '日记不存在' });
+    }
+
+    // 获取匿名评论
+    const comments = await prisma.diaryComment.findMany({
+      where: { diaryId: id },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    res.json({ diary, comments });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// POST /api/diaries/:id/comments - 匿名评论（无需登录）
+router.post('/:id/comments', async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { content, nickname } = req.body;
+
+    if (!content || !content.trim()) {
+      return res.status(400).json({ error: '评论内容不能为空' });
+    }
+
+    // 检查日记是否存在
+    const diary = await prisma.diary.findUnique({
+      where: { id },
+    });
+
+    if (!diary) {
+      return res.status(404).json({ error: '日记不存在' });
+    }
+
+    // 创建匿名评论
+    const comment = await prisma.diaryComment.create({
+      data: {
+        diaryId: id,
+        content: content.trim().slice(0, 500),
+        nickname: (nickname || '匿名用户').slice(0, 20),
+      },
+    });
+
+    // 发送通知给日记作者
+    try {
+      await sendCommentNotification(diary.authorId, { username: comment.nickname }, diary);
+    } catch (error) {
+      console.error('发送评论通知失败:', error);
+    }
+
+    res.status(201).json({ message: '评论成功', comment });
   } catch (error) {
     next(error);
   }

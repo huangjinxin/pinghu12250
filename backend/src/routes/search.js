@@ -4,10 +4,10 @@
 
 const express = require('express');
 const router = express.Router();
-const { PrismaClient } = require('@prisma/client');
 const { authenticate } = require('../middleware/auth');
 
-const prisma = new PrismaClient();
+// 使用 Prisma 单例
+const prisma = require('../lib/prisma');
 
 // GET /api/search - 全局搜索
 router.get('/', authenticate, async (req, res, next) => {

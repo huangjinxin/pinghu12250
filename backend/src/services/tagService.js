@@ -3,8 +3,8 @@
  * 统一管理所有内容的标签
  */
 
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+// 使用 Prisma 单例
+const prisma = require('../lib/prisma');
 
 // 颜色方案
 const COLOR_SCHEMES = {

@@ -2,10 +2,10 @@
  * 动态/时间轴控制器
  */
 
-const { PrismaClient } = require('@prisma/client');
 const pointService = require('../services/pointService');
 
-const prisma = new PrismaClient();
+// 使用 Prisma 单例
+const prisma = require('../lib/prisma');
 
 /**
  * 获取动态列表

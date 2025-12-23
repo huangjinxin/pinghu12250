@@ -3,8 +3,8 @@
  * 创建默认的系统配置，如积分兑换比例、每日兑换上限等
  */
 
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+// 使用 Prisma 单例
+const prisma = require('../src/lib/prisma');
 
 async function initSystemSettings() {
   try {
@@ -20,7 +20,7 @@ async function initSystemSettings() {
       },
       {
         key: 'daily_exchange_limit',
-        value: '500',
+        value: '5000',
         type: 'number',
         description: '每日积分兑换上限（积分）',
       },

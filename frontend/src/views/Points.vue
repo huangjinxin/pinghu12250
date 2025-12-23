@@ -73,7 +73,7 @@
       <n-tab-pane name="my" tab="我的积分">
         <div class="space-y-6 mt-6">
           <!-- 积分概览卡片 -->
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div class="card text-center bg-gradient-to-br from-yellow-400 to-orange-500 text-white">
               <div class="text-sm opacity-90 mb-2">总积分</div>
               <div class="text-4xl font-bold">{{ pointStats.totalPoints || 0 }}</div>
@@ -89,7 +89,24 @@
               <div class="text-4xl font-bold">{{ pointStats.monthPoints || 0 }}</div>
               <div class="text-xs opacity-75 mt-2">最近30天</div>
             </div>
+            <div class="card text-center" :class="dailyLimitClass">
+              <div class="text-sm opacity-90 mb-2">今日已得/上限</div>
+              <div class="text-4xl font-bold">
+                {{ dailyLimit.earned || 0 }}<span class="text-2xl opacity-75">/{{ dailyLimit.limit || 100 }}</span>
+              </div>
+              <div class="text-xs opacity-75 mt-2">
+                {{ dailyLimit.isMaxed ? '已达上限' : `还可获得 ${dailyLimit.remaining || 0} 分` }}
+              </div>
+            </div>
           </div>
+
+          <!-- 每日积分上限提示 -->
+          <n-alert v-if="dailyLimit.isMaxed" type="warning" class="mt-4">
+            <template #icon>
+              <n-icon><InformationCircleOutline /></n-icon>
+            </template>
+            您今日已达到积分获取上限（{{ dailyLimit.limit }} 分），继续提交内容不会再获得积分。奖罚模块的积分不受此限制。
+          </n-alert>
 
           <!-- 积分规则说明 -->
           <div class="card">
@@ -133,7 +150,7 @@
             <h2 class="text-lg font-semibold text-gray-800 mb-4">积分来源统计</h2>
             <div class="space-y-3">
               <div v-for="stat in detailedStats.actionStats" :key="stat.action" class="flex items-center">
-                <span class="w-32 text-sm text-gray-600">{{ getActionName(stat.action) }}</span>
+                <span class="w-32 text-sm text-gray-600">{{ stat.actionName || getActionName(stat.action) }}</span>
                 <div class="flex-1 h-6 bg-gray-100 rounded-full overflow-hidden mx-3">
                   <div
                     class="h-full bg-gradient-to-r from-primary-500 to-primary-600 rounded-full transition-all"
@@ -482,6 +499,24 @@ const pointRules = ref([]);
 const pointRecords = ref([]);
 const selectedPeriod = ref(null);
 const rulesExpanded = ref(false);
+const dailyLimit = ref({
+  limit: 100,
+  earned: 0,
+  remaining: 100,
+  isMaxed: false
+});
+
+// 计算每日限制卡片的样式
+const dailyLimitClass = computed(() => {
+  const percentage = (dailyLimit.value.earned / dailyLimit.value.limit) * 100;
+  if (percentage >= 100) {
+    return 'bg-gradient-to-br from-red-400 to-red-600 text-white';
+  } else if (percentage >= 80) {
+    return 'bg-gradient-to-br from-orange-400 to-orange-600 text-white';
+  } else {
+    return 'bg-gradient-to-br from-green-400 to-green-600 text-white';
+  }
+});
 
 // 管理员功能相关
 const showRuleDialog = ref(false);
@@ -648,8 +683,22 @@ const loadPointStats = async () => {
   try {
     const data = await pointAPI.getMy();
     pointStats.value = data;
+
+    // 同时加载每日限制状态
+    if (data.dailyLimit) {
+      dailyLimit.value = data.dailyLimit;
+    }
   } catch (error) {
     console.error('加载积分统计失败:', error);
+  }
+};
+
+const loadDailyLimit = async () => {
+  try {
+    const data = await pointAPI.getDailyLimit();
+    dailyLimit.value = data;
+  } catch (error) {
+    console.error('加载每日限制状态失败:', error);
   }
 };
 

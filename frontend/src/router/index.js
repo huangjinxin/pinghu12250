@@ -6,6 +6,74 @@ import { createRouter, createWebHistory } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
 
 const routes = [
+  // 公开页面（无需登录）
+  {
+    path: '/diary/:id',
+    name: 'DiaryDetail',
+    component: () => import('@/views/DiaryDetail.vue'),
+    meta: { public: true },
+  },
+  {
+    path: '/gallery/:id',
+    name: 'GalleryDetail',
+    component: () => import('@/views/GalleryDetail.vue'),
+    meta: { public: true },
+  },
+  {
+    path: '/recitation/:id',
+    name: 'RecitationDetail',
+    component: () => import('@/views/RecitationDetail.vue'),
+    meta: { public: true },
+  },
+  {
+    path: '/htmlwork/:id',
+    name: 'HtmlWorkView',
+    component: () => import('@/views/HtmlWorkView.vue'),
+    meta: { public: true },
+  },
+  {
+    path: '/poetry',
+    name: 'PublicPoetry',
+    component: () => import('@/views/PublicPoetry.vue'),
+    meta: { public: true },
+  },
+  {
+    path: '/poetry/:id',
+    name: 'PoetryView',
+    component: () => import('@/views/PoetryView.vue'),
+    meta: { public: true },
+  },
+  {
+    path: '/gallery',
+    name: 'PublicGallery',
+    component: () => import('@/views/PublicGallery.vue'),
+    meta: { public: true },
+  },
+  // 电子课本（独立页面）
+  {
+    path: '/textbook',
+    name: 'TextbookPublic',
+    component: () => import('@/views/textbook/TextbookPublic.vue'),
+    meta: { public: true },
+  },
+  {
+    path: '/textbook/workspace',
+    name: 'TextbookWorkspace',
+    component: () => import('@/views/textbook/TextbookWorkspace.vue'),
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/textbook/admin',
+    name: 'TextbookAdmin',
+    component: () => import('@/views/textbook/TextbookAdmin.vue'),
+    meta: { requiresAuth: true, requiresAdmin: true },
+  },
+  {
+    path: '/textbook/reader/:id',
+    name: 'TextbookReader',
+    component: () => import('@/views/textbook/TextbookReader.vue'),
+    meta: { requiresAuth: true },
+  },
   {
     path: '/login',
     name: 'Login',
@@ -202,6 +270,12 @@ const routes = [
         name: 'AchievementDetail',
         component: () => import('@/views/AchievementDetail.vue'),
       },
+      // 成长记录
+      {
+        path: 'my-growth',
+        name: 'MyGrowth',
+        component: () => import('@/views/MyGrowth.vue'),
+      },
       // 好友系统
       {
         path: 'friends',
@@ -286,6 +360,11 @@ const routes = [
         name: 'PayCodeManagement',
         component: () => import('@/views/admin/PayCodeManagement.vue'),
       },
+      {
+        path: 'admin/reward-rules',
+        name: 'RewardManagement',
+        component: () => import('@/views/admin/RewardManagement.vue'),
+      },
       // 教师路由
       {
         path: 'teacher/classes',
@@ -313,6 +392,11 @@ const routes = [
         name: 'ChildRecords',
         component: () => import('@/views/parent/ChildRecords.vue'),
       },
+      {
+        path: 'parent/submissions',
+        name: 'ParentSubmissions',
+        component: () => import('@/views/parent/ParentSubmissions.vue'),
+      },
     ],
   },
 ];
@@ -326,10 +410,21 @@ const router = createRouter({
 router.beforeEach((to, from, next) => {
   const authStore = useAuthStore();
 
-  if (to.meta.requiresAuth && !authStore.isAuthenticated) {
+  // 公开页面直接放行
+  if (to.meta.public) {
+    next();
+  } else if (to.meta.requiresAuth && !authStore.isAuthenticated) {
     next('/login');
   } else if (to.meta.requiresGuest && authStore.isAuthenticated) {
-    next('/');
+    // 家长用户登录后跳转到我的孩子页面
+    if (authStore.user?.role === 'PARENT') {
+      next('/parent/children');
+    } else {
+      next('/');
+    }
+  } else if (to.path === '/' && authStore.user?.role === 'PARENT') {
+    // 家长访问首页时重定向到我的孩子页面
+    next('/parent/children');
   } else {
     next();
   }

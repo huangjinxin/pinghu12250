@@ -3,8 +3,8 @@
  * 管理用户关注、好友关系、推荐算法
  */
 
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+// 使用 Prisma 单例
+const prisma = require('../lib/prisma');
 
 class FollowService {
   /**

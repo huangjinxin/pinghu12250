@@ -7,10 +7,10 @@ const router = express.Router();
 const followService = require('../services/followService');
 const achievementService = require('../services/achievementService');
 const { sendFollowNotification, sendFriendNotification } = require('../services/notificationService');
-const { PrismaClient } = require('@prisma/client');
 const { authenticate } = require('../middleware/auth');
 
-const prisma = new PrismaClient();
+// 使用 Prisma 单例
+const prisma = require('../lib/prisma');
 
 // ========== 关注操作 ==========
 
@@ -254,7 +254,7 @@ router.get('/stats/:userId', authenticate, async (req, res) => {
   try {
     const { userId } = req.params;
 
-    const user = await require('@prisma/client').PrismaClient.prototype.user.findUnique({
+    const user = await prisma.user.findUnique({
       where: { id: userId },
       select: {
         followersCount: true,

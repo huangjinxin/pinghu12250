@@ -3,8 +3,8 @@
  * 初始化挑战模板和每日挑战积分规则
  */
 
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+// 使用 Prisma 单例
+const prisma = require('../src/lib/prisma');
 
 async function main() {
   console.log('开始初始化每日挑战数据...');

@@ -2,11 +2,11 @@
  * 读书笔记控制器
  */
 
-const { PrismaClient } = require('@prisma/client');
 const pointService = require('../services/pointService');
 const achievementService = require('../services/achievementService');
 
-const prisma = new PrismaClient();
+// 使用 Prisma 单例
+const prisma = require('../lib/prisma');
 
 /**
  * 搜索书籍（从全局书库）

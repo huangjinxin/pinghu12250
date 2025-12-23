@@ -3,23 +3,24 @@
  * 严格按照 POINT_SYSTEM.md 文档实现
  */
 
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+// 使用 Prisma 单例
+const prisma = require('../lib/prisma');
 
 class PointService {
   /**
-   * 添加积分
+   * 添加积分（带每日限制检查，推荐使用）
    * @param {string} ruleId - 规则ID（如 D001, R001）
    * @param {string} userId - 用户ID
    * @param {object} options - 选项
    * @param {string} options.targetType - 关联对象类型
    * @param {string} options.targetId - 关联对象ID
    * @param {string} options.description - 自定义描述
+   * @param {boolean} options.skipDailyLimit - 是否跳过每日限制检查（奖罚模块使用）
    * @returns {Promise<{success: boolean, log: object, totalPoints: number, message?: string}>}
    */
   async addPoints(ruleId, userId, options = {}) {
     try {
-      const { targetType, targetId, description } = options;
+      const { targetType, targetId, description, skipDailyLimit = false } = options;
 
       // 1. 查询规则
       const rule = await prisma.pointRule.findUnique({
@@ -34,15 +35,40 @@ class PointService {
         return { success: false, message: `规则 ${ruleId} 未启用` };
       }
 
-      // 2. 检查每日上限
-      if (rule.dailyLimit > 0) {
+      // 2. 检查每日上限（跳过检查或规则未设置上限）
+      if (!skipDailyLimit && rule.dailyLimit > 0) {
         const canAdd = await this.checkDailyLimit(userId, ruleId, rule.dailyLimit);
         if (!canAdd) {
           return { success: false, message: '已达到今日上限' };
         }
       }
 
-      // 3. 创建积分日志
+      // 3. 如果不跳过每日限制，则检查全局每日积分上限
+      if (!skipDailyLimit && rule.points > 0) {
+        const limitStatus = await this.checkDailyPointsLimit(userId);
+
+        // 如果已达上限，不发放积分但返回成功（允许继续提交内容）
+        if (limitStatus.isMaxed) {
+          return {
+            success: true,
+            limited: true,
+            message: '已达到今日积分上限，不再获得积分',
+            totalPoints: (await prisma.user.findUnique({ where: { id: userId }, select: { totalPoints: true } }))?.totalPoints || 0,
+            pointsChanged: 0,
+            limitStatus
+          };
+        }
+
+        // 计算实际可发放的积分
+        const actualPoints = Math.min(rule.points, limitStatus.remaining);
+
+        // 如果实际发放积分少于规则积分
+        if (actualPoints < rule.points) {
+          return await this._addPointsWithLimit(userId, actualPoints, description || rule.description, targetType, targetId, ruleId);
+        }
+      }
+
+      // 4. 创建积分日志
       const pointLog = await prisma.pointLog.create({
         data: {
           userId,
@@ -54,8 +80,13 @@ class PointService {
         },
       });
 
-      // 4. 更新用户积分
+      // 5. 更新用户积分和每日限制记录
       const totalPoints = await this._updateUserPoints(userId, rule.points);
+
+      // 更新每日限制记录（仅当不跳过限制且积分为正时）
+      if (!skipDailyLimit && rule.points > 0) {
+        await this._updateDailyLimit(userId, rule.points);
+      }
 
       return {
         success: true,
@@ -66,6 +97,60 @@ class PointService {
       console.error('添加积分失败:', error);
       return { success: false, message: error.message };
     }
+  }
+
+  /**
+   * 内部方法：添加限制后的积分
+   * @private
+   */
+  async _addPointsWithLimit(userId, points, description, targetType, targetId, ruleId) {
+    const pointLog = await prisma.pointLog.create({
+      data: {
+        userId,
+        ruleId,
+        points,
+        description: `${description}（部分发放）`,
+        targetType,
+        targetId,
+      },
+    });
+
+    const totalPoints = await this._updateUserPoints(userId, points);
+    await this._updateDailyLimit(userId, points);
+
+    const limitStatus = await this.checkDailyPointsLimit(userId);
+
+    return {
+      success: true,
+      limited: true,
+      message: `今日积分接近上限，实际获得${points}积分`,
+      log: pointLog,
+      totalPoints,
+      limitStatus
+    };
+  }
+
+  /**
+   * 更新每日限制记录
+   * @private
+   */
+  async _updateDailyLimit(userId, points) {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    await prisma.dailyPointsLimit.upsert({
+      where: {
+        userId_date: { userId, date: today }
+      },
+      create: {
+        userId,
+        date: today,
+        earnedPoints: points
+      },
+      update: {
+        earnedPoints: { increment: points }
+      }
+    });
   }
 
   /**
@@ -405,7 +490,7 @@ class PointService {
    * 管理员手动调整积分
    * （迁移自 pointServiceFull）
    */
-  async adjustPointsByAdmin(targetUserId, points, adminId, remark) {
+  async adjustPointsByAdmin(targetUserId, points, adminId, remark, targetType = null, targetId = null) {
     try {
       const result = await prisma.$transaction(async (tx) => {
         const log = await tx.pointLog.create({
@@ -413,6 +498,8 @@ class PointService {
             userId: targetUserId,
             points: points,
             description: `${remark} (by ${adminId})`,
+            targetType,
+            targetId,
           },
         });
 
@@ -425,6 +512,21 @@ class PointService {
           },
           select: {
             totalPoints: true,
+          },
+        });
+
+        // 同时更新 UserPoints 表
+        await tx.userPoints.upsert({
+          where: { userId: targetUserId },
+          create: {
+            userId: targetUserId,
+            totalPoints: points,
+            todayPoints: 0,
+          },
+          update: {
+            totalPoints: {
+              increment: points,
+            },
           },
         });
 
@@ -576,6 +678,168 @@ class PointService {
       return { success: true, ...result };
     } catch (error) {
       console.error('[PointService] addPointsByActionKey error:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  /**
+   * 获取每日积分上限配置
+   */
+  async getDailyPointsLimit() {
+    try {
+      const setting = await prisma.systemSetting.findUnique({
+        where: { key: 'daily_points_limit' }
+      });
+      return setting ? parseInt(setting.value) : 100; // 默认100
+    } catch (error) {
+      console.error('[PointService] getDailyPointsLimit error:', error);
+      return 100;
+    }
+  }
+
+  /**
+   * 获取用户今日已获得积分（不含奖罚模块）
+   */
+  async getTodayEarnedPoints(userId) {
+    try {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      const record = await prisma.dailyPointsLimit.findUnique({
+        where: {
+          userId_date: {
+            userId,
+            date: today
+          }
+        }
+      });
+
+      return record ? record.earnedPoints : 0;
+    } catch (error) {
+      console.error('[PointService] getTodayEarnedPoints error:', error);
+      return 0;
+    }
+  }
+
+  /**
+   * 检查是否达到每日积分上限（不含奖罚模块）
+   */
+  async checkDailyPointsLimit(userId) {
+    try {
+      const dailyLimit = await this.getDailyPointsLimit();
+      const todayEarned = await this.getTodayEarnedPoints(userId);
+
+      return {
+        limit: dailyLimit,
+        earned: todayEarned,
+        remaining: Math.max(0, dailyLimit - todayEarned),
+        isMaxed: todayEarned >= dailyLimit
+      };
+    } catch (error) {
+      console.error('[PointService] checkDailyPointsLimit error:', error);
+      return { limit: 100, earned: 0, remaining: 100, isMaxed: false };
+    }
+  }
+
+  /**
+   * 添加积分（带每日限制检查，奖罚模块除外）
+   * @param {string} userId - 用户ID
+   * @param {number} points - 积分数
+   * @param {string} description - 描述
+   * @param {string} targetType - 目标类型
+   * @param {string} targetId - 目标ID
+   * @param {boolean} isRewardPunishment - 是否为奖罚模块（默认false）
+   */
+  async addPointsWithDailyLimit(userId, points, description, targetType = null, targetId = null, isRewardPunishment = false) {
+    try {
+      // 奖罚模块不受限制
+      if (isRewardPunishment) {
+        return await this.addPointsByActionKey(null, userId, {
+          points,
+          description,
+          targetType,
+          targetId
+        });
+      }
+
+      // 检查每日限制
+      const limitStatus = await this.checkDailyPointsLimit(userId);
+
+      // 如果已达上限，不发放积分但返回成功（允许继续提交内容）
+      if (limitStatus.isMaxed) {
+        return {
+          success: true,
+          limited: true,
+          message: '已达到今日积分上限，不再获得积分',
+          totalPoints: 0,
+          pointsChanged: 0,
+          limitStatus
+        };
+      }
+
+      // 计算实际可发放的积分（不超过剩余额度）
+      const actualPoints = Math.min(points, limitStatus.remaining);
+
+      // 发放积分
+      const result = await prisma.$transaction(async (tx) => {
+        // 创建积分日志
+        const log = await tx.pointLog.create({
+          data: {
+            userId,
+            points: actualPoints,
+            description,
+            targetType,
+            targetId
+          }
+        });
+
+        // 更新用户总积分和UserPoints
+        const [user, _] = await Promise.all([
+          tx.user.update({
+            where: { id: userId },
+            data: { totalPoints: { increment: actualPoints } },
+            select: { totalPoints: true }
+          }),
+          tx.userPoints.upsert({
+            where: { userId },
+            create: { userId, totalPoints: actualPoints, todayPoints: actualPoints },
+            update: { totalPoints: { increment: actualPoints }, todayPoints: { increment: actualPoints } }
+          })
+        ]);
+
+        // 更新每日积分限制记录
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        await tx.dailyPointsLimit.upsert({
+          where: {
+            userId_date: { userId, date: today }
+          },
+          create: {
+            userId,
+            date: today,
+            earnedPoints: actualPoints
+          },
+          update: {
+            earnedPoints: { increment: actualPoints }
+          }
+        });
+
+        return { log, totalPoints: user.totalPoints, pointsChanged: actualPoints };
+      });
+
+      // 如果实际发放积分少于请求积分，提示已接近上限
+      const wasLimited = actualPoints < points;
+
+      return {
+        success: true,
+        limited: wasLimited,
+        message: wasLimited ? `今日积分接近上限，实际获得${actualPoints}积分` : undefined,
+        ...result,
+        limitStatus: await this.checkDailyPointsLimit(userId)
+      };
+    } catch (error) {
+      console.error('[PointService] addPointsWithDailyLimit error:', error);
       return { success: false, error: error.message };
     }
   }

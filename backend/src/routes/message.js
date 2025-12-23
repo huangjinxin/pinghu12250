@@ -3,10 +3,10 @@
  */
 
 const router = require('express').Router();
-const { PrismaClient } = require('@prisma/client');
 const { authenticate } = require('../middleware/auth');
 
-const prisma = new PrismaClient();
+// 使用 Prisma 单例
+const prisma = require('../lib/prisma');
 
 /**
  * 获取与某个用户的聊天历史

@@ -2,8 +2,8 @@
  * 校区控制器
  */
 
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+// 使用 Prisma 单例
+const prisma = require('../lib/prisma');
 
 // 获取所有校区
 exports.getCampuses = async (req, res, next) => {

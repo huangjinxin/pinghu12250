@@ -3,8 +3,8 @@
  * 初始化官方标签
  */
 
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+// 使用 Prisma 单例
+const prisma = require('../src/lib/prisma');
 
 // 颜色方案
 const colors = {

@@ -62,15 +62,16 @@ enum WatchingStatus {
 // ========== 用户系统 ==========
 
 model User {
-  id        String     @id @default(uuid())
-  email     String     @unique
-  username  String     @unique
-  password  String
-  role      Role       @default(STUDENT)
-  status    UserStatus @default(PENDING)
-  avatar    String?
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
+  id              String     @id @default(uuid())
+  email           String     @unique
+  username        String     @unique
+  password        String
+  paymentPassword String?    // 支付密码（加密存储），默认为 123456
+  role            Role       @default(STUDENT)
+  status          UserStatus @default(PENDING)
+  avatar          String?
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
 
   // 关联
   schoolId String?
@@ -96,8 +97,9 @@ model User {
   homework    Homework[]
   notes       Note[]
   readingLogs ReadingLog[] @relation("ReadingLog")
-  htmlWorks   HTMLWork[]
-  dynamics    Dynamic[]
+  htmlWorks    HTMLWork[]
+  poetryWorks  PoetryWork[]
+  dynamics     Dynamic[]
 
   // 互动
   likes    Like[]
@@ -170,6 +172,21 @@ model User {
   contentPurchases ContentPurchase[] // 购买的内容
   questions        Question[] // 提出的问题
   answers          Answer[] // 回答的问题
+
+  // 奖罚管理系统
+  ruleTemplatesCreated RuleTemplate[] // 创建的奖罚模板
+  ruleSubmissions      RuleSubmission[] // 提交的奖罚记录
+  reviewedSubmissions  RuleSubmission[] @relation("ReviewedSubmissions") // 审核的提交记录
+  templateFavorites    TemplateFavorite[] // 收藏的规则模板
+
+  // 每日积分限制
+  dailyPointsLimits    DailyPointsLimit[] // 每日积分限制记录
+
+  // 钱包
+  wallet               Wallet?
+
+  // 支付订单
+  payOrders            PayOrder[]
 
   @@index([email])
   @@index([username])
@@ -294,12 +311,27 @@ model Diary {
   tags      OldContentTag[] // 旧的标签关联，迁移后可删除
   dynamicId String?         @unique
   dynamic   Dynamic?        @relation(fields: [dynamicId], references: [id])
-  createdAt DateTime        @default(now())
-  updatedAt DateTime        @updatedAt
+  comments      Comment[]       // 日记评论（旧）
+  diaryComments DiaryComment[]  // 匿名评论
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
 
   @@index([authorId])
   @@index([createdAt])
   @@index([isPublic])
+}
+
+// 日记匿名评论
+model DiaryComment {
+  id        String   @id @default(uuid())
+  diaryId   String
+  diary     Diary    @relation(fields: [diaryId], references: [id], onDelete: Cascade)
+  nickname  String   @default("匿名用户")
+  content   String   @db.Text
+  createdAt DateTime @default(now())
+
+  @@index([diaryId])
+  @@index([createdAt])
 }
 
 model Homework {
@@ -888,6 +920,8 @@ model Comment {
   dynamic   Dynamic?  @relation(fields: [dynamicId], references: [id], onDelete: Cascade)
   workId    String?
   work      HTMLWork? @relation(fields: [workId], references: [id], onDelete: Cascade)
+  diaryId   String?
+  diary     Diary?    @relation(fields: [diaryId], references: [id], onDelete: Cascade)
   parentId  String?
   parent    Comment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
   replies   Comment[] @relation("CommentReplies")
@@ -897,6 +931,7 @@ model Comment {
   @@index([authorId])
   @@index([dynamicId])
   @@index([workId])
+  @@index([diaryId])
 }
 
 // ========== 任务系统 ==========
@@ -1002,6 +1037,21 @@ model UserPoints {
   updatedAt   DateTime @updatedAt
 
   @@index([userId])
+}
+
+// 每日积分限制记录（不含奖罚模块）
+model DailyPointsLimit {
+  id            String   @id @default(uuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date          DateTime @db.Date // 日期（年-月-日）
+  earnedPoints  Int      @default(0) // 当日已获得积分（不含奖罚模块）
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([userId, date])
+  @@index([userId])
+  @@index([date])
 }
 
 // ========== 活动日志 ==========
@@ -1188,6 +1238,7 @@ model AchievementProgress {
 model Wallet {
   id        String   @id @default(uuid())
   userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   balance   Decimal  @default(0) @db.Decimal(10, 2) // 金币余额（支持小数点后2位）
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1222,6 +1273,7 @@ model PayCode {
   title       String // 商品/服务名称
   amount      Decimal    @db.Decimal(10, 2) // 金额（学习币，支持0.01）
   description String? // 描述
+  category    String? // 分类
   isActive    Boolean    @default(true) // 是否启用
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
@@ -1233,6 +1285,7 @@ model PayCode {
   @@index([code])
   @@index([createdAt])
   @@index([isActive])
+  @@index([category])
 }
 
 // 支付订单
@@ -1240,6 +1293,7 @@ model PayOrder {
   id         String   @id @default(uuid())
   orderNo    String   @unique // 订单号
   userId     String // 支付用户
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   payCodeId  String // 收款码ID
   payCode    PayCode  @relation(fields: [payCodeId], references: [id])
   amount     Decimal  @db.Decimal(10, 2) // 支付金额（支持小数）
@@ -1437,9 +1491,9 @@ model Transaction {
   amount      Int // 金额（正数=收入，负数=支出）
   balance     Int // 交易后余额
   fromUserId  String? // 来源用户ID（打赏、奖励等）
-  fromUser    User?           @relation("TransactionFrom", fields: [fromUserId], references: [id])
+  fromUser    User?           @relation("TransactionFrom", fields: [fromUserId], references: [id], onDelete: SetNull)
   toUserId    String? // 目标用户ID（打赏等）
-  toUser      User?           @relation("TransactionTo", fields: [toUserId], references: [id])
+  toUser      User?           @relation("TransactionTo", fields: [toUserId], references: [id], onDelete: SetNull)
   relatedType String? // 关联类型：work/diary/homework/question
   relatedId   String? // 关联ID
   description String          @db.Text // 描述
@@ -1582,6 +1636,7 @@ model SystemSetting {
   @@index([key])
 }
 
+
 // ========== 积分兑换系统 ==========
 
 model PointExchange {
@@ -1594,4 +1649,386 @@ model PointExchange {
 
   @@index([userId])
   @@index([createdAt])
+}
+
+// ========== 奖罚管理系统 ==========
+
+// 技术类型字典表
+model RuleType {
+  id          String         @id @default(uuid())
+  name        String         @unique // 类型名称
+  description String? // 描述
+  isEnabled   Boolean        @default(true)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  
+  templates   RuleTemplate[]
+  
+  @@index([isEnabled])
+}
+
+// 展示标准字典表
+model RuleStandard {
+  id          String         @id @default(uuid())
+  name        String         @unique // 标准名称
+  description String? // 描述
+  isEnabled   Boolean        @default(true)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  
+  templates   RuleTemplate[]
+  
+  @@index([isEnabled])
+}
+
+// 奖罚规则模板表
+model RuleTemplate {
+  id               String          @id @default(uuid())
+  name             String // 规则名称
+  description      String?         @db.Text // 规则描述（填写说明、要求等）
+  typeId           String // 技术类型ID
+  type             RuleType        @relation(fields: [typeId], references: [id], onDelete: Cascade)
+  standardId       String // 展示标准ID
+  standard         RuleStandard    @relation(fields: [standardId], references: [id], onDelete: Cascade)
+  requireImage     Boolean         @default(false) // 是否需要图片
+  requireText      Boolean         @default(true) // 是否需要文本说明
+  requireLink      Boolean         @default(false) // 是否需要链接
+  requireAudio     Boolean         @default(false) // 是否需要音频
+  textMaxLength    Int             @default(500) // 文本最大字数
+  audioUrl         String? // 规则说明音频URL（可选）
+  points           Int // 积分（可正可负）
+  allowQuantity    Boolean         @default(false) // 是否允许用户选择数量
+  status           String          @default("ENABLED") // ENABLED / DISABLED
+  createdBy        String // 创建人ID
+  creator          User            @relation(fields: [createdBy], references: [id], onDelete: Cascade)
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+
+  submissions      RuleSubmission[]
+  favorites        TemplateFavorite[]
+
+  @@index([typeId])
+  @@index([standardId])
+  @@index([status])
+  @@index([createdBy])
+}
+
+// 用户提交记录表
+model RuleSubmission {
+  id           String       @id @default(uuid())
+  userId       String // 提交用户ID
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  templateId   String // 模板ID
+  template     RuleTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  content      String       @db.Text // 文本说明
+  images       String[] // 图片URL数组
+  audios       String[]     @default([]) // 音频URL数组
+  link         String? // 链接
+  quantity     Int          @default(1) // 数量（用于计算积分）
+  status       String       @default("PENDING") // PENDING / APPROVED / REJECTED
+  reviewNote   String? // 审核备注
+  reviewedBy   String? // 审核人ID
+  reviewer     User?        @relation("ReviewedSubmissions", fields: [reviewedBy], references: [id], onDelete: SetNull)
+  reviewedAt   DateTime? // 审核时间
+  pointsAwarded Int?       // 实际获得的积分
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  @@index([userId])
+  @@index([templateId])
+  @@index([status])
+  @@index([reviewedBy])
+  @@index([createdAt])
+}
+
+// 用户收藏的规则模板
+model TemplateFavorite {
+  id         String       @id @default(uuid())
+  userId     String
+  user       User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  templateId String
+  template   RuleTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  createdAt  DateTime     @default(now())
+
+  @@unique([userId, templateId])
+  @@index([userId])
+  @@index([templateId])
+}
+
+// ========== 电子课本系统 ==========
+
+// 学科枚举
+// 注意: subject 和 semester 已改为 String 类型，支持自定义值
+// 常用 subject: CHINESE(语文), MATH(数学), ENGLISH(英语), SCIENCE(科学) 等
+// 常用 semester: UP(上册), DOWN(下册), FULL(全一册) 等
+
+// 课文状态枚举
+enum TextbookLessonStatus {
+  EMPTY       // 空（未录入）
+  DRAFT       // 草稿
+  SUBMITTED   // 已提交审核
+  APPROVED    // 已通过
+  REJECTED    // 已拒绝
+  PUBLISHED   // 已发布
+}
+
+// 教材表
+model Textbook {
+  id          String   @id @default(uuid())
+  subject     String   // 学科（CHINESE/MATH/ENGLISH/SCIENCE等）
+  grade       Int      // 年级（1-9）
+  semester    String   // 学期（UP/DOWN/FULL等）
+  version     String            @default("人教版") // 版本
+  title       String            // 教材名称（如：语文三年级上册）
+  totalPages  Int?              // 总页数
+  pdfUrl      String?           // PDF文件路径
+  coverImage  String?           // 封面缩略图路径（上传PDF时自动生成）
+  status      String            @default("draft") // draft/published
+  isHidden    Boolean           @default(false) // 是否隐藏
+  createdBy   String            // 创建人ID
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  units       TextbookUnit[]
+  prompts     TextbookPrompt[]  // 教材自定义提示词
+
+  @@unique([subject, grade, semester, version])
+  @@index([subject])
+  @@index([grade])
+  @@index([status])
+  @@index([isHidden])
+  @@index([createdBy])
+}
+
+// 单元表
+model TextbookUnit {
+  id          String    @id @default(uuid())
+  textbookId  String
+  textbook    Textbook  @relation(fields: [textbookId], references: [id], onDelete: Cascade)
+  unitNumber  Int       // 单元序号
+  title       String    // 单元标题（如：第一单元）
+  theme       String?   // 单元主题（可选）
+  pageStart   Int?      // 起始页码
+  pageEnd     Int?      // 结束页码
+  sortOrder   Int       @default(0)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  lessons     TextbookLesson[]
+
+  @@unique([textbookId, unitNumber])
+  @@index([textbookId])
+  @@index([sortOrder])
+}
+
+// 课文表
+model TextbookLesson {
+  id           String               @id @default(uuid())
+  unitId       String
+  unit         TextbookUnit         @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  lessonNumber Int                  // 课文序号
+  title        String               // 课文标题
+  pageStart    Int?                 // 起始页码
+  pageEnd      Int?                 // 结束页码
+  htmlContent  String?              @db.Text // HTML内容
+  status       TextbookLessonStatus @default(EMPTY)
+  inputBy      String?              // 录入人ID
+  reviewedBy   String?              // 审核人ID
+  reviewNote   String?              // 审核备注
+  reviewedAt   DateTime?            // 审核时间
+  sortOrder    Int                  @default(0)
+  createdAt    DateTime             @default(now())
+  updatedAt    DateTime             @updatedAt
+
+  @@unique([unitId, lessonNumber])
+  @@index([unitId])
+  @@index([status])
+  @@index([inputBy])
+  @@index([sortOrder])
+}
+
+// ========== 唐诗宋词作品系统 ==========
+
+// 审核状态枚举
+enum PoetryWorkStatus {
+  PENDING   // 待审核
+  APPROVED  // 已通过
+  REJECTED  // 已拒绝
+}
+
+// 唐诗宋词作品表
+model PoetryWork {
+  id           String            @id @default(uuid())
+  authorId     String
+  author       User              @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  title        String            // 作品标题
+  htmlCode     String            @db.Text // 完整HTML代码
+  status       PoetryWorkStatus  @default(PENDING) // 审核状态
+  reviewReason String?           // 审核原因
+  submissionId String?           // 关联的审核提交记录ID
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+
+  likes        PoetryLike[]
+
+  @@index([authorId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+// 唐诗宋词点赞表
+model PoetryLike {
+  id        String     @id @default(uuid())
+  userId    String
+  workId    String
+  work      PoetryWork @relation(fields: [workId], references: [id], onDelete: Cascade)
+  isLike    Boolean    @default(true) // true=点赞，false=点踩
+  createdAt DateTime   @default(now())
+
+  @@unique([userId, workId])
+  @@index([userId])
+  @@index([workId])
+}
+
+// ========== 阅读笔记系统 ==========
+
+// 阅读笔记表（用户主动保存的搜索/查字结果）
+model ReadingNote {
+  id          String   @id @default(uuid())
+  userId      String
+  textbookId  String   // 教材ID
+  sessionId   String   // 阅读会话ID（前端生成）
+  sourceType  String   // 来源类型：dict / search / explain
+  query       String   // 用户查询内容
+  content     Json     // 原始卡片数据
+  snippet     String   // 文本摘要（用于列表展示）
+  page        Int      // 关联页码
+  createdAt   DateTime @default(now())
+
+  @@index([userId, textbookId])
+  @@index([sessionId])
+  @@index([createdAt])
+}
+
+// ========== AI 辅助系统 ==========
+
+// AI API 配置表
+model AiApiConfig {
+  id           String   @id @default(uuid())
+  name         String                          // API 名称，如 "本地 LM Studio"
+  baseUrl      String                          // 服务器地址，如 "http://localhost:1234/v1"
+  apiKey       String?                         // API Key（可选）
+  model        String   @default("default")    // 模型名称
+  temperature  Float    @default(0.7)          // 温度参数
+  maxTokens    Int      @default(2000)         // 最大 token 数
+  isEnabled    Boolean  @default(true)         // 是否启用
+  isDefault    Boolean  @default(false)        // 是否默认
+  createdBy    String                          // 创建人 ID
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // 关联
+  analysisLogs AiAnalysisLog[]
+
+  @@index([createdBy])
+  @@index([isEnabled, isDefault])
+}
+
+// AI 分析提示词模板
+model AiPromptTemplate {
+  id           String   @id @default(uuid())
+  name         String                          // 模板名称
+  subject      String?                         // 适用学科（可选，null 表示通用）
+  promptText   String   @db.Text               // 提示词内容
+  description  String?                         // 模板描述
+  isDefault    Boolean  @default(false)        // 是否默认模板
+  isEnabled    Boolean  @default(true)         // 是否启用
+  createdBy    String                          // 创建人 ID
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // 关联
+  analysisLogs AiAnalysisLog[]
+
+  @@index([subject, isDefault])
+  @@index([isEnabled])
+  @@index([createdBy])
+}
+
+// AI 分析调用日志（用于追溯）
+model AiAnalysisLog {
+  id             String            @id @default(uuid())
+  userId         String                          // 触发用户 ID
+  textbookId     String                          // 教材 ID
+  sessionId      String                          // 阅读会话 ID
+  apiConfigId    String?                         // 使用的 API 配置 ID
+  apiConfig      AiApiConfig?      @relation(fields: [apiConfigId], references: [id], onDelete: SetNull)
+  promptId       String?                         // 使用的提示词模板 ID
+  prompt         AiPromptTemplate? @relation(fields: [promptId], references: [id], onDelete: SetNull)
+  inputPages     String                          // 输入页码范围，如 "3-5"
+  inputText      String            @db.Text      // 输入的 PDF 文本内容
+  fullPrompt     String            @db.Text      // 完整的请求 prompt
+  outputText     String?           @db.Text      // AI 输出内容
+  tokensUsed     Int?                            // 消耗的 token 数
+  responseTime   Int?                            // 响应时间（毫秒）
+  status         String            @default("pending")    // pending/success/error
+  errorMessage   String?                         // 错误信息
+  createdAt      DateTime          @default(now())
+
+  @@index([userId])
+  @@index([textbookId])
+  @@index([sessionId])
+  @@index([apiConfigId])
+  @@index([createdAt])
+  @@index([status])
+}
+
+// 教材阅读聊天记录（永久存储，与用户和教材绑定）
+model TextbookChatMessage {
+  id           String   @id @default(uuid())
+  userId       String
+  textbookId   String
+  role         String                          // user / assistant / system
+  content      String   @db.Text               // 消息内容
+  page         Int?                            // 关联页码
+  sourceType   String?                         // 来源类型：user_input / ai_analysis / quote
+  metadata     Json?                           // 额外信息（引用来源等）
+  createdAt    DateTime @default(now())
+
+  @@index([userId, textbookId])
+  @@index([createdAt])
+}
+
+// ========== AI 提示词层级系统 ==========
+
+// 系统级提示词（全局唯一）
+model SystemPrompt {
+  id           String   @id @default(uuid())
+  promptText   String   @db.Text               // 系统提示词内容
+  description  String?                         // 描述
+  createdBy    String                          // 创建人 ID
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([createdBy])
+}
+
+// 教材自定义提示词（每本教材可有多条）
+model TextbookPrompt {
+  id           String   @id @default(uuid())
+  textbookId   String                          // 教材 ID
+  textbook     Textbook @relation(fields: [textbookId], references: [id], onDelete: Cascade)
+  name         String                          // 提示词名称
+  promptText   String   @db.Text               // 提示词内容
+  description  String?                         // 描述
+  isActive     Boolean  @default(false)        // 是否当前使用
+  sortOrder    Int      @default(0)            // 排序
+  createdBy    String                          // 创建人 ID
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([textbookId])
+  @@index([isActive])
+  @@index([createdBy])
+  @@index([sortOrder])
 }

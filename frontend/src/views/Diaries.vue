@@ -166,7 +166,7 @@ import { ref, computed, onMounted, h, reactive } from 'vue';
 import { useMessage, useDialog, NButton, NSpace, NTag } from 'naive-ui';
 import { diaryAPI } from '@/api';
 import { format } from 'date-fns';
-import { AddOutline, CopyOutline, CreateOutline, TrashOutline } from '@vicons/ionicons5';
+import { AddOutline, CopyOutline, CreateOutline, TrashOutline, ShareSocialOutline } from '@vicons/ionicons5';
 import TagSelector from '@/components/TagSelector.vue';
 
 const message = useMessage();
@@ -265,9 +265,19 @@ const columns = [
   {
     title: '操作',
     key: 'actions',
-    width: 220,
+    width: 280,
     render: (row) => {
       return h(NSpace, { size: 'small' }, () => [
+        h(
+          NButton,
+          {
+            size: 'small',
+            quaternary: true,
+            type: 'primary',
+            onClick: () => shareDiary(row),
+          },
+          { default: () => '分享', icon: () => h(ShareSocialOutline) }
+        ),
         h(
           NButton,
           {
@@ -410,6 +420,22 @@ ${formatDate(diary.createdAt)} · ${getMoodEmoji(diary.mood)} ${diary.weather}`;
     message.success('日记内容已复制');
   } catch (error) {
     message.error('复制失败');
+  }
+};
+
+// 分享日记（复制链接，自动设为公开）
+const shareDiary = async (diary) => {
+  try {
+    // 如果日记不是公开的，先设为公开
+    if (!diary.isPublic) {
+      await diaryAPI.updateDiary(diary.id, { isPublic: true });
+      diary.isPublic = true;
+    }
+    const url = `${window.location.origin}/diary/${diary.id}`;
+    await navigator.clipboard.writeText(url);
+    message.success('分享链接已复制');
+  } catch (error) {
+    message.error('分享失败');
   }
 };
 

@@ -3,7 +3,7 @@
     <!-- 用户信息头部 -->
     <div class="card">
       <div class="flex items-center space-x-4">
-        <div class="relative">
+        <div class="relative flex-shrink-0">
           <n-avatar :src="user?.avatar" :size="80" round>
             {{ user?.profile?.nickname?.[0] || user?.username?.[0] }}
           </n-avatar>
@@ -13,14 +13,29 @@
             <template #icon><n-icon><CameraOutline /></n-icon></template>
           </n-button>
         </div>
-        <div class="flex-1">
-          <h2 class="text-xl font-bold text-gray-800">
+        <div class="flex-1 min-w-0">
+          <h2 class="text-xl font-bold text-gray-800 truncate">
             {{ user?.profile?.nickname || user?.username }}
           </h2>
-          <p class="text-gray-500">{{ user?.email }}</p>
+          <p class="text-gray-500 truncate">{{ user?.email }}</p>
           <n-tag :type="roleTagType" size="small" class="mt-1">{{ roleLabel }}</n-tag>
         </div>
-        <div class="grid grid-cols-3 gap-4 text-center">
+        <!-- 移动端退出登录按钮 -->
+        <div class="md:hidden flex-shrink-0">
+          <n-button
+            type="error"
+            secondary
+            round
+            @click="handleLogout"
+          >
+            <template #icon>
+              <n-icon size="18"><LogOutOutline /></n-icon>
+            </template>
+            退出登录
+          </n-button>
+        </div>
+        <!-- PC端显示统计数据 -->
+        <div class="hidden md:grid grid-cols-3 gap-4 text-center flex-shrink-0">
           <div>
             <div class="text-2xl font-bold text-primary-500">{{ user?.profile?.joinedDays || 0 }}</div>
             <div class="text-xs text-gray-500">加入天数</div>
@@ -87,22 +102,57 @@
 
       <!-- 安全设置 -->
       <n-tab-pane name="security" tab="安全设置">
-        <div class="card">
-          <h3 class="font-medium mb-4">修改密码</h3>
-          <n-form :model="passwordForm" label-placement="left" label-width="80">
-            <n-form-item label="旧密码">
-              <n-input v-model:value="passwordForm.oldPassword" type="password" show-password-on="click" placeholder="请输入旧密码" />
-            </n-form-item>
-            <n-form-item label="新密码">
-              <n-input v-model:value="passwordForm.newPassword" type="password" show-password-on="click" placeholder="请输入新密码" />
-            </n-form-item>
-            <n-form-item label="确认密码">
-              <n-input v-model:value="passwordForm.confirmPassword" type="password" show-password-on="click" placeholder="请再次输入新密码" />
-            </n-form-item>
-            <n-form-item>
-              <n-button type="primary" :loading="changingPassword" @click="changePassword">修改密码</n-button>
-            </n-form-item>
-          </n-form>
+        <div class="space-y-6">
+          <!-- 修改登录密码 -->
+          <div class="card">
+            <h3 class="font-medium mb-4">修改登录密码</h3>
+            <n-form :model="passwordForm" label-placement="left" label-width="80">
+              <n-form-item label="旧密码">
+                <n-input v-model:value="passwordForm.oldPassword" type="password" show-password-on="click" placeholder="请输入旧密码" />
+              </n-form-item>
+              <n-form-item label="新密码">
+                <n-input v-model:value="passwordForm.newPassword" type="password" show-password-on="click" placeholder="请输入新密码" />
+              </n-form-item>
+              <n-form-item label="确认密码">
+                <n-input v-model:value="passwordForm.confirmPassword" type="password" show-password-on="click" placeholder="请再次输入新密码" />
+              </n-form-item>
+              <n-form-item>
+                <n-button type="primary" :loading="changingPassword" @click="changePassword">修改密码</n-button>
+              </n-form-item>
+            </n-form>
+          </div>
+
+          <!-- 支付密码设置 -->
+          <div class="card">
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="font-medium">支付密码</h3>
+              <n-tag :type="paymentPasswordSet ? 'success' : 'warning'" size="small">
+                {{ paymentPasswordSet ? '已设置' : '未设置（默认123456）' }}
+              </n-tag>
+            </div>
+            <p class="text-sm text-gray-500 mb-4">支付密码用于学习币消费时的安全验证</p>
+            <n-form :model="paymentPasswordForm" label-placement="left" label-width="100">
+              <n-form-item label="原支付密码">
+                <n-input
+                  v-model:value="paymentPasswordForm.oldPassword"
+                  type="password"
+                  show-password-on="click"
+                  :placeholder="paymentPasswordSet ? '请输入原支付密码' : '默认密码为 123456'"
+                />
+              </n-form-item>
+              <n-form-item label="新支付密码">
+                <n-input v-model:value="paymentPasswordForm.newPassword" type="password" show-password-on="click" placeholder="请输入新支付密码（至少6位）" />
+              </n-form-item>
+              <n-form-item label="确认密码">
+                <n-input v-model:value="paymentPasswordForm.confirmPassword" type="password" show-password-on="click" placeholder="请再次输入新支付密码" />
+              </n-form-item>
+              <n-form-item>
+                <n-button type="primary" :loading="changingPaymentPassword" @click="resetPaymentPassword">
+                  {{ paymentPasswordSet ? '修改支付密码' : '设置支付密码' }}
+                </n-button>
+              </n-form-item>
+            </n-form>
+          </div>
         </div>
       </n-tab-pane>
 
@@ -140,7 +190,7 @@
           <div class="card">
             <div class="flex items-center justify-between mb-4">
               <div>
-                <h3 class="text-lg font-bold text-gray-800">平湖少儿空间</h3>
+                <h3 class="text-lg font-bold text-gray-800">苹湖少儿空间</h3>
                 <p class="text-sm text-gray-500 mt-1">Children Growth Platform</p>
               </div>
               <div class="text-right">
@@ -269,7 +319,7 @@
           <div class="card">
             <h3 class="font-medium text-gray-800 mb-3">关于我们</h3>
             <p class="text-sm text-gray-600 leading-relaxed">
-              平湖少儿空间是一个面向青少年的综合性学习成长平台。我们致力于为孩子们提供一个安全、有趣、富有创造力的学习环境，
+              苹湖少儿空间是一个面向青少年的综合性学习成长平台。我们致力于为孩子们提供一个安全、有趣、富有创造力的学习环境，
               帮助他们在编程、艺术、社交等多个领域全面发展。
             </p>
             <div class="mt-4 flex gap-3">
@@ -326,18 +376,23 @@
 <script setup>
 import AvatarText from '@/components/AvatarText.vue'
 import { ref, computed, onMounted } from 'vue';
-import { useMessage } from 'naive-ui';
+import { useMessage, useDialog } from 'naive-ui';
 import { useAuthStore } from '@/stores/auth';
 import { userAPI } from '@/api';
-import { CameraOutline, DocumentTextOutline, CheckmarkCircleOutline } from '@vicons/ionicons5';
+import { CameraOutline, DocumentTextOutline, CheckmarkCircleOutline, LogOutOutline } from '@vicons/ionicons5';
+import { useRouter } from 'vue-router';
 import { VERSION, CHANGELOG } from '@/config/changelog';
 
 const message = useMessage();
+const dialog = useDialog();
+const router = useRouter();
 const authStore = useAuthStore();
 
 const user = computed(() => authStore.user);
 const saving = ref(false);
 const changingPassword = ref(false);
+const changingPaymentPassword = ref(false);
+const paymentPasswordSet = ref(false);
 const linking = ref(false);
 const uploading = ref(false);
 const parents = ref([]);
@@ -350,6 +405,7 @@ const selectedFile = ref(null);
 const profileForm = ref({ nickname: '', grade: '', bio: '', interests: [] });
 const privacyForm = ref({ profilePublic: true, showStats: true });
 const passwordForm = ref({ oldPassword: '', newPassword: '', confirmPassword: '' });
+const paymentPasswordForm = ref({ oldPassword: '', newPassword: '', confirmPassword: '' });
 
 // 系统设置相关
 const currentVersion = ref(VERSION);
@@ -556,6 +612,50 @@ const changePassword = async () => {
   }
 };
 
+// 检查支付密码设置状态
+const checkPaymentPasswordStatus = async () => {
+  try {
+    const result = await userAPI.checkPaymentPasswordSet();
+    paymentPasswordSet.value = result.isSet;
+  } catch (error) {
+    console.error('检查支付密码状态失败:', error);
+  }
+};
+
+// 重置/设置支付密码
+const resetPaymentPassword = async () => {
+  if (!paymentPasswordForm.value.oldPassword) {
+    message.warning('请输入原支付密码');
+    return;
+  }
+  if (!paymentPasswordForm.value.newPassword) {
+    message.warning('请输入新支付密码');
+    return;
+  }
+  if (paymentPasswordForm.value.newPassword.length < 6) {
+    message.warning('支付密码至少6位');
+    return;
+  }
+  if (paymentPasswordForm.value.newPassword !== paymentPasswordForm.value.confirmPassword) {
+    message.warning('两次密码不一致');
+    return;
+  }
+  changingPaymentPassword.value = true;
+  try {
+    await userAPI.resetPaymentPassword({
+      oldPassword: paymentPasswordForm.value.oldPassword,
+      newPassword: paymentPasswordForm.value.newPassword,
+    });
+    message.success('支付密码设置成功');
+    paymentPasswordForm.value = { oldPassword: '', newPassword: '', confirmPassword: '' };
+    paymentPasswordSet.value = true;
+  } catch (error) {
+    message.error(error.error || '设置失败');
+  } finally {
+    changingPaymentPassword.value = false;
+  }
+};
+
 const linkParent = async () => {
   if (!parentEmail.value) {
     message.warning('请输入家长邮箱');
@@ -574,7 +674,23 @@ const linkParent = async () => {
   }
 };
 
+// 退出登录
+const handleLogout = () => {
+  dialog.warning({
+    title: '确认退出',
+    content: '确定要退出登录吗？',
+    positiveText: '确定',
+    negativeText: '取消',
+    onPositiveClick: () => {
+      authStore.logout();
+      message.success('已退出登录');
+      router.push('/login');
+    },
+  });
+};
+
 onMounted(() => {
   loadUser();
+  checkPaymentPasswordStatus();
 });
 </script>

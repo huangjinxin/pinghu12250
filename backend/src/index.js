@@ -9,9 +9,9 @@ const cors = require('cors');
 const path = require('path');
 const { Server } = require('socket.io');
 const jwt = require('jsonwebtoken');
-const { PrismaClient } = require('@prisma/client');
 
-const prisma = new PrismaClient();
+// 使用 Prisma 单例
+const prisma = require('./lib/prisma');
 
 // 导入路由
 const authRoutes = require('./routes/auth');
@@ -47,12 +47,25 @@ const rewardRoutes = require('./routes/reward');
 const questionRoutes = require('./routes/question');
 const walletRoutes = require('./routes/wallet');
 const payRoutes = require('./routes/pay');
+const ruleRoutes = require('./routes/rules');
+const submissionsRoutes = require('./routes/submissions');
+const galleryRoutes = require('./routes/gallery');
+const poetryWorkRoutes = require('./routes/poetryWork');
+const textbookRoutes = require('./routes/textbook');
+const dictRoutes = require('./routes/dict');
+const textbookNoteRoutes = require('./routes/textbookNote');
+const aiConfigRoutes = require('./routes/aiConfig');
+const aiPromptRoutes = require('./routes/aiPrompt');
+const aiAnalysisRoutes = require('./routes/aiAnalysis');
+const textbookChatRoutes = require('./routes/textbookChat');
 
 // 导入服务
 const challengeService = require('./services/challengeService');
 
 // 导入中间件
 const { errorHandler } = require('./middleware/errorHandler');
+const upload = require('./middleware/upload');
+const { authenticate } = require('./middleware/auth');
 
 // 导入定时任务库
 const cron = require('node-cron');
@@ -61,24 +74,49 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // 中间件
-// CORS配置：开发环境允许所有来源，支持局域网访问
+// CORS配置：允许所有来源访问
 app.use(cors({
-  origin: process.env.NODE_ENV === 'production'
-    ? ['http://localhost:12250', 'http://127.0.0.1:12250'] // 生产环境限制来源
-    : '*', // 开发环境允许所有来源（支持局域网访问）
+  origin: true, // 允许所有来源，并自动回显请求的 origin
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
 }));
 
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 // 静态文件服务（上传的文件）
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
+// PDF静态文件服务（外部磁盘）
+const pdfStorageDir = process.env.PDF_STORAGE_DIR || '/Volumes/2TB-BC01/pinghu/books-ai';
+app.use('/pdfs', express.static(pdfStorageDir));
+
 // 健康检查
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
+// 通用文件上传接口（支持图片和音频）
+app.post('/api/upload', authenticate, upload.single('file'), (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: '请选择要上传的文件' });
+    }
+
+    // 根据文件类型返回相对路径
+    let folder = 'images';
+    if (req.file.fieldname === 'avatar') {
+      folder = 'avatars';
+    } else if (req.file.mimetype.startsWith('audio/')) {
+      folder = 'audios';
+    }
+
+    const fileUrl = `/uploads/${folder}/${req.file.filename}`;
+    res.json({ url: fileUrl });
+  } catch (error) {
+    console.error('文件上传失败:', error);
+    res.status(500).json({ error: '文件上传失败' });
+  }
 });
 
 // API路由
@@ -115,6 +153,17 @@ app.use('/api/reward', rewardRoutes);
 app.use('/api/questions', questionRoutes);
 app.use('/api/wallet', walletRoutes);
 app.use('/api/pay', payRoutes);
+app.use('/api/rules', ruleRoutes);
+app.use('/api/submissions', submissionsRoutes);
+app.use('/api/gallery', galleryRoutes);
+app.use('/api/poetry-works', poetryWorkRoutes);
+app.use('/api/textbooks', textbookRoutes);
+app.use('/api/dict', dictRoutes);
+app.use('/api/textbook-notes', textbookNoteRoutes);
+app.use('/api/ai-config', aiConfigRoutes);
+app.use('/api/ai-prompts', aiPromptRoutes);
+app.use('/api/ai-analysis', aiAnalysisRoutes);
+app.use('/api/textbook-chat', textbookChatRoutes);
 
 // 404处理
 app.use((req, res) => {
@@ -132,14 +181,12 @@ const httpServer = http.createServer(app);
 // 初始化Socket.io - 支持局域网WebSocket连接
 const io = new Server(httpServer, {
   cors: {
-    origin: process.env.NODE_ENV === 'production'
-      ? ['http://localhost:12250', 'http://127.0.0.1:12250'] // 生产环境限制来源
-      : '*', // 开发环境允许所有来源（支持局域网访问）
+    origin: true, // 允许所有来源
     credentials: true,
     methods: ['GET', 'POST'],
   },
-  // 传输方式：优先WebSocket，失败自动降级为轮询
-  transports: ['websocket', 'polling'],
+  // 传输方式：优先轮询，成功后升级到WebSocket
+  transports: ['polling', 'websocket'],
   // 允许跨域升级请求（WebSocket握手）
   allowEIO3: true,
   // 允许从任何来源升级连接
@@ -151,6 +198,10 @@ const io = new Server(httpServer, {
 
 // 在线用户Map: userId -> socketId
 const onlineUsers = new Map();
+
+// Socket认证错误计数（防止日志刷屏）
+let socketAuthErrorCount = 0;
+const MAX_SOCKET_AUTH_ERRORS = 5;
 
 // JWT认证中间件
 io.use(async (socket, next) => {
@@ -184,7 +235,13 @@ io.use(async (socket, next) => {
 
     next();
   } catch (err) {
-    console.error('[Socket] 认证失败:', err.message);
+    socketAuthErrorCount++;
+    if (socketAuthErrorCount <= MAX_SOCKET_AUTH_ERRORS) {
+      console.error('[Socket] 认证失败:', err.message);
+      if (socketAuthErrorCount === MAX_SOCKET_AUTH_ERRORS) {
+        console.warn('[Socket] 后续认证错误将不再显示');
+      }
+    }
     next(new Error('认证失败：' + err.message));
   }
 });

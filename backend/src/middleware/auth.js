@@ -3,9 +3,8 @@
  */
 
 const jwt = require('jsonwebtoken');
-const { PrismaClient } = require('@prisma/client');
-
-const prisma = new PrismaClient();
+// 使用 Prisma 单例
+const prisma = require('../lib/prisma');
 
 /**
  * 验证JWT token
@@ -81,4 +80,39 @@ const isAdmin = (req, res, next) => {
   next();
 };
 
-module.exports = { authenticate, authorize, isAdmin };
+/**
+ * 可选认证中间件（有token就验证，没有也放行）
+ */
+const optionalAuth = async (req, res, next) => {
+  try {
+    const token = req.headers.authorization?.replace('Bearer ', '');
+
+    if (!token) {
+      return next();
+    }
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+    const user = await prisma.user.findUnique({
+      where: { id: decoded.userId },
+      select: {
+        id: true,
+        email: true,
+        username: true,
+        role: true,
+        avatar: true,
+      },
+    });
+
+    if (user) {
+      req.user = user;
+    }
+
+    next();
+  } catch (error) {
+    // token无效也放行，只是不设置user
+    next();
+  }
+};
+
+module.exports = { authenticate, authorize, isAdmin, optionalAuth };

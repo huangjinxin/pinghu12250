@@ -5,11 +5,19 @@ import path from 'path';
 export default defineConfig({
   plugins: [vue()],
   server: {
-    host: '0.0.0.0', // 监听所有网络接口，允许局域网访问
+    host: '0.0.0.0',
     port: 12250,
+    allowedHosts: ['pinghu.706tech.cn'],
     proxy: {
       '/api': {
-        // 在Docker环境中使用服务名，本地开发使用localhost
+        target: process.env.DOCKER_ENV ? 'http://backend:12251' : 'http://localhost:12251',
+        changeOrigin: true,
+      },
+      '/uploads': {
+        target: process.env.DOCKER_ENV ? 'http://backend:12251' : 'http://localhost:12251',
+        changeOrigin: true,
+      },
+      '/pdfs': {
         target: process.env.DOCKER_ENV ? 'http://backend:12251' : 'http://localhost:12251',
         changeOrigin: true,
       },

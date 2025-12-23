@@ -3,11 +3,11 @@
  * 管理成就的检查、解锁、进度追踪
  */
 
-const { PrismaClient } = require('@prisma/client');
 const pointService = require('./pointService');
 const { sendAchievementNotification } = require('./notificationService');
 
-const prisma = new PrismaClient();
+// 使用 Prisma 单例
+const prisma = require('../lib/prisma');
 
 // 成就触发映射表
 const ACHIEVEMENT_TRIGGERS = {

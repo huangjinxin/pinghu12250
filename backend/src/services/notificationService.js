@@ -3,8 +3,8 @@
  * 用于向用户发送系统通知（成就解锁、作品购买、关注好友等）
  */
 
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+// 使用 Prisma 单例
+const prisma = require('../lib/prisma');
 
 // 延迟获取io和onlineUsers，避免循环依赖
 let io = null;
@@ -39,7 +39,8 @@ async function sendSystemMessage(toUserId, type, content, metadata = {}) {
       'SYSTEM_TASK',
       'SYSTEM_PURCHASE',
       'SYSTEM_FOLLOW',
-      'SYSTEM_FRIEND'
+      'SYSTEM_FRIEND',
+      'SYSTEM_COMMENT'
     ];
 
     if (!validTypes.includes(type)) {
@@ -165,6 +166,26 @@ async function sendTaskNotification(toUserId, content, metadata = {}) {
 }
 
 /**
+ * 发送评论通知
+ * @param {string} toUserId - 接收者ID（日记作者）
+ * @param {object} commenter - 评论者对象
+ * @param {object} diary - 日记对象
+ */
+async function sendCommentNotification(toUserId, commenter, diary) {
+  // 不给自己发通知
+  if (toUserId === commenter.id) return null;
+
+  const content = `💬 ${commenter.username} 评论了你的日记《${diary.title}》`;
+  const metadata = {
+    diaryId: diary.id,
+    commenterId: commenter.id,
+    link: `/diary/${diary.id}`
+  };
+
+  return sendSystemMessage(toUserId, 'SYSTEM_COMMENT', content, metadata);
+}
+
+/**
  * 批量发送系统消息
  * @param {string[]} userIds - 用户ID数组
  * @param {string} type - 消息类型
@@ -191,5 +212,6 @@ module.exports = {
   sendFollowNotification,
   sendFriendNotification,
   sendTaskNotification,
+  sendCommentNotification,
   sendBulkSystemMessages
 };

@@ -1,0 +1,833 @@
+<template>
+  <div class="my-growth">
+    <n-card title="心路历程">
+      <n-tabs v-model:value="activeTab" type="line">
+        <n-tab-pane name="available" tab="可填写项目">
+          <n-spin :show="loading">
+            <n-empty
+              v-if="availableTemplates.length === 0"
+              description="暂无可填写的项目"
+            />
+            <div v-else>
+              <n-grid :cols="2" :x-gap="16" :y-gap="16" responsive="screen">
+                <n-gi
+                  v-for="template in paginatedTemplates"
+                  :key="template.id"
+                >
+                  <n-card
+                    hoverable
+                    class="template-card"
+                    @click="handleFillTemplate(template)"
+                  >
+                    <template #header>
+                      <div class="template-header">
+                        <span class="template-name">{{ template.name }}</span>
+                        <n-tag
+                          :type="template.points > 0 ? 'success' : 'error'"
+                          size="medium"
+                          round
+                        >
+                          {{ template.points > 0 ? '+' : '' }}{{ template.points }}
+                        </n-tag>
+                      </div>
+                    </template>
+                    <n-space vertical size="small">
+                      <n-space>
+                        <n-tag type="info" size="small" round>
+                          <template #icon>
+                            <n-icon :component="CodeSlashOutline" />
+                          </template>
+                          {{ template.type.name }}
+                        </n-tag>
+                        <n-tag size="small" round>
+                          <template #icon>
+                            <n-icon :component="TrophyOutline" />
+                          </template>
+                          {{ template.standard.name }}
+                        </n-tag>
+                      </n-space>
+                      <div class="template-requirements">
+                        <n-space size="small">
+                          <n-tag v-if="template.requireText" size="tiny" type="default">
+                            需要文字
+                          </n-tag>
+                          <n-tag v-if="template.requireImage" size="tiny" type="default">
+                            需要图片
+                          </n-tag>
+                          <n-tag v-if="template.requireLink" size="tiny" type="default">
+                            需要链接
+                          </n-tag>
+                        </n-space>
+                      </div>
+                    </n-space>
+                  </n-card>
+                </n-gi>
+              </n-grid>
+
+              <n-pagination
+                v-if="templatePagination.totalPages > 1"
+                v-model:page="templatePagination.page"
+                :page-count="templatePagination.totalPages"
+                style="margin-top: 20px; justify-content: center"
+                show-size-picker
+                :page-sizes="[6, 12, 18, 24]"
+                :page-size="templatePagination.pageSize"
+                @update:page-size="handleTemplateSizeChange"
+              />
+            </div>
+          </n-spin>
+        </n-tab-pane>
+
+        <n-tab-pane name="my" tab="我的提交">
+          <n-spin :show="submissionStore.myLoading">
+            <n-empty
+              v-if="groupedSubmissions.length === 0"
+              description="暂无提交记录"
+            />
+            <div v-else>
+              <n-list bordered>
+                <n-list-item
+                  v-for="group in groupedSubmissions"
+                  :key="group.templateId"
+                >
+                  <template #prefix>
+                    <div class="submission-prefix">
+                      <n-tag
+                        :type="getStatusType(group.latest.status)"
+                        size="large"
+                      >
+                        {{ getStatusText(group.latest.status) }}
+                      </n-tag>
+                    </div>
+                  </template>
+
+                  <div class="submission-main">
+                    <!-- 标题行 -->
+                    <div class="submission-title">
+                      <span class="submission-name">{{ group.templateName }}</span>
+                      <n-space size="small">
+                        <n-tag type="info" size="small">{{ group.typeName }}</n-tag>
+                        <n-tag size="small">{{ group.standardName }}</n-tag>
+                        <n-tag
+                          :type="group.latest.template.points > 0 ? 'success' : 'error'"
+                          size="small"
+                        >
+                          {{ group.latest.template.points > 0 ? '+' : '' }}{{ group.latest.template.points }} 积分
+                        </n-tag>
+                      </n-space>
+                    </div>
+
+                    <!-- 最新提交内容 -->
+                    <div class="submission-latest">
+                      <n-space align="center" size="small">
+                        <span class="submission-time">{{ formatDate(group.latest.createdAt) }}</span>
+                        <n-badge
+                          v-if="group.history.length > 0"
+                          :value="group.history.length"
+                          type="info"
+                        >
+                          <n-button
+                            text
+                            size="small"
+                            @click.stop="toggleHistory(group)"
+                          >
+                            {{ group.showHistory ? '收起历史' : '查看历史' }}
+                          </n-button>
+                        </n-badge>
+                      </n-space>
+
+                      <div v-if="group.latest.content" class="submission-content">
+                        {{ group.latest.content }}
+                      </div>
+
+                      <n-space v-if="group.latest.images?.length" class="submission-images">
+                        <n-image
+                          v-for="(img, index) in group.latest.images"
+                          :key="index"
+                          :src="img"
+                          width="60"
+                          style="border-radius: 4px"
+                        />
+                      </n-space>
+
+                      <div v-if="group.latest.link" class="submission-link">
+                        <n-icon :component="LinkOutline" size="14" />
+                        <a :href="group.latest.link" target="_blank">{{ group.latest.link }}</a>
+                      </div>
+
+                      <div v-if="group.latest.reviewNote" class="review-note">
+                        <strong>审核备注：</strong>{{ group.latest.reviewNote }}
+                      </div>
+
+                      <div v-if="group.latest.status === 'APPROVED' && group.latest.pointsAwarded !== null" class="points-awarded">
+                        <n-tag type="success" size="small">
+                          实际获得：{{ group.latest.pointsAwarded > 0 ? '+' : '' }}{{ group.latest.pointsAwarded }} 积分
+                        </n-tag>
+                      </div>
+                    </div>
+
+                    <!-- 历史记录 -->
+                    <n-collapse-transition :show="group.showHistory">
+                      <div v-if="group.history.length > 0" class="history-section">
+                        <n-divider style="margin: 12px 0 8px 0;">
+                          <span style="color: #999; font-size: 12px;">历史记录</span>
+                        </n-divider>
+                        <div
+                          v-for="historyItem in group.history"
+                          :key="historyItem.id"
+                          class="history-item"
+                        >
+                          <n-space align="center" size="small" style="margin-bottom: 6px;">
+                            <n-tag :type="getStatusType(historyItem.status)" size="small">
+                              {{ getStatusText(historyItem.status) }}
+                            </n-tag>
+                            <span class="submission-time">{{ formatDate(historyItem.createdAt) }}</span>
+                            <n-button
+                              text
+                              size="tiny"
+                              type="primary"
+                              @click="handleViewHistory(historyItem)"
+                            >
+                              查看详情
+                            </n-button>
+                          </n-space>
+                          <div v-if="historyItem.content" class="submission-content archived">
+                            {{ historyItem.content }}
+                          </div>
+                          <div v-if="historyItem.reviewNote" class="review-note archived">
+                            <strong>审核备注：</strong>{{ historyItem.reviewNote }}
+                          </div>
+                        </div>
+                      </div>
+                    </n-collapse-transition>
+                  </div>
+
+                  <template #suffix>
+                    <n-space vertical align="end" :size="8">
+                      <n-button
+                        v-if="group.latest.status === 'REJECTED'"
+                        size="small"
+                        type="primary"
+                        @click="handleResubmit(group.latest)"
+                      >
+                        重新提交
+                      </n-button>
+                      <n-button
+                        v-if="group.latest.status === 'PENDING'"
+                        size="small"
+                        @click="handleEditSubmission(group.latest)"
+                      >
+                        编辑
+                      </n-button>
+                      <n-button
+                        v-if="group.latest.status === 'PENDING'"
+                        size="small"
+                        type="error"
+                        @click="handleDeleteSubmission(group.latest.id)"
+                      >
+                        删除
+                      </n-button>
+                    </n-space>
+                  </template>
+                </n-list-item>
+              </n-list>
+
+              <n-pagination
+                v-if="submissionStore.myPagination.totalPages > 1"
+                v-model:page="submissionStore.myPagination.page"
+                :page-count="submissionStore.myPagination.totalPages"
+                style="margin-top: 20px; justify-content: center"
+                @update:page="handlePageChange"
+              />
+            </div>
+          </n-spin>
+        </n-tab-pane>
+      </n-tabs>
+    </n-card>
+
+    <!-- 查看详情对话框 -->
+    <n-modal
+      v-model:show="showDetailDialog"
+      preset="card"
+      title="提交详情"
+      style="width: 600px"
+    >
+      <n-descriptions v-if="viewingSubmission" label-placement="left" :column="1">
+        <n-descriptions-item label="规则名称">
+          {{ viewingSubmission.template.name }}
+        </n-descriptions-item>
+        <n-descriptions-item label="技术类型">
+          <n-tag type="info" size="small">{{ viewingSubmission.template.type.name }}</n-tag>
+        </n-descriptions-item>
+        <n-descriptions-item label="展示标准">
+          <n-tag size="small">{{ viewingSubmission.template.standard.name }}</n-tag>
+        </n-descriptions-item>
+        <n-descriptions-item label="积分">
+          <n-tag
+            :type="viewingSubmission.template.points > 0 ? 'success' : 'error'"
+            size="small"
+          >
+            {{ viewingSubmission.template.points > 0 ? '+' : '' }}{{ viewingSubmission.template.points }} 积分
+          </n-tag>
+        </n-descriptions-item>
+        <n-descriptions-item label="状态">
+          <n-tag :type="getStatusType(viewingSubmission.status)" size="small">
+            {{ getStatusText(viewingSubmission.status) }}
+          </n-tag>
+        </n-descriptions-item>
+        <n-descriptions-item label="提交时间">
+          {{ formatDate(viewingSubmission.createdAt) }}
+        </n-descriptions-item>
+        <n-descriptions-item v-if="viewingSubmission.content" label="说明内容">
+          {{ viewingSubmission.content }}
+        </n-descriptions-item>
+        <n-descriptions-item v-if="viewingSubmission.images?.length" label="图片">
+          <n-space>
+            <n-image
+              v-for="(img, index) in viewingSubmission.images"
+              :key="index"
+              :src="img"
+              width="100"
+              style="border-radius: 4px"
+            />
+          </n-space>
+        </n-descriptions-item>
+        <n-descriptions-item v-if="viewingSubmission.link" label="链接">
+          <a :href="viewingSubmission.link" target="_blank">{{ viewingSubmission.link }}</a>
+        </n-descriptions-item>
+        <n-descriptions-item v-if="viewingSubmission.reviewNote" label="审核备注">
+          <div class="review-note">
+            {{ viewingSubmission.reviewNote }}
+          </div>
+        </n-descriptions-item>
+        <n-descriptions-item v-if="viewingSubmission.reviewedAt" label="审核时间">
+          {{ formatDate(viewingSubmission.reviewedAt) }}
+        </n-descriptions-item>
+        <n-descriptions-item v-if="viewingSubmission.pointsAwarded !== null" label="实际获得积分">
+          <n-tag
+            :type="viewingSubmission.pointsAwarded > 0 ? 'success' : 'error'"
+            size="small"
+          >
+            {{ viewingSubmission.pointsAwarded > 0 ? '+' : '' }}{{ viewingSubmission.pointsAwarded }} 积分
+          </n-tag>
+        </n-descriptions-item>
+      </n-descriptions>
+    </n-modal>
+
+    <!-- 填写/编辑表单对话框 -->
+    <n-modal
+      v-model:show="showFormDialog"
+      preset="card"
+      :title="editingSubmission ? '编辑提交' : '填写表单'"
+      style="width: 600px"
+    >
+      <n-form
+        ref="formRef"
+        :model="formData"
+        :rules="formRules"
+        label-placement="top"
+      >
+        <n-form-item
+          v-if="selectedTemplate?.requireText"
+          label="描述说明"
+          path="content"
+          :required="selectedTemplate.requireText"
+        >
+          <n-input
+            v-model:value="formData.content"
+            type="textarea"
+            :placeholder="`最多${selectedTemplate.textMaxLength}字`"
+            :maxlength="selectedTemplate.textMaxLength"
+            show-count
+            :rows="5"
+          />
+        </n-form-item>
+
+        <n-form-item
+          v-if="selectedTemplate?.requireImage"
+          label="上传图片"
+          path="images"
+          :required="selectedTemplate.requireImage"
+        >
+          <n-upload
+            v-model:file-list="imageFileList"
+            :max="1"
+            list-type="image-card"
+            accept="image/*"
+            :custom-request="handleCustomUpload"
+            @change="handleImageChange"
+          >
+            点击上传
+          </n-upload>
+        </n-form-item>
+
+        <n-form-item
+          v-if="selectedTemplate?.requireLink"
+          label="链接"
+          path="link"
+          :required="selectedTemplate.requireLink"
+        >
+          <n-input
+            v-model:value="formData.link"
+            placeholder="请输入链接地址"
+          />
+        </n-form-item>
+      </n-form>
+
+      <template #footer>
+        <n-space justify="end">
+          <n-button @click="showFormDialog = false">取消</n-button>
+          <n-button type="primary" @click="handleSubmitForm">提交</n-button>
+        </n-space>
+      </template>
+    </n-modal>
+  </div>
+</template>
+
+<script setup>
+import { ref, computed, onMounted } from 'vue';
+import { useMessage, useDialog } from 'naive-ui';
+import { LinkOutline, CodeSlashOutline, TrophyOutline } from '@vicons/ionicons5';
+import { useSubmissionStore } from '@/stores/submission';
+import api from '@/api';
+
+const message = useMessage();
+const dialog = useDialog();
+const submissionStore = useSubmissionStore();
+
+// 用于跟踪历史记录展开状态
+const historyExpandStates = ref({});
+
+// 将提交记录按模板分组
+const groupedSubmissions = computed(() => {
+  const groups = {};
+
+  // 按模板ID分组
+  submissionStore.mySubmissions.forEach(submission => {
+    const templateId = submission.template.id;
+    if (!groups[templateId]) {
+      groups[templateId] = {
+        templateId,
+        templateName: submission.template.name,
+        typeName: submission.template.type.name,
+        standardName: submission.template.standard.name,
+        submissions: []
+      };
+    }
+    groups[templateId].submissions.push(submission);
+  });
+
+  // 对每组内的提交按时间排序，最新的在前
+  const result = Object.values(groups).map(group => {
+    group.submissions.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    return {
+      ...group,
+      latest: group.submissions[0], // 最新的提交
+      history: group.submissions.slice(1), // 历史提交
+      showHistory: historyExpandStates.value[group.templateId] || false
+    };
+  });
+
+  // 按最新提交时间排序整个列表
+  result.sort((a, b) => new Date(b.latest.createdAt) - new Date(a.latest.createdAt));
+
+  return result;
+});
+
+const activeTab = ref('available');
+const loading = ref(false);
+const availableTemplates = ref([]);
+
+// 模板分页
+const templatePagination = ref({
+  page: 1,
+  pageSize: 6,
+  totalPages: 0
+});
+
+// 分页后的模板
+const paginatedTemplates = computed(() => {
+  const start = (templatePagination.value.page - 1) * templatePagination.value.pageSize;
+  const end = start + templatePagination.value.pageSize;
+  templatePagination.value.totalPages = Math.ceil(availableTemplates.value.length / templatePagination.value.pageSize);
+  return availableTemplates.value.slice(start, end);
+});
+
+const showFormDialog = ref(false);
+const showDetailDialog = ref(false);
+const selectedTemplate = ref(null);
+const editingSubmission = ref(null);
+const viewingSubmission = ref(null);
+const formRef = ref(null);
+const formData = ref({
+  content: '',
+  images: [],
+  link: ''
+});
+const imageFileList = ref([]);
+
+const formRules = {
+  content: [
+    {
+      required: true,
+      message: '请输入描述说明',
+      trigger: 'blur'
+    }
+  ],
+  images: [
+    {
+      required: true,
+      validator: (rule, value) => {
+        if (selectedTemplate.value?.requireImage && imageFileList.value.length === 0) {
+          return new Error('请上传图片');
+        }
+        return true;
+      },
+      trigger: 'change'
+    }
+  ],
+  link: [
+    {
+      required: true,
+      message: '请输入链接',
+      trigger: 'blur'
+    },
+    {
+      type: 'url',
+      message: '请输入有效的URL',
+      trigger: 'blur'
+    }
+  ]
+};
+
+onMounted(async () => {
+  await fetchAvailableTemplates();
+  await submissionStore.fetchMySubmissions();
+});
+
+async function fetchAvailableTemplates() {
+  loading.value = true;
+  try {
+    const { templates } = await api.get('/rules/templates/active');
+    availableTemplates.value = templates || [];
+  } catch (error) {
+    message.error('获取可填写项目失败');
+  } finally {
+    loading.value = false;
+  }
+}
+
+function handleFillTemplate(template) {
+  selectedTemplate.value = template;
+  editingSubmission.value = null;
+  formData.value = {
+    content: '',
+    images: [],
+    link: ''
+  };
+  imageFileList.value = [];
+  showFormDialog.value = true;
+}
+
+function handleEditSubmission(submission) {
+  selectedTemplate.value = submission.template;
+  editingSubmission.value = submission;
+  formData.value = {
+    content: submission.content || '',
+    images: submission.images || [],
+    link: submission.link || ''
+  };
+  imageFileList.value = submission.images.map((url, index) => ({
+    id: index,
+    name: `image-${index}`,
+    status: 'finished',
+    url
+  }));
+  showFormDialog.value = true;
+}
+
+function handleResubmit(submission) {
+  // 被拒绝的提交，创建新提交而不是编辑
+  selectedTemplate.value = submission.template;
+  editingSubmission.value = null; // 设置为 null 表示创建新提交
+  formData.value = {
+    content: submission.content || '',
+    images: submission.images || [],
+    link: submission.link || ''
+  };
+  imageFileList.value = submission.images.map((url, index) => ({
+    id: index,
+    name: `image-${index}`,
+    status: 'finished',
+    url
+  }));
+  showFormDialog.value = true;
+}
+
+function handleViewHistory(submission) {
+  viewingSubmission.value = submission;
+  showDetailDialog.value = true;
+}
+
+function toggleHistory(group) {
+  historyExpandStates.value[group.templateId] = !historyExpandStates.value[group.templateId];
+}
+
+function handleImageChange({ fileList }) {
+  imageFileList.value = fileList;
+}
+
+async function handleCustomUpload({ file, onFinish, onError }) {
+  const formData = new FormData();
+  formData.append('file', file.file);
+
+  try {
+    const response = await api.post('/upload', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    });
+
+    const url = response.url || response.data?.url;
+    file.url = url;
+    file.status = 'finished';
+
+    onFinish();
+  } catch (error) {
+    console.error('图片上传失败:', error);
+    message.error('图片上传失败');
+    onError();
+  }
+}
+
+async function handleSubmitForm() {
+  try {
+    await formRef.value?.validate();
+
+    const data = {
+      templateId: selectedTemplate.value.id,
+      content: formData.value.content,
+      images: imageFileList.value.map(f => f.url || f.response?.url).filter(Boolean),
+      link: formData.value.link
+    };
+
+    if (editingSubmission.value) {
+      await submissionStore.updateMySubmission(editingSubmission.value.id, data);
+      message.success('更新成功');
+    } else {
+      await submissionStore.createSubmission(data);
+      message.success('提交成功，等待审核');
+    }
+
+    showFormDialog.value = false;
+  } catch (error) {
+    if (error?.message) {
+      message.error(error.message);
+    }
+  }
+}
+
+async function handleDeleteSubmission(id) {
+  dialog.warning({
+    title: '确认删除',
+    content: '确定要删除这条提交记录吗？',
+    positiveText: '确定',
+    negativeText: '取消',
+    onPositiveClick: async () => {
+      try {
+        await submissionStore.deleteMySubmission(id);
+        message.success('删除成功');
+      } catch (error) {
+        message.error('删除失败');
+      }
+    }
+  });
+}
+
+function handlePageChange(page) {
+  submissionStore.fetchMySubmissions(page);
+}
+
+function handleTemplateSizeChange(pageSize) {
+  templatePagination.value.pageSize = pageSize;
+  templatePagination.value.page = 1;
+}
+
+function getStatusType(status) {
+  const types = {
+    PENDING: 'warning',
+    APPROVED: 'success',
+    REJECTED: 'error'
+  };
+  return types[status] || 'default';
+}
+
+function getStatusText(status) {
+  const texts = {
+    PENDING: '待审核',
+    APPROVED: '已通过',
+    REJECTED: '已拒绝'
+  };
+  return texts[status] || status;
+}
+
+function formatDate(date) {
+  return new Date(date).toLocaleString('zh-CN');
+}
+</script>
+
+<style scoped>
+.my-growth {
+  padding: 20px;
+}
+
+/* 模板卡片样式 */
+.template-card {
+  cursor: pointer;
+  transition: all 0.3s ease;
+  height: 100%;
+}
+
+.template-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.template-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.template-name {
+  font-weight: 600;
+  font-size: 15px;
+  flex: 1;
+}
+
+.template-requirements {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid #f0f0f0;
+}
+
+/* 提交列表样式 */
+.submission-prefix {
+  display: flex;
+  align-items: flex-start;
+  padding-top: 4px;
+}
+
+.submission-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.submission-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+  gap: 12px;
+}
+
+.submission-name {
+  font-weight: 600;
+  font-size: 15px;
+  color: #333;
+}
+
+.submission-latest {
+  margin-top: 8px;
+}
+
+.submission-time {
+  color: #999;
+  font-size: 12px;
+}
+
+.submission-content {
+  color: #666;
+  font-size: 14px;
+  margin-top: 8px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.submission-content.archived {
+  color: #999;
+  font-size: 13px;
+  opacity: 0.85;
+}
+
+.submission-images {
+  margin-top: 8px;
+}
+
+.submission-link {
+  color: #666;
+  font-size: 13px;
+  margin-top: 8px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.submission-link a {
+  color: #18a058;
+  text-decoration: none;
+}
+
+.submission-link a:hover {
+  text-decoration: underline;
+}
+
+.review-note {
+  color: #666;
+  font-size: 13px;
+  padding: 10px;
+  background: #fff7e6;
+  border-left: 3px solid #faad14;
+  border-radius: 4px;
+  margin-top: 8px;
+}
+
+.review-note.archived {
+  background: #f5f5f5;
+  border-left-color: #d9d9d9;
+}
+
+.review-note strong {
+  color: #faad14;
+  margin-right: 4px;
+}
+
+.review-note.archived strong {
+  color: #999;
+}
+
+.points-awarded {
+  margin-top: 8px;
+}
+
+.history-section {
+  margin-top: 12px;
+  padding: 12px;
+  background: #fafafa;
+  border-radius: 6px;
+}
+
+.history-item {
+  padding: 10px;
+  margin-bottom: 8px;
+  background: white;
+  border-radius: 4px;
+  border: 1px solid #e8e8e8;
+}
+
+.history-item:last-child {
+  margin-bottom: 0;
+}
+</style>

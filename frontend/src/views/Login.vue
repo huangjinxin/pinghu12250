@@ -3,9 +3,9 @@
     <div class="bg-white rounded-2xl shadow-xl max-w-md w-full p-8">
       <div class="text-center mb-8">
         <div class="w-16 h-16 bg-gradient-to-br from-primary-500 to-primary-600 rounded-xl flex items-center justify-center mx-auto mb-4">
-          <span class="text-white font-bold text-2xl">平</span>
+          <span class="text-white font-bold text-2xl">苹</span>
         </div>
-        <h1 class="text-2xl font-bold text-gray-800">平湖少儿空间</h1>
+        <h1 class="text-2xl font-bold text-gray-800">苹湖少儿空间</h1>
         <p class="text-gray-500 mt-2">欢迎回来！请登录您的账户</p>
       </div>
 

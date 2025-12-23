@@ -33,7 +33,7 @@
           <div class="text-5xl font-bold mb-4">{{ Number(wallet.balance || 0).toFixed(2) }}</div>
           <div class="flex justify-center gap-2">
             <n-button type="primary" @click="showExchangeModal = true">兑换</n-button>
-            <n-button type="success" @click="showScanModal = true">
+            <n-button type="success" @click="startCameraScanning">
               <template #icon>
                 <n-icon><QrCodeOutline /></n-icon>
               </template>
@@ -49,6 +49,43 @@
       学习币是稀缺货币，可以通过积分兑换获得。当前兑换比例：{{ exchangeConfig.rate?.points || 100 }} 积分 = {{ exchangeConfig.rate?.coins || 10 }} 学习币。
       每日兑换上限：{{ exchangeConfig.dailyLimit || 500 }} 积分，今日剩余：{{ exchangeConfig.remainingLimit || 0 }} 积分。
     </n-alert>
+
+    <!-- 积分倒数排行榜 -->
+    <n-card title="积分倒数排行榜 TOP5" size="small">
+      <template #header-extra>
+        <n-icon color="#ef4444"><TrophyOutline /></n-icon>
+      </template>
+      <n-spin :show="loadingLeaderboard">
+        <div v-if="leaderboard.length > 0" class="space-y-2">
+          <div
+            v-for="(user, index) in leaderboard"
+            :key="user.id"
+            class="flex items-center justify-between py-2 px-3 rounded-lg"
+            :class="index === 0 ? 'bg-red-50' : index === 1 ? 'bg-orange-50' : index === 2 ? 'bg-yellow-50' : 'bg-white'"
+          >
+            <div class="flex items-center gap-3">
+              <div
+                class="w-6 h-6 rounded-full flex items-center justify-center text-sm font-bold"
+                :class="{
+                  'bg-red-400 text-white': index === 0,
+                  'bg-orange-400 text-white': index === 1,
+                  'bg-yellow-400 text-white': index === 2,
+                  'bg-gray-200 text-gray-600': index > 2
+                }"
+              >
+                {{ index + 1 }}
+              </div>
+              <n-avatar :src="user.avatar" :size="32" round>
+                {{ (user.displayName || user.username || '?').charAt(0) }}
+              </n-avatar>
+              <span class="font-medium">{{ user.displayName || user.username }}</span>
+            </div>
+            <div class="font-bold text-red-600">{{ user.totalPoints || 0 }} 分</div>
+          </div>
+        </div>
+        <n-empty v-else description="暂无排行数据" size="small" />
+      </n-spin>
+    </n-card>
 
     <!-- 标签页：积分明细 / 学习币明细 / 兑换记录 -->
     <n-card>
@@ -119,9 +156,14 @@
                   <p class="text-xs text-gray-500">{{ formatDate(order.createdAt) }}</p>
                   <p class="text-xs text-gray-600">订单号：{{ order.orderNo }}</p>
                 </div>
-                <div class="text-right">
-                  <div class="text-red-600 font-bold">-{{ Number(order.amount).toFixed(2) }} 学习币</div>
-                  <n-tag type="success" size="small">已完成</n-tag>
+                <div class="text-right flex items-center gap-2">
+                  <div>
+                    <div class="text-red-600 font-bold">-{{ Number(order.amount).toFixed(2) }} 学习币</div>
+                    <n-tag type="success" size="small">已完成</n-tag>
+                  </div>
+                  <n-button size="small" quaternary @click="copyReceipt(order)">
+                    复制凭证
+                  </n-button>
                 </div>
               </div>
             </div>
@@ -210,18 +252,32 @@
       preset="dialog"
       title="扫描二维码"
       :mask-closable="false"
-      style="width: 90%; max-width: 500px;"
+      :style="{ width: '95%', maxWidth: '600px' }"
+      :closable="false"
     >
       <div class="camera-scanner-container">
         <div id="qr-reader" class="qr-reader"></div>
         <n-alert type="info" class="mt-4">
-          将二维码对准摄像头进行扫描
+          <template #icon>
+            <n-icon><CameraOutline /></n-icon>
+          </template>
+          将二维码对准扫描框，保持稳定
         </n-alert>
+        <div class="camera-tips mt-2">
+          <n-text depth="3" style="font-size: 12px;">
+            提示：如无法启动摄像头，请确保使用 HTTPS 访问，并在浏览器中允许摄像头权限
+          </n-text>
+        </div>
       </div>
       <template #action>
-        <n-button @click="stopCameraScanning" :loading="!cameraScanning">
-          关闭
-        </n-button>
+        <div class="flex gap-2">
+          <n-button @click="switchToManualInput">
+            手动输入
+          </n-button>
+          <n-button type="error" @click="stopCameraScanning" :loading="!cameraScanning">
+            关闭摄像头
+          </n-button>
+        </div>
       </template>
     </n-modal>
 
@@ -247,13 +303,13 @@
           </div>
           <div class="flex justify-between">
             <span class="text-gray-600">当前余额</span>
-            <span :class="wallet.balance >= currentPayCode.amount ? 'text-green-600' : 'text-red-600'">
+            <span :class="Number(wallet.balance) >= Number(currentPayCode.amount) ? 'text-green-600' : 'text-red-600'">
               {{ Number(wallet.balance).toFixed(2) }} 学习币
             </span>
           </div>
         </div>
 
-        <n-alert v-if="wallet.balance < currentPayCode.amount" type="error">
+        <n-alert v-if="Number(wallet.balance) < Number(currentPayCode.amount)" type="error">
           余额不足，请先兑换学习币
         </n-alert>
       </div>
@@ -263,9 +319,42 @@
           <n-button @click="showPaymentModal = false">取消</n-button>
           <n-button
             type="primary"
+            @click="openPasswordModal"
+            :loading="paying"
+            :disabled="!currentPayCode || Number(wallet.balance) < Number(currentPayCode.amount)"
+          >
+            确认支付
+          </n-button>
+        </div>
+      </template>
+    </n-modal>
+
+    <!-- 支付密码输入弹窗 -->
+    <n-modal v-model:show="showPasswordModal" preset="dialog" title="输入支付密码">
+      <div class="space-y-4">
+        <n-alert type="info">
+          请输入支付密码完成支付（默认密码：123456）
+        </n-alert>
+
+        <n-form-item label="支付密码">
+          <n-input
+            v-model:value="paymentPassword"
+            type="password"
+            placeholder="请输入支付密码"
+            show-password-on="click"
+            @keyup.enter="handlePayment"
+          />
+        </n-form-item>
+      </div>
+
+      <template #action>
+        <div class="flex gap-2">
+          <n-button @click="showPasswordModal = false">取消</n-button>
+          <n-button
+            type="primary"
             @click="handlePayment"
             :loading="paying"
-            :disabled="!currentPayCode || wallet.balance < currentPayCode.amount"
+            :disabled="!paymentPassword"
           >
             确认支付
           </n-button>
@@ -300,7 +389,15 @@
       </div>
 
       <template #action>
-        <n-button type="primary" @click="closeSuccessModal">完成</n-button>
+        <div class="flex gap-2">
+          <n-button @click="copyPaymentReceipt">
+            <template #icon>
+              <n-icon><CopyOutline /></n-icon>
+            </template>
+            复制凭证
+          </n-button>
+          <n-button type="primary" @click="closeSuccessModal">完成</n-button>
+        </div>
       </template>
     </n-modal>
   </div>
@@ -310,12 +407,14 @@
 import { ref, reactive, onMounted, onUnmounted, computed } from 'vue';
 import { useMessage } from 'naive-ui';
 import { pointAPI, walletAPI, payAPI } from '@/api';
-import { TrophyOutline, DiamondOutline, QrCodeOutline, CheckmarkCircleOutline, CameraOutline } from '@vicons/ionicons5';
+import { TrophyOutline, DiamondOutline, QrCodeOutline, CheckmarkCircleOutline, CameraOutline, CopyOutline } from '@vicons/ionicons5';
 import { useRouter } from 'vue-router';
 import { Html5Qrcode } from 'html5-qrcode';
+import { useAuthStore } from '@/stores/auth';
 
 const message = useMessage();
 const router = useRouter();
+const authStore = useAuthStore();
 
 // 数据
 const userPoints = ref(0);
@@ -325,9 +424,9 @@ const coinTransactions = ref([]);
 const exchangeHistory = ref([]);
 const exchangeConfig = reactive({
   rate: { points: 100, coins: 10 },
-  dailyLimit: 500,
+  dailyLimit: 5000,
   todayUsed: 0,
-  remainingLimit: 500,
+  remainingLimit: 5000,
 });
 
 // 加载状态
@@ -335,6 +434,10 @@ const loadingPoints = ref(false);
 const loadingCoins = ref(false);
 const loadingExchange = ref(false);
 const loadingPayments = ref(false);
+const loadingLeaderboard = ref(false);
+
+// 排行榜数据
+const leaderboard = ref([]);
 
 // UI 状态
 const activeTab = ref('points');
@@ -345,6 +448,7 @@ const exchanging = ref(false);
 // 扫码支付状态
 const showScanModal = ref(false);
 const showPaymentModal = ref(false);
+const showPasswordModal = ref(false);
 const showSuccessModal = ref(false);
 const scanCode = ref('');
 const currentPayCode = ref(null);
@@ -352,6 +456,7 @@ const paymentResult = ref(null);
 const scanning = ref(false);
 const paying = ref(false);
 const paymentOrders = ref([]);
+const paymentPassword = ref('');
 
 // 摄像头扫码状态
 const showCameraScanner = ref(false);
@@ -374,12 +479,32 @@ const loadPointsInfo = async () => {
   }
 };
 
+// 加载积分排行榜（倒数后5名）
+const loadLeaderboard = async () => {
+  loadingLeaderboard.value = true;
+  try {
+    const response = await pointAPI.getLeaderboard({ limit: 5, order: 'asc' });
+    // 后端返回 leaderboard 字段
+    leaderboard.value = response.leaderboard || [];
+  } catch (error) {
+    console.error('加载排行榜失败:', error);
+  } finally {
+    loadingLeaderboard.value = false;
+  }
+};
+
 // 加载积分明细
 const loadPointLogs = async () => {
   loadingPoints.value = true;
   try {
     const response = await pointAPI.getPointLogs({ limit: 50 });
-    pointLogs.value = response.logs || [];
+    // 后端返回 records 字段
+    pointLogs.value = (response.records || []).map(r => ({
+      id: r.id,
+      points: r.points,
+      description: r.description || r.actionName || '积分变动',
+      createdAt: r.createdAt,
+    }));
   } catch (error) {
     message.error(error.message || '加载积分明细失败');
   } finally {
@@ -505,14 +630,29 @@ const handleScanCode = async () => {
   }
 };
 
+// 打开支付密码弹窗
+const openPasswordModal = () => {
+  paymentPassword.value = '';
+  showPasswordModal.value = true;
+};
+
 // 处理支付
 const handlePayment = async () => {
   if (!currentPayCode.value) return;
 
+  if (!paymentPassword.value) {
+    message.warning('请输入支付密码');
+    return;
+  }
+
   paying.value = true;
   try {
-    const result = await payAPI.submitPayment({ payCodeId: currentPayCode.value.id });
+    const result = await payAPI.submitPayment({
+      payCodeId: currentPayCode.value.id,
+      paymentPassword: paymentPassword.value
+    });
     paymentResult.value = result.order;
+    showPasswordModal.value = false;
     showPaymentModal.value = false;
     showSuccessModal.value = true;
 
@@ -535,28 +675,200 @@ const closeSuccessModal = () => {
   scanCode.value = '';
   currentPayCode.value = null;
   paymentResult.value = null;
+  paymentPassword.value = '';
   activeTab.value = 'payment'; // 切换到支付记录tab
+};
+
+// 切换到手动输入
+const switchToManualInput = async () => {
+  await stopCameraScanning();
+  showScanModal.value = true;
+};
+
+// 复制支付凭证
+const copyReceipt = async (order) => {
+  const username = authStore.user?.username || '未知用户';
+  const receiptText = `【支付凭证】
+用户：${username}
+项目：${order.title}
+金额：${Number(order.amount).toFixed(2)} 学习币
+订单号：${order.orderNo}
+支付时间：${formatDate(order.createdAt)}
+状态：已完成`;
+
+  try {
+    await navigator.clipboard.writeText(receiptText);
+    message.success('凭证已复制到剪贴板');
+  } catch (error) {
+    // 兼容不支持 clipboard API 的浏览器
+    const textarea = document.createElement('textarea');
+    textarea.value = receiptText;
+    textarea.style.position = 'fixed';
+    textarea.style.opacity = '0';
+    document.body.appendChild(textarea);
+    textarea.select();
+    try {
+      document.execCommand('copy');
+      message.success('凭证已复制到剪贴板');
+    } catch (e) {
+      message.error('复制失败，请手动复制');
+    }
+    document.body.removeChild(textarea);
+  }
+};
+
+// 复制当前支付成功的凭证
+const copyPaymentReceipt = async () => {
+  if (!paymentResult.value) return;
+  await copyReceipt(paymentResult.value);
+};
+
+// 检测是否为iOS设备
+const isIOS = () => {
+  return /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+};
+
+// 检测是否为安全上下文（HTTPS或localhost）
+const isSecureContext = () => {
+  // 使用浏览器原生 isSecureContext 属性
+  if (typeof window.isSecureContext !== 'undefined') {
+    return window.isSecureContext;
+  }
+  // 兼容性检查
+  const protocol = window.location.protocol;
+  const hostname = window.location.hostname;
+  return protocol === 'https:' ||
+    hostname === 'localhost' ||
+    hostname === '127.0.0.1' ||
+    hostname.endsWith('.localhost');
+};
+
+// 检测浏览器是否支持摄像头
+const isCameraSupported = () => {
+  // 检查是否在安全上下文中
+  if (!isSecureContext()) {
+    console.warn('非安全上下文，摄像头API不可用');
+    return false;
+  }
+  // 检查 mediaDevices API
+  return !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
+};
+
+// 获取可用的摄像头列表
+const getAvailableCameras = async () => {
+  try {
+    const devices = await Html5Qrcode.getCameras();
+    return devices;
+  } catch (error) {
+    console.error('获取摄像头列表失败:', error);
+    return [];
+  }
 };
 
 // 开始摄像头扫码
 const startCameraScanning = async () => {
   try {
+    // 检查是否为安全上下文
+    if (!isSecureContext()) {
+      message.warning('摄像头需要 HTTPS，已切换到手动输入');
+      showScanModal.value = true;
+      return;
+    }
+
+    // 检查浏览器是否支持摄像头
+    if (!isCameraSupported()) {
+      message.warning('浏览器不支持摄像头，已切换到手动输入');
+      showScanModal.value = true;
+      return;
+    }
+
+    // 先请求摄像头权限
+    try {
+      console.log('请求摄像头权限...');
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          facingMode: { ideal: 'environment' },
+          width: { ideal: 1280 },
+          height: { ideal: 720 }
+        }
+      });
+      console.log('摄像头权限获取成功');
+      // 立即停止，让html5-qrcode来管理
+      stream.getTracks().forEach(track => track.stop());
+    } catch (permissionError) {
+      console.error('摄像头权限请求失败:', permissionError);
+      let errorMsg = '摄像头不可用';
+      if (permissionError.name === 'NotAllowedError') {
+        errorMsg = '摄像头权限被拒绝';
+      } else if (permissionError.name === 'NotFoundError') {
+        errorMsg = '未检测到摄像头';
+      } else if (permissionError.name === 'NotReadableError') {
+        errorMsg = '摄像头被占用';
+      } else if (permissionError.name === 'OverconstrainedError') {
+        // 某些设备不支持 environment facingMode，尝试不指定
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+          stream.getTracks().forEach(track => track.stop());
+        } catch (e) {
+          message.warning(errorMsg + '，已切换到手动输入');
+          showScanModal.value = true;
+          return;
+        }
+      } else {
+        errorMsg = permissionError.message || '摄像头访问失败';
+      }
+      // 摄像头不可用，直接弹出手动输入框
+      if (permissionError.name !== 'OverconstrainedError') {
+        message.warning(errorMsg + '，已切换到手动输入');
+        showScanModal.value = true;
+        return;
+      }
+    }
+
     showCameraScanner.value = true;
     cameraScanning.value = true;
 
     // 等待DOM更新
-    await new Promise(resolve => setTimeout(resolve, 100));
+    await new Promise(resolve => setTimeout(resolve, 300));
 
     html5QrCode = new Html5Qrcode('qr-reader');
 
+    // 获取可用摄像头
+    const cameras = await getAvailableCameras();
+    console.log('可用摄像头:', cameras);
+
+    // 配置
     const config = {
       fps: 10,
       qrbox: { width: 250, height: 250 },
-      aspectRatio: 1.0,
+      aspectRatio: 1.0
     };
 
+    // 优先使用后置摄像头
+    let cameraId = { facingMode: 'environment' };
+
+    // 如果有多个摄像头，尝试选择后置摄像头
+    if (cameras.length > 0) {
+      // 尝试找后置摄像头
+      const backCamera = cameras.find(camera =>
+        camera.label.toLowerCase().includes('back') ||
+        camera.label.toLowerCase().includes('rear') ||
+        camera.label.toLowerCase().includes('环境') ||
+        camera.label.toLowerCase().includes('后')
+      );
+      if (backCamera) {
+        cameraId = backCamera.id;
+      } else if (cameras.length === 1) {
+        // 只有一个摄像头，直接使用
+        cameraId = cameras[0].id;
+      }
+    }
+
+    console.log('使用摄像头:', cameraId);
+
     await html5QrCode.start(
-      { facingMode: 'environment' }, // 使用后置摄像头
+      cameraId,
       config,
       (decodedText) => {
         // 扫码成功
@@ -567,11 +879,28 @@ const startCameraScanning = async () => {
         // 不需要处理
       }
     );
+
+    message.info('摄像头已启动，请将二维码对准扫描框');
+
   } catch (error) {
     console.error('启动摄像头失败:', error);
-    message.error('无法启动摄像头，请检查权限设置');
+
+    let errorMsg = '摄像头启动失败';
+    if (error.name === 'NotAllowedError' || error.message?.includes('Permission')) {
+      errorMsg = '摄像头权限被拒绝';
+    } else if (error.name === 'NotFoundError') {
+      errorMsg = '未检测到摄像头';
+    } else if (error.name === 'NotReadableError') {
+      errorMsg = '摄像头被占用';
+    } else if (error.name === 'OverconstrainedError') {
+      errorMsg = '摄像头配置不支持';
+    }
+
+    // 启动失败，自动切换到手动输入
+    message.warning(errorMsg + '，已切换到手动输入');
     showCameraScanner.value = false;
     cameraScanning.value = false;
+    showScanModal.value = true;
   }
 };
 
@@ -596,11 +925,23 @@ const handleQRCodeScanned = async (decodedText) => {
   // 停止扫码
   await stopCameraScanning();
 
-  // 填入收款码
+  // 保存扫码结果
   scanCode.value = decodedText;
 
-  // 提示用户
-  message.success('扫码成功！');
+  // 直接验证二维码并弹出支付确认界面
+  scanning.value = true;
+  try {
+    const data = await payAPI.scanPayCode(decodedText.trim());
+    currentPayCode.value = data.payCode;
+    showPaymentModal.value = true;
+    message.success('扫码成功！');
+  } catch (error) {
+    message.error(error.error || '收款码无效');
+    // 如果二维码无效，可以提示用户手动输入
+    showScanModal.value = true;
+  } finally {
+    scanning.value = false;
+  }
 };
 
 // 格式化日期
@@ -618,6 +959,7 @@ onMounted(async () => {
     loadExchangeConfig(),
     loadExchangeHistory(),
     loadPaymentOrders(),
+    loadLeaderboard(),
   ]);
 });
 
@@ -667,20 +1009,67 @@ onUnmounted(() => {
 
 .qr-reader {
   width: 100%;
-  max-width: 400px;
+  max-width: 500px;
+  min-height: 300px;
   border: 2px solid #e5e7eb;
   border-radius: 8px;
   overflow: hidden;
+  background-color: #000;
 }
 
 /* 覆盖html5-qrcode默认样式 */
 .qr-reader :deep(video) {
   width: 100% !important;
   height: auto !important;
+  min-height: 300px;
   border-radius: 6px;
+  object-fit: cover;
 }
 
 .qr-reader :deep(#qr-shaded-region) {
-  border: 2px solid rgba(24, 160, 88, 0.8) !important;
+  border: 3px solid rgba(24, 160, 88, 0.9) !important;
+  border-radius: 8px;
+}
+
+/* iPad/iOS 优化 */
+@media (min-width: 768px) {
+  .qr-reader {
+    min-height: 400px;
+  }
+
+  .qr-reader :deep(video) {
+    min-height: 400px;
+  }
+}
+
+.camera-tips {
+  text-align: center;
+  padding: 8px;
+  background-color: #fef9c3;
+  border-radius: 4px;
+}
+
+/* 扫码框动画 */
+.qr-reader :deep(#qr-shaded-region)::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, #18a058, transparent);
+  animation: scan 2s linear infinite;
+}
+
+@keyframes scan {
+  0% {
+    top: 0;
+  }
+  50% {
+    top: 100%;
+  }
+  100% {
+    top: 0;
+  }
 }
 </style>

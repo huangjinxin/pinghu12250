@@ -4,10 +4,10 @@
 
 const express = require('express');
 const router = express.Router();
-const { PrismaClient } = require('@prisma/client');
 const { authenticate } = require('../middleware/auth');
 
-const prisma = new PrismaClient();
+// 使用 Prisma 单例
+const prisma = require('../lib/prisma');
 
 // ========== 用户搜索（用于邀请成员）- 必须在 /:id 路由之前 ==========
 

@@ -2,8 +2,8 @@
  * 初始化看板测试数据
  */
 
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+// 使用 Prisma 单例
+const prisma = require('../src/lib/prisma');
 
 async function initBoardData() {
   try {

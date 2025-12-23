@@ -62,6 +62,10 @@ export const userAPI = {
   linkParent: (parentEmail) => api.post('/users/link-parent', { parentEmail }),
   getChildren: () => api.get('/users/me/children'),
   getTeachers: () => api.get('/users/teachers'),
+  // 支付密码
+  resetPaymentPassword: (data) => api.put('/users/me/payment-password', data),
+  verifyPaymentPassword: (password) => api.post('/users/me/payment-password/verify', { password }),
+  checkPaymentPasswordSet: () => api.get('/users/me/payment-password/check'),
 };
 
 // 动态API
@@ -81,6 +85,10 @@ export const diaryAPI = {
   createDiary: (data) => api.post('/diaries', data),
   updateDiary: (id, data) => api.put(`/diaries/${id}`, data),
   deleteDiary: (id) => api.delete(`/diaries/${id}`),
+  // 公开接口
+  getPublicDiary: (id) => api.get(`/diaries/${id}/public`),
+  addComment: (id, data) => api.post(`/diaries/${id}/comments`, data),
+  deleteComment: (diaryId, commentId) => api.delete(`/diaries/${diaryId}/comments/${commentId}`),
 };
 
 // 作业API
@@ -180,10 +188,14 @@ export const boardAPI = {
 // 管理员API
 export const adminAPI = {
   getUsers: (params) => api.get('/admin/users', { params }),
+  createUser: (data) => api.post('/admin/users', data),
   updateUserStatus: (id, data) => api.put(`/admin/users/${id}/status`, data),
   updateUserJoinedDate: (id, data) => api.put(`/admin/users/${id}/joined-date`, data),
+  updateUserChildren: (id, data) => api.put(`/admin/users/${id}/children`, data),
   resetUserPassword: (id, data) => api.put(`/admin/users/${id}/reset-password`, data),
+  deleteUser: (id) => api.delete(`/admin/users/${id}`),
   getPendingUsers: () => api.get('/admin/pending-users'),
+  getStudents: (params) => api.get('/admin/students', { params }),
   getActivityLogs: (params) => api.get('/admin/activity-logs', { params }),
   getStats: () => api.get('/admin/stats'),
 };
@@ -197,12 +209,17 @@ export const payAPI = {
   updatePayCode: (id, data) => api.put(`/pay/codes/${id}`, data),
   togglePayCode: (id) => api.put(`/pay/codes/${id}/toggle`),
   deletePayCode: (id) => api.delete(`/pay/codes/${id}`),
+  getCategories: () => api.get('/pay/codes/categories'),
   getAllOrders: (params) => api.get('/pay/orders', { params }),
+  getOrderStats: (params) => api.get('/pay/orders/stats', { params }),
 
   // 学生接口
   scanPayCode: (code) => api.get(`/pay/scan/${code}`),
   submitPayment: (data) => api.post('/pay/submit', data),
   getMyOrders: (params) => api.get('/pay/my-orders', { params }),
+
+  // 公开接口（无需登录）
+  getPublicPayCodes: (params) => api.get('/pay/public/codes', { params }),
 };
 
 // 校区API
@@ -247,6 +264,9 @@ export const pointAPI = {
   getStats: () => api.get('/points/stats'),
   getLeaderboard: (params) => api.get('/points/leaderboard', { params }),
 
+  // 每日限制
+  getDailyLimit: () => api.get('/points/daily-limit'),
+
   // 积分兑换
   getExchangeConfig: () => api.get('/points/exchange/config'),
   exchangePointsToCoins: (data) => api.post('/points/exchange', data),
@@ -258,6 +278,8 @@ export const pointAPI = {
   adminAdjust: (data) => api.post('/points/admin/adjust', data),
   adminInitRules: () => api.post('/points/admin/init'),
   adminGetLogs: (params) => api.get('/points/admin/logs', { params }),
+  adminGetDailyLimitConfig: () => api.get('/points/admin/daily-limit-config'),
+  adminUpdateDailyLimitConfig: (data) => api.put('/points/admin/daily-limit-config', data),
 };
 
 // 游戏API
@@ -533,6 +555,266 @@ export const movieAPI = {
   createMovieLog: (data) => api.post('/movies/logs', data),
   deleteMovieLog: (id) => api.delete(`/movies/logs/${id}`),
   toggleMovieLogLike: (id, data) => api.post(`/movies/logs/${id}/like`, data),
+};
+
+// 奖罚规则管理API
+export const rewardRuleAPI = {
+  // 技术类型管理
+  getTechTypes: () => api.get('/reward-rules/tech-types'),
+  createTechType: (data) => api.post('/reward-rules/tech-types', data),
+  updateTechType: (id, data) => api.put(`/reward-rules/tech-types/${id}`, data),
+  deleteTechType: (id) => api.delete(`/reward-rules/tech-types/${id}`),
+
+  // 规则管理
+  getRules: (params) => api.get('/reward-rules', { params }),
+  getRuleById: (id) => api.get(`/reward-rules/${id}`),
+  createRule: (data) => api.post('/reward-rules', data),
+  updateRule: (id, data) => api.put(`/reward-rules/${id}`, data),
+  deleteRule: (id) => api.delete(`/reward-rules/${id}`),
+  toggleRuleStatus: (id) => api.patch(`/reward-rules/${id}/status`),
+};
+
+// 用户提交记录API
+export const submissionAPI = {
+  // 提交记录查询
+  getSubmissions: (params) => api.get('/submissions', { params }),
+  getSubmissionById: (id) => api.get(`/submissions/${id}`),
+  getSubmissionStats: () => api.get('/submissions/stats'),
+
+  // 审核中心
+  getPendingSubmissions: (params) => api.get('/submissions/pending', { params }),
+  reviewSubmission: (id, data) => api.post(`/submissions/${id}/review`, data),
+  approveSubmission: (id, data) => api.post(`/submissions/${id}/approve`, data),
+  rejectSubmission: (id, data) => api.post(`/submissions/${id}/reject`, data),
+
+  // 管理操作
+  deleteSubmission: (id) => api.delete(`/submissions/${id}`),
+};
+
+// 电子课本API
+export const textbookAPI = {
+  // 公开接口（无需登录）
+  getPublicTextbooks: () => api.get('/textbooks/public'),
+  getPublicTextbookToc: (id) => api.get(`/textbooks/public/${id}/toc`),
+  getPublicLesson: (id) => api.get(`/textbooks/public/lesson/${id}`),
+
+  // 用户接口（需登录）
+  getMyTextbooks: () => api.get('/textbooks/my'),
+  createTextbook: (data) => api.post('/textbooks', data),
+  getTextbookDetail: (id) => api.get(`/textbooks/${id}`),
+  updateTextbook: (id, data) => api.put(`/textbooks/${id}`, data),
+  deleteTextbook: (id) => api.delete(`/textbooks/${id}`),
+
+  // 单元管理
+  createUnit: (data) => api.post('/textbooks/units', data),
+  updateUnit: (id, data) => api.put(`/textbooks/units/${id}`, data),
+  deleteUnit: (id) => api.delete(`/textbooks/units/${id}`),
+
+  // 课文管理
+  createLesson: (data) => api.post('/textbooks/lessons', data),
+  getLessonDetail: (id) => api.get(`/textbooks/lessons/${id}`),
+  updateLesson: (id, data) => api.put(`/textbooks/lessons/${id}`, data),
+  submitLesson: (id) => api.post(`/textbooks/lessons/${id}/submit`),
+  deleteLesson: (id) => api.delete(`/textbooks/lessons/${id}`),
+
+  // 管理员接口
+  getPendingLessons: () => api.get('/textbooks/admin/pending'),
+  getAdminStats: () => api.get('/textbooks/admin/stats'),
+  reviewLesson: (id, data) => api.put(`/textbooks/admin/lesson/${id}/review`, data),
+
+  // PDF管理
+  uploadPdf: (id, formData) => api.post(`/textbooks/${id}/pdf`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+    timeout: 300000, // 5分钟超时（大文件）
+  }),
+  deletePdf: (id) => api.delete(`/textbooks/${id}/pdf`),
+  getPdf: (id) => api.get(`/textbooks/${id}/pdf`),
+
+  // 封面管理
+  uploadCover: (id, coverData) => api.post(`/textbooks/${id}/cover`, { coverData }),
+};
+
+// 教材阅读笔记API（用于保存查字/搜索结果）
+export const textbookNoteAPI = {
+  // 创建笔记
+  create: (data) => api.post('/textbook-notes', data),
+  // 删除笔记
+  delete: (id) => api.delete(`/textbook-notes/${id}`),
+  // 获取笔记列表
+  list: (params) => api.get('/textbook-notes', { params }),
+};
+
+// AI 配置 API（管理员）
+export const aiConfigAPI = {
+  getList: () => api.get('/ai-config'),
+  create: (data) => api.post('/ai-config', data),
+  update: (id, data) => api.put(`/ai-config/${id}`, data),
+  delete: (id) => api.delete(`/ai-config/${id}`),
+  setDefault: (id) => api.put(`/ai-config/${id}/default`),
+  toggle: (id) => api.put(`/ai-config/${id}/toggle`),
+  test: (id) => api.post(`/ai-config/${id}/test`),
+  fetchModels: (data) => api.post('/ai-config/fetch-models', data),
+  getModels: (id) => api.get(`/ai-config/${id}/models`),
+};
+
+// AI 提示词 API
+export const aiPromptAPI = {
+  // 科目模板
+  getList: (params) => api.get('/ai-prompts', { params }),
+  getDefault: (subject) => api.get('/ai-prompts/default', { params: { subject } }),
+  create: (data) => api.post('/ai-prompts', data),
+  update: (id, data) => api.put(`/ai-prompts/${id}`, data),
+  delete: (id) => api.delete(`/ai-prompts/${id}`),
+  setDefault: (id) => api.put(`/ai-prompts/${id}/default`),
+
+  // 系统提示词
+  getSystemPrompt: () => api.get('/ai-prompts/system'),
+  saveSystemPrompt: (data) => api.post('/ai-prompts/system', data),
+  initDefaults: () => api.post('/ai-prompts/init-defaults'),
+
+  // 教材提示词
+  getTextbookPrompts: (textbookId) => api.get(`/ai-prompts/textbook/${textbookId}`),
+  createTextbookPrompt: (textbookId, data) => api.post(`/ai-prompts/textbook/${textbookId}`, data),
+  updateTextbookPrompt: (id, data) => api.put(`/ai-prompts/textbook-prompt/${id}`, data),
+  deleteTextbookPrompt: (id) => api.delete(`/ai-prompts/textbook-prompt/${id}`),
+  activateTextbookPrompt: (id) => api.put(`/ai-prompts/textbook-prompt/${id}/activate`),
+  copyDefaultToTextbook: (textbookId) => api.post(`/ai-prompts/textbook/${textbookId}/copy-default`),
+};
+
+// AI 分析 API
+export const aiAnalysisAPI = {
+  analyze: (data) => api.post('/ai-analysis/analyze', data, { timeout: 120000 }), // 2分钟超时
+  chat: (data) => api.post('/ai-analysis/chat', data, { timeout: 120000 }), // 普通聊天
+  abort: (connectionId) => api.post(`/ai-analysis/abort/${connectionId}`),
+  getLogs: (params) => api.get('/ai-analysis/logs', { params }),
+  getLog: (id) => api.get(`/ai-analysis/logs/${id}`),
+};
+
+// AI 流式聊天辅助函数
+export const aiStreamChat = {
+  /**
+   * 创建流式聊天连接
+   * @param {object} params - 参数
+   * @param {function} onChunk - 收到数据块时的回调
+   * @param {function} onDone - 完成时的回调
+   * @param {function} onError - 错误时的回调
+   * @returns {object} - 包含 abort 方法的对象
+   */
+  create: (params, { onStart, onChunk, onDone, onError, onAborted }) => {
+    const token = localStorage.getItem('token');
+    const queryParams = new URLSearchParams({
+      textbookId: params.textbookId,
+      sessionId: params.sessionId,
+      message: encodeURIComponent(params.message),
+      ...(params.context && { context: encodeURIComponent(params.context) }),
+      ...(params.subject && { subject: params.subject }),
+    });
+
+    const url = `/api/ai-analysis/chat/stream?${queryParams}`;
+    const eventSource = new EventSource(url, {
+      withCredentials: true,
+    });
+
+    // 使用 fetch 代替 EventSource 以支持 Authorization header
+    let connectionId = null;
+    const controller = new AbortController();
+
+    const fetchStream = async () => {
+      try {
+        const response = await fetch(`/api/ai-analysis/chat/stream?${queryParams}`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+          signal: controller.signal,
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
+
+        connectionId = response.headers.get('X-Connection-Id');
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n');
+          buffer = lines.pop() || '';
+
+          for (const line of lines) {
+            if (line.startsWith('event: ')) {
+              const eventType = line.slice(7);
+              continue;
+            }
+            if (line.startsWith('data: ')) {
+              try {
+                const data = JSON.parse(line.slice(6));
+                // 根据上一个 event 类型处理
+                if (data.connectionId && onStart) {
+                  onStart(data.connectionId);
+                } else if (data.content !== undefined) {
+                  // chunk 或 done
+                  if (data.responseTime !== undefined) {
+                    // done 事件
+                    onDone && onDone(data);
+                  } else {
+                    // chunk 事件
+                    onChunk && onChunk(data.content);
+                  }
+                } else if (data.message) {
+                  // error 或 aborted
+                  if (data.message === '用户中断') {
+                    onAborted && onAborted();
+                  } else {
+                    onError && onError(data.message);
+                  }
+                }
+              } catch (e) {
+                // 忽略解析错误
+              }
+            }
+          }
+        }
+      } catch (error) {
+        if (error.name === 'AbortError') {
+          onAborted && onAborted();
+        } else {
+          onError && onError(error.message);
+        }
+      }
+    };
+
+    fetchStream();
+
+    return {
+      abort: () => {
+        controller.abort();
+        if (connectionId) {
+          // 通知服务端中断
+          fetch(`/api/ai-analysis/abort/${connectionId}`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+            },
+          }).catch(() => {});
+        }
+      },
+      getConnectionId: () => connectionId,
+    };
+  },
+};
+
+// 教材聊天记录 API
+export const textbookChatAPI = {
+  getMessages: (textbookId, params) => api.get(`/textbook-chat/${textbookId}`, { params }),
+  addMessage: (textbookId, data) => api.post(`/textbook-chat/${textbookId}`, data),
+  deleteMessage: (textbookId, messageId) => api.delete(`/textbook-chat/${textbookId}/${messageId}`),
+  clear: (textbookId) => api.delete(`/textbook-chat/${textbookId}/clear`),
 };
 
 export default api;

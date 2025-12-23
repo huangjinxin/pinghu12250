@@ -3,8 +3,8 @@
  * 初始化默认成就定义
  */
 
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+// 使用 Prisma 单例
+const prisma = require('../src/lib/prisma');
 
 // 成就定义数据
 const achievements = [

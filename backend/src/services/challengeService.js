@@ -2,10 +2,10 @@
  * 每日挑战服务 - 管理每日挑战系统
  */
 
-const { PrismaClient } = require('@prisma/client');
 const pointService = require('./pointService');
 
-const prisma = new PrismaClient();
+// 使用 Prisma 单例
+const prisma = require('../lib/prisma');
 
 class ChallengeService {
   /**

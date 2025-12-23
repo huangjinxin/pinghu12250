@@ -240,7 +240,7 @@ const notifications = ref([
     id: '1',
     type: 'system',
     title: '系统消息',
-    content: '欢迎使用平湖少儿空间',
+    content: '欢迎使用苹湖少儿空间',
     read: false,
     createdAt: new Date(Date.now() - 1000 * 60),
   },

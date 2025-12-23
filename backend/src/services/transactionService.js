@@ -2,8 +2,8 @@
  * 交易服务 - 处理学习货币系统的交易
  */
 
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+// 使用 Prisma 单例
+const prisma = require('../lib/prisma');
 
 class TransactionService {
   /**

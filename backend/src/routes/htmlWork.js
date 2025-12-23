@@ -13,6 +13,12 @@ router.get('/', authenticate, htmlWorkController.getWorks);
 // GET /api/html-works/categories/list - 获取所有分类
 router.get('/categories/list', authenticate, htmlWorkController.getCategories);
 
+// GET /api/html-works/public - 公开获取作品列表（无需登录）
+router.get('/public', htmlWorkController.getPublicWorks);
+
+// GET /api/html-works/public/:id - 公开访问单个作品（无需登录）
+router.get('/public/:id', htmlWorkController.getPublicWorkById);
+
 // GET /api/html-works/:id - 获取单个作品
 router.get('/:id', authenticate, htmlWorkController.getWorkById);
 

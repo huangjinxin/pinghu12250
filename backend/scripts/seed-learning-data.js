@@ -3,8 +3,8 @@
  * 创建5个测试项目和10条学习记录
  */
 
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+// 使用 Prisma 单例
+const prisma = require('../src/lib/prisma');
 
 // 测试项目数据
 const testProjects = [

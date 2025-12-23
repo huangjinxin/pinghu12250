@@ -6,8 +6,8 @@ const express = require('express');
 const router = express.Router();
 const { authenticate } = require('../middleware/auth');
 const transactionService = require('../services/transactionService');
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+// 使用 Prisma 单例
+const prisma = require('../lib/prisma');
 
 /**
  * POST /api/reward/send

@@ -4,11 +4,24 @@
 
 const express = require('express');
 const router = express.Router();
-const { PrismaClient } = require('@prisma/client');
 const { authenticate, isAdmin } = require('../middleware/auth');
 const pointService = require('../services/pointService');
 
-const prisma = new PrismaClient();
+// 使用 Prisma 单例
+const prisma = require('../lib/prisma');
+
+// targetType 中文名称映射
+const TARGET_TYPE_NAMES = {
+  homework: '作业',
+  htmlWork: 'HTML作品',
+  bookshelf: '书架',
+  readingLog: '阅读记录',
+  diary: '日记',
+  other: '其他',
+  like: '点赞',
+  question_reward: '问答悬赏',
+  rule_submission: '奖罚记录',
+};
 
 /**
  * POST /api/points/apply
@@ -61,6 +74,9 @@ router.get('/my', authenticate, async (req, res, next) => {
     const userPoints = await pointService.getUserPoints(userId);
     const totalPoints = userPoints.totalPoints;
 
+    // 获取每日积分限制状态
+    const dailyLimitStatus = await pointService.checkDailyPointsLimit(userId);
+
     // 计算时间范围
     let startDate = null;
     if (period === 'today') {
@@ -101,6 +117,7 @@ router.get('/my', authenticate, async (req, res, next) => {
       totalPoints,
       weekPoints,
       monthPoints,
+      dailyLimit: dailyLimitStatus, // 每日积分限制状态
       records: filteredLogs.map(log => ({
         id: log.id,
         actionKey: log.targetType || 'other',
@@ -119,6 +136,26 @@ router.get('/my', authenticate, async (req, res, next) => {
 router.get('/me', authenticate, async (req, res, next) => {
   req.url = '/my';
   return router.handle(req, res, next);
+});
+
+/**
+ * GET /api/points/daily-limit
+ * 获取每日积分限制状态
+ */
+router.get('/daily-limit', authenticate, async (req, res, next) => {
+  try {
+    const userId = req.user.id;
+    const limitStatus = await pointService.checkDailyPointsLimit(userId);
+
+    res.json({
+      ...limitStatus,
+      message: limitStatus.isMaxed
+        ? '今日积分已达上限'
+        : `今日还可获得${limitStatus.remaining}积分`
+    });
+  } catch (error) {
+    next(error);
+  }
 });
 
 /**
@@ -146,6 +183,7 @@ router.get('/stats', authenticate, async (req, res, next) => {
       if (!actionStats[key]) {
         actionStats[key] = {
           action: key,
+          actionName: TARGET_TYPE_NAMES[key] || key,
           totalPoints: 0,
           count: 0,
         };
@@ -178,6 +216,7 @@ router.get('/records', authenticate, async (req, res, next) => {
       records: result.logs.map(log => ({
         id: log.id,
         actionKey: log.targetType || 'other',
+        actionName: TARGET_TYPE_NAMES[log.targetType] || log.targetType || '其他',
         points: log.points,
         description: log.description || log.rule?.description || '',
         createdAt: log.createdAt,
@@ -197,12 +236,17 @@ router.get('/leaderboard', authenticate, async (req, res, next) => {
   try {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 50;
+    const order = req.query.order || 'desc';
     const skip = (page - 1) * limit;
+
+    // 支持正序(desc)或倒序(asc)排列
+    const sortOrder = order === 'asc' ? 'asc' : 'desc';
 
     const [users, total] = await Promise.all([
       prisma.user.findMany({
         where: {
           status: 'ACTIVE',
+          role: 'STUDENT', // 排行榜只显示学生
         },
         select: {
           id: true,
@@ -216,7 +260,7 @@ router.get('/leaderboard', authenticate, async (req, res, next) => {
           },
         },
         orderBy: {
-          totalPoints: 'desc',
+          totalPoints: sortOrder,
         },
         skip,
         take: limit,
@@ -224,6 +268,7 @@ router.get('/leaderboard', authenticate, async (req, res, next) => {
       prisma.user.count({
         where: {
           status: 'ACTIVE',
+          role: 'STUDENT', // 排行榜只显示学生
         },
       }),
     ]);
@@ -247,6 +292,7 @@ router.get('/leaderboard', authenticate, async (req, res, next) => {
     const currentUserRank = await prisma.user.count({
       where: {
         status: 'ACTIVE',
+        role: 'STUDENT', // 排行榜只显示学生
         totalPoints: {
           gt: currentUser.totalPoints,
         },
@@ -444,6 +490,64 @@ router.post('/admin/init', authenticate, isAdmin, async (req, res, next) => {
 });
 
 /**
+ * GET /api/points/admin/daily-limit-config
+ * 获取每日积分上限配置（管理员）
+ */
+router.get('/admin/daily-limit-config', authenticate, isAdmin, async (req, res, next) => {
+  try {
+    const setting = await prisma.systemSetting.findUnique({
+      where: { key: 'daily_points_limit' }
+    });
+
+    const limit = setting ? parseInt(setting.value) : 100;
+
+    res.json({
+      key: 'daily_points_limit',
+      value: limit,
+      description: '每日积分获取上限（不含奖罚模块）'
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * PUT /api/points/admin/daily-limit-config
+ * 设置每日积分上限（管理员）
+ */
+router.put('/admin/daily-limit-config', authenticate, isAdmin, async (req, res, next) => {
+  try {
+    const { value } = req.body;
+
+    if (!value || value < 0) {
+      return res.status(400).json({ error: '每日上限必须是大于等于0的数字' });
+    }
+
+    const limit = parseInt(value);
+
+    await prisma.systemSetting.upsert({
+      where: { key: 'daily_points_limit' },
+      create: {
+        key: 'daily_points_limit',
+        value: limit.toString(),
+        type: 'number',
+        description: '每日积分获取上限（不含奖罚模块）'
+      },
+      update: {
+        value: limit.toString()
+      }
+    });
+
+    res.json({
+      message: '每日积分上限设置成功',
+      limit
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
  * GET /api/points/exchange/config
  * 获取积分兑换配置
  */
@@ -462,7 +566,7 @@ router.get('/exchange/config', authenticate, async (req, res, next) => {
     });
 
     const rate = rateSetting ? JSON.parse(rateSetting.value) : { points: 100, coins: 10 };
-    const dailyLimit = limitSetting ? parseInt(limitSetting.value) : 500;
+    const dailyLimit = limitSetting ? parseInt(limitSetting.value) : 5000;
 
     // 计算今日已使用额度
     const today = new Date();
@@ -514,7 +618,7 @@ router.post('/exchange', authenticate, async (req, res, next) => {
     const limitSetting = await prisma.systemSetting.findUnique({
       where: { key: 'daily_exchange_limit' },
     });
-    const dailyLimit = limitSetting ? parseInt(limitSetting.value) : 500;
+    const dailyLimit = limitSetting ? parseInt(limitSetting.value) : 5000;
 
     // 检查今日额度
     const today = new Date();

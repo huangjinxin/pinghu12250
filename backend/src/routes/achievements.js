@@ -249,8 +249,8 @@ router.post('/check', authenticate, async (req, res) => {
  */
 router.get('/categories', authenticate, async (req, res) => {
   try {
-    const { PrismaClient } = require('@prisma/client');
-    const prisma = new PrismaClient();
+    // 使用 Prisma 单例
+const prisma = require('../lib/prisma');
 
     const achievements = await prisma.achievement.groupBy({
       by: ['category', 'rarity'],

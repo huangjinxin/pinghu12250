@@ -4,11 +4,11 @@
 
 const express = require('express');
 const router = express.Router();
-const { PrismaClient } = require('@prisma/client');
 const { authenticate } = require('../middleware/auth');
 const { getPointRules, getUserPointStats } = require('../services/pointService');
 
-const prisma = new PrismaClient();
+// 使用 Prisma 单例
+const prisma = require('../lib/prisma');
 
 // GET /api/points/rules - 获取积分规则
 router.get('/rules', authenticate, async (req, res, next) => {
@@ -277,13 +277,17 @@ router.post('/admin/deduct', authenticate, async (req, res, next) => {
 // GET /api/points/leaderboard - 获取积分排行榜
 router.get('/leaderboard', authenticate, async (req, res, next) => {
   try {
-    const { page = 1, limit = 50, period } = req.query;
+    const { page = 1, limit = 50, period, order = 'desc' } = req.query;
     const skip = (parseInt(page) - 1) * parseInt(limit);
 
-    // 获取所有用户按积分排序
+    // 支持正序(desc)或倒序(asc)排列
+    const sortOrder = order === 'asc' ? 'asc' : 'desc';
+
+    // 获取学生用户按积分排序（排行榜只显示学生）
     const users = await prisma.user.findMany({
       where: {
         status: 'ACTIVE', // 只显示激活的用户
+        role: 'STUDENT',  // 只显示学生
       },
       select: {
         id: true,
@@ -297,15 +301,15 @@ router.get('/leaderboard', authenticate, async (req, res, next) => {
         },
       },
       orderBy: {
-        totalPoints: 'desc',
+        totalPoints: sortOrder,
       },
       skip,
       take: parseInt(limit),
     });
 
-    // 获取总用户数
+    // 获取学生总数
     const total = await prisma.user.count({
-      where: { status: 'ACTIVE' },
+      where: { status: 'ACTIVE', role: 'STUDENT' },
     });
 
     // 添加排名信息
@@ -315,10 +319,11 @@ router.get('/leaderboard', authenticate, async (req, res, next) => {
       displayName: user.profile?.nickname || user.username,
     }));
 
-    // 查找当前用户的排名
+    // 查找当前用户的排名（只在学生中排名）
     const currentUserRank = await prisma.user.count({
       where: {
         status: 'ACTIVE',
+        role: 'STUDENT',
         totalPoints: {
           gt: (await prisma.user.findUnique({
             where: { id: req.user.id },
@@ -352,7 +357,7 @@ router.get('/exchange/config', authenticate, async (req, res, next) => {
     ]);
 
     const rate = rateConfig ? JSON.parse(rateConfig.value) : { points: 100, coins: 10 };
-    const dailyLimit = limitConfig ? parseInt(limitConfig.value) : 500;
+    const dailyLimit = limitConfig ? parseInt(limitConfig.value) : 5000;
 
     // 获取今日已兑换的积分
     const today = new Date();
@@ -402,7 +407,7 @@ router.post('/exchange', authenticate, async (req, res, next) => {
     ]);
 
     const rate = rateConfig ? JSON.parse(rateConfig.value) : { points: 100, coins: 10 };
-    const dailyLimit = limitConfig ? parseInt(limitConfig.value) : 500;
+    const dailyLimit = limitConfig ? parseInt(limitConfig.value) : 5000;
 
     // 检查今日已兑换额度
     const today = new Date();

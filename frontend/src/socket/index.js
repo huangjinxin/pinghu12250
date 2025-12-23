@@ -7,6 +7,8 @@ import { io } from 'socket.io-client';
 
 let socket = null;
 let chatStore = null;
+let connectionErrorCount = 0;
+const MAX_ERROR_LOGS = 3; // 最多显示3次错误日志
 
 /**
  * 连接Socket服务器
@@ -14,35 +16,51 @@ let chatStore = null;
  * @returns {Socket} socket实例
  */
 export const connectSocket = (token) => {
+  // 如果没有 token，不尝试连接
+  if (!token) {
+    console.log('[Socket] 无token，跳过连接');
+    return null;
+  }
+
   if (socket?.connected) {
     console.log('[Socket] 已连接，跳过重复连接');
     return socket;
   }
 
-  // 动态获取后端地址：支持局域网访问
-  // 使用当前访问的host（可能是localhost、127.0.0.1或局域网IP）+ 后端端口
-  const currentHost = window.location.hostname;
-  const backendPort = '12251';
-  const backendUrl = import.meta.env.VITE_API_BASE_URL || `http://${currentHost}:${backendPort}`;
+  // 先断开旧连接
+  if (socket) {
+    socket.disconnect();
+    socket = null;
+  }
+
+  // 使用当前页面的origin作为Socket.io连接地址（通过nginx代理）
+  // 这样无论是localhost还是外网域名都能正常工作
+  const backendUrl = window.location.origin;
 
   console.log('[Socket] 连接地址:', backendUrl);
-  console.log('[Socket] 当前主机:', currentHost);
+
+  // 重置错误计数
+  connectionErrorCount = 0;
 
   socket = io(backendUrl, {
+    path: '/socket.io', // 使用默认路径，通过nginx代理
     auth: { token },
-    transports: ['websocket', 'polling'], // 优先websocket，失败自动降级polling
+    transports: ['polling', 'websocket'], // 先用polling建立连接，再升级到websocket
     reconnection: true,
-    reconnectionDelay: 1000,
-    reconnectionAttempts: 5,
-    timeout: 10000,
-    withCredentials: true, // 允许跨域连接
+    reconnectionDelay: 3000,
+    reconnectionDelayMax: 15000,
+    reconnectionAttempts: 2, // 减少重试次数
+    timeout: 15000,
+    withCredentials: true,
     autoConnect: true,
-    forceNew: false
+    forceNew: true,
+    upgrade: true // 允许升级到websocket
   });
 
   // 连接成功
   socket.on('connect', () => {
     console.log('[Socket] ✅ 连接成功');
+    connectionErrorCount = 0; // 重置错误计数
     if (chatStore) {
       chatStore.setConnectionStatus(true);
     }
@@ -56,9 +74,17 @@ export const connectSocket = (token) => {
     }
   });
 
-  // 连接错误
+  // 连接错误 - 限制日志输出并在多次失败后停止重连
   socket.on('connect_error', (err) => {
-    console.error('[Socket] ⚠️ 连接失败:', err.message);
+    connectionErrorCount++;
+    if (connectionErrorCount <= MAX_ERROR_LOGS) {
+      console.warn('[Socket] ⚠️ 连接失败:', err.message);
+      if (connectionErrorCount === MAX_ERROR_LOGS) {
+        console.warn('[Socket] 已达到最大重试次数，停止重连');
+        // 停止继续重连
+        socket.disconnect();
+      }
+    }
     if (chatStore) {
       chatStore.setConnectionStatus(false);
     }

@@ -7,9 +7,9 @@
         <div class="h-16 flex items-center px-6 border-b border-gray-100">
           <router-link to="/" class="flex items-center space-x-2">
             <div class="w-8 h-8 bg-gradient-to-br from-primary-500 to-primary-600 rounded-lg flex items-center justify-center">
-              <span class="text-white font-bold text-sm">平</span>
+              <span class="text-white font-bold text-sm">苹</span>
             </div>
-            <span class="text-lg font-bold text-gray-800">平湖少儿空间</span>
+            <span class="text-lg font-bold text-gray-800">苹湖少儿空间</span>
           </router-link>
         </div>
 
@@ -107,9 +107,9 @@
         <div class="h-16 flex items-center justify-between px-6 border-b border-gray-100">
           <router-link to="/" class="flex items-center space-x-2">
             <div class="w-8 h-8 bg-gradient-to-br from-primary-500 to-primary-600 rounded-lg flex items-center justify-center">
-              <span class="text-white font-bold text-sm">平</span>
+              <span class="text-white font-bold text-sm">苹</span>
             </div>
-            <span class="text-lg font-bold text-gray-800">平湖少儿空间</span>
+            <span class="text-lg font-bold text-gray-800">苹湖少儿空间</span>
           </router-link>
           <button @click="sidebarOpen = false" class="p-1 rounded hover:bg-gray-100">
             <n-icon :size="20"><CloseOutline /></n-icon>
@@ -208,13 +208,13 @@
           <!-- 移动端 Logo -->
           <router-link to="/" class="lg:hidden flex items-center space-x-2">
             <div class="w-8 h-8 bg-gradient-to-br from-primary-500 to-primary-600 rounded-lg flex items-center justify-center">
-              <span class="text-white font-bold text-sm">平</span>
+              <span class="text-white font-bold text-sm">苹</span>
             </div>
-            <span class="text-lg font-bold text-gray-800 hidden sm:block">平湖少儿空间</span>
+            <span class="text-lg font-bold text-gray-800 hidden sm:block">苹湖少儿空间</span>
           </router-link>
 
-          <!-- 搜索框 -->
-          <div class="hidden sm:block lg:ml-4">
+          <!-- 搜索框（家长不显示） -->
+          <div v-if="!isParent" class="hidden sm:block lg:ml-4">
             <n-input
               v-model:value="searchQuery"
               placeholder="搜索..."
@@ -232,14 +232,14 @@
 
         <!-- 右侧 -->
         <div class="flex items-center space-x-3">
-          <!-- 金币余额 -->
-          <router-link to="/wallet" class="flex items-center gap-2 bg-yellow-50 px-3 py-1.5 rounded-lg hover:bg-yellow-100 transition-colors">
-            <n-icon :size="18" color="#f59e0b"><Wallet /></n-icon>
-            <span class="font-bold text-yellow-600 text-sm hidden md:inline">{{ Number(walletBalance || 0).toFixed(2) }}</span>
+          <!-- 积分入口（家长不显示） -->
+          <router-link v-if="!isParent" to="/wallet" class="flex items-center gap-2 bg-purple-50 px-3 py-1.5 rounded-lg hover:bg-purple-100 transition-colors">
+            <n-icon :size="18" color="#8b5cf6"><TrophyOutline /></n-icon>
+            <span class="font-bold text-purple-600 text-sm hidden md:inline">{{ userPoints || 0 }}</span>
           </router-link>
 
-          <!-- 消息中心 -->
-          <MessageCenter />
+          <!-- 消息中心（家长不显示） -->
+          <MessageCenter v-if="!isParent" />
 
           <!-- 用户头像 (非PC端) -->
           <router-link to="/profile" class="lg:hidden">
@@ -310,6 +310,7 @@ import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
 import { useChatStore } from '@/stores/chat';
+import { useParentStore } from '@/stores/parent';
 import { useMessage, useDialog } from 'naive-ui';
 import api from '@/api';
 import { connectSocket, disconnectSocket, setChatStore } from '@/socket';
@@ -364,6 +365,7 @@ const router = useRouter();
 const route = useRoute();
 const authStore = useAuthStore();
 const chatStore = useChatStore();
+const parentStore = useParentStore();
 const message = useMessage();
 const dialog = useDialog();
 
@@ -373,6 +375,7 @@ const searchQuery = ref('');
 const showBackToTop = ref(false);
 const windowWidth = ref(window.innerWidth);
 const walletBalance = ref(0);
+const userPoints = ref(0);
 const expandedKeys = ref(JSON.parse(localStorage.getItem('menuExpandedKeys') || '[]'));
 
 // 默认头像
@@ -380,6 +383,21 @@ const expandedKeys = ref(JSON.parse(localStorage.getItem('menuExpandedKeys') || 
 // 设备类型判断
 const isMobile = computed(() => windowWidth.value < 768);
 const isTablet = computed(() => windowWidth.value >= 768 && windowWidth.value < 1024);
+
+// 是否是家长角色
+const isParent = computed(() => authStore.user?.role === 'PARENT');
+
+// 家长端"我的孩子"导航标签 - 使用 parentStore 中选中的孩子名字
+const parentChildLabel = computed(() => {
+  const childName = parentStore.selectedChildName;
+  return childName && childName !== '孩子' ? `我的${childName}` : '我的孩子';
+});
+
+// 家长端"孩子历程"导航标签 - 跟随选中的孩子变化
+const parentSubmissionLabel = computed(() => {
+  const childName = parentStore.selectedChildName;
+  return childName && childName !== '孩子' ? `${childName}历程` : '孩子历程';
+});
 
 // 用户角色标签
 const roleLabel = computed(() => {
@@ -426,6 +444,7 @@ const baseMenuItems = [
       { key: 'market', path: '/market', icon: Cart, label: '作品市集' },
       { key: 'my-purchases', path: '/my-purchases', icon: BagHandleOutline, label: '我的购买' },
       { key: 'my-shop', path: '/my-shop', icon: StorefrontOutline, label: '我的商店' },
+      { key: 'textbook-entry', path: '/textbook/workspace', icon: BookOutline, label: '教材录入' },
     ]
   },
 
@@ -444,6 +463,7 @@ const baseMenuItems = [
       { key: 'challenges', path: '/challenges', icon: FlagOutline, label: '每日挑战' },
       { key: 'achievements', path: '/achievements', icon: Ribbon, label: '成就中心' },
       { key: 'points', path: '/points', icon: StarOutline, label: '积分中心' },
+      { key: 'my-growth', path: '/my-growth', icon: CreateOutline, label: '心路历程' },
     ]
   },
 
@@ -498,6 +518,8 @@ const adminMenuItems = [
       { key: 'admin-classes', path: '/admin/classes', icon: SchoolOutline, label: '班级管理' },
       { key: 'admin-games', path: '/admin/games', icon: GameControllerOutline, label: '游戏管理' },
       { key: 'admin-paycodes', path: '/admin/paycodes', icon: QrCodeOutline, label: '收款码管理' },
+      { key: 'admin-reward-rules', path: '/admin/reward-rules', icon: TrophyOutline, label: '奖罚管理' },
+      { key: 'admin-textbooks', path: '/textbook/admin', icon: BookOutline, label: '教材审核' },
       { key: 'admin-logs', path: '/admin/logs', icon: ListOutline, label: '活动日志' },
     ]
   },
@@ -513,15 +535,33 @@ const teacherMenuItems = [
   },
 ];
 
-// 家长专属菜单
-const parentMenuItems = [
+// 家长专属菜单（只显示：我的孩子、作品广场、孩子历程）- 动态标签
+const parentMenuItems = computed(() => [
   {
     key: 'parent-children',
     path: '/parent/children',
-    label: '我的孩子',
+    label: parentChildLabel.value,
     icon: PeopleOutline
   },
-];
+  {
+    key: 'works-square',
+    path: '/works',
+    label: '作品广场',
+    icon: EaselOutline
+  },
+  {
+    key: 'parent-submissions',
+    path: '/parent/submissions',
+    label: parentSubmissionLabel.value,
+    icon: CreateOutline
+  },
+  {
+    key: 'parent-profile',
+    path: '/profile',
+    label: '我的',
+    icon: PersonOutline
+  },
+]);
 
 // 侧边栏菜单项 (根据角色动态生成)
 const menuItems = computed(() => {
@@ -534,7 +574,8 @@ const menuItems = computed(() => {
   } else if (role === 'TEACHER') {
     items = [...teacherMenuItems, ...baseMenuItems];
   } else if (role === 'PARENT') {
-    items = [...parentMenuItems, ...baseMenuItems];
+    // 家长只显示专属菜单，不显示其他功能
+    items = [...parentMenuItems.value];
   } else {
     items = [...baseMenuItems];
   }
@@ -568,13 +609,12 @@ const bottomNavItems = computed(() => {
     ];
   }
 
-  // 家长移动端导航
+  // 家长移动端导航（我的孩子 - 作品广场 - 孩子历程 - 我的）
   if (role === 'PARENT') {
     return [
-      { path: '/', label: '首页', icon: HomeOutline },
-      { path: '/parent/children', label: '孩子', icon: PeopleOutline },
-      { path: '/works', label: '作品', icon: EaselOutline },
-      { path: '/timeline', label: '社交', icon: TimeOutline },
+      { path: '/parent/children', label: parentChildLabel.value, icon: PeopleOutline },
+      { path: '/works', label: '作品广场', icon: EaselOutline },
+      { path: '/parent/submissions', label: parentSubmissionLabel.value, icon: CreateOutline },
       { path: '/profile', label: '我的', icon: PersonOutline },
     ];
   }
@@ -676,6 +716,24 @@ const loadWalletBalance = async () => {
   }
 };
 
+// 加载用户积分
+const loadUserPoints = async () => {
+  try {
+    const response = await api.get('/points/my');
+    userPoints.value = response.totalPoints || 0;
+  } catch (error) {
+    console.error('加载积分失败:', error);
+  }
+};
+
+// 加载家长的孩子列表（用于动态显示导航标签）
+const loadParentChildren = async () => {
+  if (!isParent.value) return;
+  if (!parentStore.loaded) {
+    await parentStore.loadChildren();
+  }
+};
+
 // 自动展开包含当前路由的菜单项
 const autoExpandActiveMenu = () => {
   menuItems.value.forEach(item => {
@@ -687,17 +745,22 @@ const autoExpandActiveMenu = () => {
   });
 };
 
-// 钱包余额定时器
+// 定时器
 let walletTimer = null;
+let pointsTimer = null;
 
 onMounted(() => {
   window.addEventListener('scroll', handleScroll);
   window.addEventListener('resize', handleResize);
   loadWalletBalance(); // 加载钱包余额
+  loadUserPoints(); // 加载用户积分
+  loadParentChildren(); // 加载家长的孩子列表（用于动态导航标签）
   autoExpandActiveMenu(); // 自动展开激活的菜单
 
   // 定时更新钱包余额（每30秒）
   walletTimer = setInterval(loadWalletBalance, 30000);
+  // 定时更新积分（每30秒）
+  pointsTimer = setInterval(loadUserPoints, 30000);
 
   // 初始化聊天系统
   if (authStore.token) {
@@ -718,6 +781,9 @@ onUnmounted(() => {
   window.removeEventListener('resize', handleResize);
   if (walletTimer) {
     clearInterval(walletTimer);
+  }
+  if (pointsTimer) {
+    clearInterval(pointsTimer);
   }
 
   // 断开Socket连接

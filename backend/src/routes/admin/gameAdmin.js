@@ -4,10 +4,10 @@
 
 const express = require('express');
 const router = express.Router();
-const { PrismaClient } = require('@prisma/client');
 const { authenticate, authorize } = require('../../middleware/auth');
 
-const prisma = new PrismaClient();
+// 使用 Prisma 单例
+const prisma = require('../../lib/prisma');
 
 // 所有路由都需要管理员权限
 router.use(authenticate);

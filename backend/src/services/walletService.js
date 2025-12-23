@@ -2,8 +2,8 @@
  * 虚拟货币服务 - 管理用户金币钱包
  */
 
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+// 使用 Prisma 单例
+const prisma = require('../lib/prisma');
 
 class WalletService {
   /**

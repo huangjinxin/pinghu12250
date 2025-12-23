@@ -36,10 +36,12 @@ services:
       PORT: 12251
       NODE_ENV: development
       FRONTEND_URL: http://localhost:12250
+      PDF_STORAGE_DIR: /pdfs
     volumes:
       - ./backend:/app
       - /app/node_modules
       - ./backend/uploads:/app/uploads
+      - /Volumes/2TB-BC01/pinghu/books-ai:/pdfs
     depends_on:
       postgres:
         condition: service_healthy

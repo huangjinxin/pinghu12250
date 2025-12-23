@@ -17,6 +17,15 @@ router.put('/me', authenticate, userController.updateCurrentUser);
 // PUT /api/users/me/password - 修改密码
 router.put('/me/password', authenticate, userController.updatePassword);
 
+// PUT /api/users/me/payment-password - 重置支付密码
+router.put('/me/payment-password', authenticate, userController.resetPaymentPassword);
+
+// POST /api/users/me/payment-password/verify - 验证支付密码
+router.post('/me/payment-password/verify', authenticate, userController.verifyPaymentPassword);
+
+// GET /api/users/me/payment-password/check - 检查是否已设置支付密码
+router.get('/me/payment-password/check', authenticate, userController.checkPaymentPasswordSet);
+
 // POST /api/users/me/avatar - 上传头像
 router.post('/me/avatar', authenticate, upload.single('avatar'), userController.uploadAvatar);
 
@@ -31,6 +40,9 @@ router.post('/link-parent', authenticate, userController.linkParent);
 
 // GET /api/users/me/children - 获取我的孩子列表（家长操作）
 router.get('/me/children', authenticate, userController.getChildren);
+
+// GET /api/users/me/children/:childId/financial - 获取孩子的积分和学习币明细（家长操作）
+router.get('/me/children/:childId/financial', authenticate, userController.getChildFinancialDetails);
 
 // GET /api/users/teachers - 获取所有老师列表
 router.get('/teachers', authenticate, userController.getTeachers);

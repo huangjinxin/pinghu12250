@@ -2,11 +2,11 @@
  * HTML作品控制器
  */
 
-const { PrismaClient } = require('@prisma/client');
 const pointService = require('../services/pointService');
 const achievementService = require('../services/achievementService');
 
-const prisma = new PrismaClient();
+// 使用 Prisma 单例
+const prisma = require('../lib/prisma');
 
 /**
  * 获取作品列表
@@ -583,6 +583,107 @@ exports.getCategories = async (req, res, next) => {
 
     res.json({
       categories,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * 获取公开作品列表（无需登录）
+ */
+exports.getPublicWorks = async (req, res, next) => {
+  try {
+    const { page = 1, pageSize = 9 } = req.query;
+    const skip = (parseInt(page) - 1) * parseInt(pageSize);
+
+    const [works, total] = await Promise.all([
+      prisma.hTMLWork.findMany({
+        where: { isPublic: true },
+        include: {
+          author: {
+            select: {
+              id: true,
+              username: true,
+              avatar: true,
+              profile: {
+                select: {
+                  nickname: true,
+                },
+              },
+            },
+          },
+          _count: {
+            select: {
+              likes: true,
+              forks: true,
+            },
+          },
+        },
+        orderBy: {
+          createdAt: 'desc',
+        },
+        skip,
+        take: parseInt(pageSize),
+      }),
+      prisma.hTMLWork.count({ where: { isPublic: true } }),
+    ]);
+
+    res.json({
+      works,
+      pagination: {
+        page: parseInt(page),
+        pageSize: parseInt(pageSize),
+        total,
+        totalPages: Math.ceil(total / parseInt(pageSize)),
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * 获取单个作品（公开访问，无需登录）
+ * 所有作品都作为公开作品展示
+ */
+exports.getPublicWorkById = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    const work = await prisma.hTMLWork.findUnique({
+      where: { id },
+      include: {
+        author: {
+          select: {
+            id: true,
+            username: true,
+            avatar: true,
+            profile: {
+              select: {
+                nickname: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!work) {
+      return res.status(404).json({ error: '作品不存在' });
+    }
+
+    // 返回基本信息和代码
+    res.json({
+      id: work.id,
+      title: work.title,
+      description: work.description,
+      htmlCode: work.htmlCode,
+      cssCode: work.cssCode,
+      jsCode: work.jsCode,
+      author: work.author,
+      createdAt: work.createdAt,
+      visibility: work.visibility,
     });
   } catch (error) {
     next(error);

@@ -2,8 +2,8 @@
  * 日常记录控制器
  */
 
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+// 使用 Prisma 单例
+const prisma = require('../lib/prisma');
 
 // 获取记录列表
 exports.getRecords = async (req, res, next) => {

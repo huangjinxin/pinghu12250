@@ -4,13 +4,13 @@
 
 const express = require('express');
 const router = express.Router();
-const { PrismaClient } = require('@prisma/client');
 const { authenticate } = require('../middleware/auth');
 const pointService = require('../services/pointService');
 const challengeService = require('../services/challengeService');
 const achievementService = require('../services/achievementService');
 
-const prisma = new PrismaClient();
+// 使用 Prisma 单例
+const prisma = require('../lib/prisma');
 
 // ========== 学习项目管理 ==========
 

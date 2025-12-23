@@ -2,12 +2,12 @@
  * 用户控制器
  */
 
-const { PrismaClient } = require('@prisma/client');
 const bcrypt = require('bcryptjs');
 const sharp = require('sharp');
 const path = require('path');
 
-const prisma = new PrismaClient();
+// 使用 Prisma 单例
+const prisma = require('../lib/prisma');
 
 /**
  * 获取当前用户信息
@@ -208,6 +208,113 @@ exports.updatePassword = async (req, res, next) => {
 };
 
 /**
+ * 重置支付密码
+ * 默认密码为 123456，用户可以重置为自己的密码
+ */
+exports.resetPaymentPassword = async (req, res, next) => {
+  try {
+    const { oldPassword, newPassword } = req.body;
+    const DEFAULT_PAYMENT_PASSWORD = '123456';
+
+    if (!newPassword) {
+      return res.status(400).json({ error: '新密码为必填项' });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({ error: '支付密码至少6位' });
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: req.user.id },
+    });
+
+    // 如果用户已设置支付密码，需要验证旧密码
+    if (user.paymentPassword) {
+      if (!oldPassword) {
+        return res.status(400).json({ error: '请输入原支付密码' });
+      }
+      const isOldPasswordValid = await bcrypt.compare(oldPassword, user.paymentPassword);
+      if (!isOldPasswordValid) {
+        return res.status(401).json({ error: '原支付密码错误' });
+      }
+    } else {
+      // 如果用户未设置支付密码，验证默认密码
+      if (!oldPassword) {
+        return res.status(400).json({ error: '请输入原支付密码' });
+      }
+      if (oldPassword !== DEFAULT_PAYMENT_PASSWORD) {
+        return res.status(401).json({ error: '原支付密码错误（默认密码为123456）' });
+      }
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    await prisma.user.update({
+      where: { id: req.user.id },
+      data: { paymentPassword: hashedPassword },
+    });
+
+    res.json({ message: '支付密码设置成功' });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * 验证支付密码
+ */
+exports.verifyPaymentPassword = async (req, res, next) => {
+  try {
+    const { password } = req.body;
+    const DEFAULT_PAYMENT_PASSWORD = '123456';
+
+    if (!password) {
+      return res.status(400).json({ error: '请输入支付密码' });
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: req.user.id },
+    });
+
+    // 如果用户已设置支付密码
+    if (user.paymentPassword) {
+      const isValid = await bcrypt.compare(password, user.paymentPassword);
+      if (!isValid) {
+        return res.status(401).json({ error: '支付密码错误' });
+      }
+    } else {
+      // 使用默认密码
+      if (password !== DEFAULT_PAYMENT_PASSWORD) {
+        return res.status(401).json({ error: '支付密码错误' });
+      }
+    }
+
+    res.json({ success: true, message: '验证成功' });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * 检查是否已设置支付密码
+ */
+exports.checkPaymentPasswordSet = async (req, res, next) => {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: req.user.id },
+      select: { paymentPassword: true },
+    });
+
+    res.json({
+      isSet: !!user.paymentPassword,
+      message: user.paymentPassword ? '已设置支付密码' : '未设置支付密码（默认密码123456）'
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
  * 上传头像
  */
 exports.uploadAvatar = async (req, res, next) => {
@@ -375,7 +482,7 @@ exports.linkParent = async (req, res, next) => {
 };
 
 /**
- * 获取我的孩子列表（家长操作）
+ * 获取我的孩子列表（家长操作）- 包含成长统计和最近动态
  */
 exports.getChildren = async (req, res, next) => {
   try {
@@ -383,19 +490,22 @@ exports.getChildren = async (req, res, next) => {
       return res.status(403).json({ error: '只有家长可以查看孩子列表' });
     }
 
-    const children = await prisma.studentParent.findMany({
+    // 获取关联的孩子基本信息
+    const relations = await prisma.studentParent.findMany({
       where: { parentId: req.user.id },
       include: {
-        student: {
+        child: {
           select: {
             id: true,
             username: true,
             email: true,
             avatar: true,
+            totalPoints: true,
+            createdAt: true,
             profile: true,
             class: {
               include: {
-                campus: true,
+                school: true,
               },
             },
           },
@@ -403,7 +513,265 @@ exports.getChildren = async (req, res, next) => {
       },
     });
 
-    res.json({ children: children.map(c => c.student) });
+    // 为每个孩子获取统计数据和最近动态
+    const childrenWithStats = await Promise.all(
+      relations.map(async (rel) => {
+        const child = rel.child;
+        if (!child) return null;
+
+        // 计算加入天数
+        const joinedDays = Math.floor(
+          (Date.now() - new Date(child.createdAt).getTime()) / (1000 * 60 * 60 * 24)
+        ) + 1; // +1 是因为注册当天算第1天
+
+        // 并行获取统计数据
+        const [worksCount, poetryWorksCount, submissionsCount, wallet, recentActivities] = await Promise.all([
+          // HTML作品数量
+          prisma.hTMLWork.count({
+            where: { authorId: child.id },
+          }),
+          // 诗词作品数量
+          prisma.poetryWork.count({
+            where: { authorId: child.id },
+          }),
+          // 提交记录数量
+          prisma.ruleSubmission.count({
+            where: { userId: child.id },
+          }),
+          // 钱包余额
+          prisma.wallet.findUnique({
+            where: { userId: child.id },
+            select: { balance: true },
+          }),
+          // 最近动态（最近10条）
+          getRecentActivities(child.id, 10),
+        ]);
+
+        return {
+          ...child,
+          stats: {
+            totalPoints: child.totalPoints || 0,
+            learningCoins: wallet?.balance || 0,
+            worksCount: worksCount + poetryWorksCount,
+            htmlWorksCount: worksCount,
+            poetryWorksCount,
+            submissionsCount,
+            joinedDays,
+          },
+          recentActivities,
+        };
+      })
+    );
+
+    res.json({ children: childrenWithStats.filter(Boolean) });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * 获取用户最近动态
+ */
+async function getRecentActivities(userId, limit = 15) {
+  try {
+    // 获取最近的提交记录
+    const submissions = await prisma.ruleSubmission.findMany({
+      where: { userId },
+      include: {
+        template: {
+          select: { name: true, points: true },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+      take: limit,
+    });
+
+    // 获取最近的HTML作品
+    const works = await prisma.hTMLWork.findMany({
+      where: { authorId: userId },
+      select: {
+        id: true,
+        title: true,
+        createdAt: true,
+      },
+      orderBy: { createdAt: 'desc' },
+      take: limit,
+    });
+
+    // 获取最近的诗词作品
+    const poetryWorks = await prisma.poetryWork.findMany({
+      where: { authorId: userId },
+      select: {
+        id: true,
+        title: true,
+        status: true,
+        createdAt: true,
+      },
+      orderBy: { createdAt: 'desc' },
+      take: limit,
+    });
+
+    // 获取最近的积分记录
+    const pointLogs = await prisma.pointLog.findMany({
+      where: { userId },
+      orderBy: { createdAt: 'desc' },
+      take: limit,
+    });
+
+    // 获取最近的学习币记录
+    const wallet = await prisma.wallet.findUnique({
+      where: { userId },
+      select: { id: true },
+    });
+
+    let coinLogs = [];
+    if (wallet) {
+      coinLogs = await prisma.walletTransaction.findMany({
+        where: { walletId: wallet.id },
+        orderBy: { createdAt: 'desc' },
+        take: limit,
+      });
+    }
+
+    // 合并并排序
+    const activities = [
+      ...submissions.map((s) => ({
+        type: 'submission',
+        id: s.id,
+        title: s.template?.name || '提交记录',
+        points: s.pointsAwarded || s.template?.points || 0,
+        status: s.status,
+        createdAt: s.createdAt,
+      })),
+      ...works.map((w) => ({
+        type: 'work',
+        id: w.id,
+        title: w.title,
+        createdAt: w.createdAt,
+      })),
+      ...poetryWorks.map((p) => ({
+        type: 'poetry',
+        id: p.id,
+        title: p.title,
+        status: p.status,
+        points: p.status === 'APPROVED' ? 5 : 0,
+        createdAt: p.createdAt,
+      })),
+      ...pointLogs.map((p) => ({
+        type: 'point',
+        id: p.id,
+        title: p.reason || '积分变动',
+        amount: p.amount,
+        createdAt: p.createdAt,
+      })),
+      ...coinLogs.map((c) => ({
+        type: 'coin',
+        id: c.id,
+        title: c.description || '学习币变动',
+        amount: Number(c.amount),
+        createdAt: c.createdAt,
+      })),
+    ];
+
+    // 按时间排序，取最近的
+    activities.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    return activities.slice(0, limit);
+  } catch (error) {
+    console.error('获取用户动态失败:', error);
+    return [];
+  }
+}
+
+/**
+ * 获取孩子的积分和学习币明细（家长用）
+ */
+exports.getChildFinancialDetails = async (req, res, next) => {
+  try {
+    const { childId } = req.params;
+    const { type = 'all', page = 1, limit = 20 } = req.query;
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+
+    // 验证是否是该孩子的家长
+    const relation = await prisma.studentParent.findFirst({
+      where: {
+        parentId: req.user.id,
+        childId,
+      },
+    });
+
+    if (!relation && req.user.role !== 'ADMIN') {
+      return res.status(403).json({ error: '无权查看该孩子信息' });
+    }
+
+    const results = { points: null, coins: null };
+
+    // 获取积分记录
+    if (type === 'all' || type === 'points') {
+      const [pointLogs, pointsTotal] = await Promise.all([
+        prisma.pointLog.findMany({
+          where: { userId: childId },
+          orderBy: { createdAt: 'desc' },
+          skip: type === 'points' ? skip : 0,
+          take: type === 'points' ? parseInt(limit) : 10,
+        }),
+        prisma.pointLog.count({ where: { userId: childId } }),
+      ]);
+
+      results.points = {
+        logs: pointLogs,
+        total: pointsTotal,
+        page: type === 'points' ? parseInt(page) : 1,
+        totalPages: type === 'points' ? Math.ceil(pointsTotal / parseInt(limit)) : 1,
+      };
+    }
+
+    // 获取学习币记录 - 需要先通过 wallet 找到 walletId
+    if (type === 'all' || type === 'coins') {
+      const childWallet = await prisma.wallet.findUnique({
+        where: { userId: childId },
+        select: { id: true },
+      });
+
+      let coinLogs = [];
+      let coinsTotal = 0;
+
+      if (childWallet) {
+        [coinLogs, coinsTotal] = await Promise.all([
+          prisma.walletTransaction.findMany({
+            where: { walletId: childWallet.id },
+            orderBy: { createdAt: 'desc' },
+            skip: type === 'coins' ? skip : 0,
+            take: type === 'coins' ? parseInt(limit) : 10,
+          }),
+          prisma.walletTransaction.count({ where: { walletId: childWallet.id } }),
+        ]);
+      }
+
+      results.coins = {
+        logs: coinLogs,
+        total: coinsTotal,
+        page: type === 'coins' ? parseInt(page) : 1,
+        totalPages: type === 'coins' ? Math.ceil(coinsTotal / parseInt(limit)) : 1,
+      };
+    }
+
+    // 获取当前余额
+    const [user, wallet] = await Promise.all([
+      prisma.user.findUnique({
+        where: { id: childId },
+        select: { totalPoints: true },
+      }),
+      prisma.wallet.findUnique({
+        where: { userId: childId },
+        select: { balance: true },
+      }),
+    ]);
+
+    res.json({
+      currentPoints: user?.totalPoints || 0,
+      currentCoins: wallet?.balance || 0,
+      ...results,
+    });
   } catch (error) {
     next(error);
   }

@@ -4,11 +4,11 @@
 
 const express = require('express');
 const router = express.Router();
-const { PrismaClient } = require('@prisma/client');
 const { authenticate, authorize } = require('../middleware/auth');
 const pointService = require('../services/pointService');
 
-const prisma = new PrismaClient();
+// 使用 Prisma 单例
+const prisma = require('../lib/prisma');
 
 // GET /api/tasks - 获取所有任务（系统任务+个人任务）
 router.get('/', authenticate, async (req, res, next) => {

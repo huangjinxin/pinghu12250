@@ -2,8 +2,8 @@
  * 班级控制器
  */
 
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+// 使用 Prisma 单例
+const prisma = require('../lib/prisma');
 
 // 获取所有班级
 exports.getClasses = async (req, res, next) => {

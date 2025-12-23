@@ -2,13 +2,13 @@
  * 认证控制器
  */
 
-const { PrismaClient } = require('@prisma/client');
 const bcrypt = require('bcryptjs');
 const { generateToken } = require('../utils/jwt');
 const pointService = require('../services/pointService');
 const { processUserAvatar } = require('../utils/avatarHelper');
 
-const prisma = new PrismaClient();
+// 使用 Prisma 单例
+const prisma = require('../lib/prisma');
 
 /**
  * 用户注册
