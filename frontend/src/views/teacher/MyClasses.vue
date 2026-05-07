@@ -63,7 +63,9 @@ import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useMessage } from 'naive-ui';
 import { classAPI } from '@/api';
-import { SchoolOutline, PeopleOutline, ArrowForwardOutline } from '@vicons/ionicons5';
+import SchoolOutline from '@vicons/ionicons5/es/SchoolOutline'
+import PeopleOutline from '@vicons/ionicons5/es/PeopleOutline'
+import ArrowForwardOutline from '@vicons/ionicons5/es/ArrowForwardOutline'
 
 const router = useRouter();
 const message = useMessage();

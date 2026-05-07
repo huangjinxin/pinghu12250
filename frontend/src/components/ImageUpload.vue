@@ -23,7 +23,7 @@
 <script setup>
 import { ref, watch } from 'vue';
 import { useMessage } from 'naive-ui';
-import { AddOutline } from '@vicons/ionicons5';
+import AddOutline from '@vicons/ionicons5/es/AddOutline'
 import api from '@/api';
 
 const props = defineProps({

@@ -66,12 +66,10 @@
 import { ref, computed, onMounted, h } from 'vue';
 import { useMessage } from 'naive-ui';
 import { NIcon } from 'naive-ui';
-import {
-  SparklesOutline,
-  SettingsOutline,
-  ExpandOutline,
-  DocumentTextOutline
-} from '@vicons/ionicons5';
+import SparklesOutline from '@vicons/ionicons5/es/SparklesOutline'
+import SettingsOutline from '@vicons/ionicons5/es/SettingsOutline'
+import ExpandOutline from '@vicons/ionicons5/es/ExpandOutline'
+import DocumentTextOutline from '@vicons/ionicons5/es/DocumentTextOutline'
 import { aiPromptAPI, aiAnalysisAPI } from '@/api/index';
 
 const message = useMessage();

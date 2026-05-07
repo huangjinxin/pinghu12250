@@ -137,11 +137,9 @@ import { ref, computed, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useMessage } from 'naive-ui';
 import { classAPI, recordAPI } from '@/api';
-import {
-  ArrowBackOutline,
-  CreateOutline,
-  SearchOutline,
-} from '@vicons/ionicons5';
+import ArrowBackOutline from '@vicons/ionicons5/es/ArrowBackOutline'
+import CreateOutline from '@vicons/ionicons5/es/CreateOutline'
+import SearchOutline from '@vicons/ionicons5/es/SearchOutline'
 
 const route = useRoute();
 const router = useRouter();

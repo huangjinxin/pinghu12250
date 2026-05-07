@@ -58,7 +58,9 @@
 
 <script setup>
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
-import { BookOutline, VolumeHighOutline, CloseOutline } from '@vicons/ionicons5';
+import BookOutline from '@vicons/ionicons5/es/BookOutline'
+import VolumeHighOutline from '@vicons/ionicons5/es/VolumeHighOutline'
+import CloseOutline from '@vicons/ionicons5/es/CloseOutline'
 import CharacterDetail from './CharacterDetail.vue';
 import { speak, stopSpeaking } from '@/utils/speechService';
 import { isSingleChinese } from '@/api/dict';
@@ -258,6 +260,7 @@ onUnmounted(() => {
   gap: 4px;
   padding: 10px 16px;
   min-height: 44px;
+  min-width: 44px;
   border: none;
   background: transparent;
   color: white;
@@ -269,6 +272,23 @@ onUnmounted(() => {
   user-select: none;
   -webkit-user-select: none;
   -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+/* 触摸设备上增大按钮尺寸 */
+@media (pointer: coarse) {
+  .text-selection-menu {
+    padding: 8px;
+    gap: 4px;
+  }
+
+  .menu-btn {
+    padding: 12px 20px;
+    min-height: 48px;
+    min-width: 48px;
+    font-size: 15px;
+    border-radius: 24px;
+  }
 }
 
 .menu-btn:hover {

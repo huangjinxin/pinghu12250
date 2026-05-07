@@ -461,30 +461,28 @@ import { useMessage } from 'naive-ui';
 import { format, formatDistanceToNow } from 'date-fns';
 import { zhCN } from 'date-fns/locale';
 import { NButton, NSwitch, NTag } from 'naive-ui';
-import {
-  InformationCircleOutline,
-  TrendingUpOutline,
-  TrendingDownOutline,
-  CreateOutline,
-  BookOutline,
-  SchoolOutline,
-  DocumentTextOutline,
-  CodeSlashOutline,
-  ChatbubbleOutline,
-  CheckmarkCircleOutline,
-  LogInOutline,
-  CalendarOutline,
-  TrophyOutline,
-  RemoveCircleOutline,
-  ChevronUpOutline,
-  ChevronDownOutline,
-  SettingsOutline,
-  AddOutline,
-  CreateSharp,
-  TrashOutline,
-  ListOutline,
-  SearchOutline,
-} from '@vicons/ionicons5';
+import InformationCircleOutline from '@vicons/ionicons5/es/InformationCircleOutline'
+import TrendingUpOutline from '@vicons/ionicons5/es/TrendingUpOutline'
+import TrendingDownOutline from '@vicons/ionicons5/es/TrendingDownOutline'
+import CreateOutline from '@vicons/ionicons5/es/CreateOutline'
+import BookOutline from '@vicons/ionicons5/es/BookOutline'
+import SchoolOutline from '@vicons/ionicons5/es/SchoolOutline'
+import DocumentTextOutline from '@vicons/ionicons5/es/DocumentTextOutline'
+import CodeSlashOutline from '@vicons/ionicons5/es/CodeSlashOutline'
+import ChatbubbleOutline from '@vicons/ionicons5/es/ChatbubbleOutline'
+import CheckmarkCircleOutline from '@vicons/ionicons5/es/CheckmarkCircleOutline'
+import LogInOutline from '@vicons/ionicons5/es/LogInOutline'
+import CalendarOutline from '@vicons/ionicons5/es/CalendarOutline'
+import TrophyOutline from '@vicons/ionicons5/es/TrophyOutline'
+import RemoveCircleOutline from '@vicons/ionicons5/es/RemoveCircleOutline'
+import ChevronUpOutline from '@vicons/ionicons5/es/ChevronUpOutline'
+import ChevronDownOutline from '@vicons/ionicons5/es/ChevronDownOutline'
+import SettingsOutline from '@vicons/ionicons5/es/SettingsOutline'
+import AddOutline from '@vicons/ionicons5/es/AddOutline'
+import CreateSharp from '@vicons/ionicons5/es/CreateSharp'
+import TrashOutline from '@vicons/ionicons5/es/TrashOutline'
+import ListOutline from '@vicons/ionicons5/es/ListOutline'
+import SearchOutline from '@vicons/ionicons5/es/SearchOutline'
 
 const authStore = useAuthStore();
 const message = useMessage();

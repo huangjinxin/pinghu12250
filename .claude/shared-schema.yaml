@@ -1,0 +1,217 @@
+# 两端共享数据模型对照表
+# 确保 Web 后端 (Prisma) 与 iOS 前端 (Swift) 字段一致
+# 更新时间: 2025-12-28
+
+# ========== 用户相关 ==========
+User:
+  web: User (Prisma)
+  ios: SimpleUser / WorkAuthor / DiaryAuthor (简化版)
+  shared_fields:
+    - id: String
+    - username: String
+    - avatar: String?
+  ios_note: iOS 有多个简化版本用于不同场景
+
+# ========== 教材系统 ==========
+Textbook:
+  web: Textbook (Prisma)
+  ios: Textbook (TextbookModels.swift)
+  shared_fields:
+    - id: String
+    - subject: String
+    - grade: Int
+    - semester: String
+    - version: String
+    - title: String
+    - pdfUrl: String?
+    - coverImage: String?
+    - totalPages: Int?
+    - status: String?
+  ios_computed:
+    - displayTitle, fullTitle, gradeName
+    - subjectIcon, subjectColor
+    - hasPdf, coverImageURL, pdfFullURL
+
+TextbookUnit:
+  web: TextbookUnit (Prisma)
+  ios: TextbookUnit (TextbookModels.swift)
+  shared_fields:
+    - id: String
+    - textbookId: String
+    - unitNumber: Int
+    - title: String
+    - theme: String?
+    - pageStart: Int?
+    - pageEnd: Int?
+
+TextbookLesson:
+  web: TextbookLesson (Prisma)
+  ios: TextbookLesson (TextbookModels.swift)
+  shared_fields:
+    - id: String
+    - unitId: String
+    - lessonNumber: Int
+    - title: String
+    - htmlContent: String?
+    - status: String?
+
+ReadingNote:
+  web: ReadingNote (Prisma)
+  ios: ReadingNote (TextbookModels.swift)
+  shared_fields:
+    - id: String
+    - userId: String
+    - textbookId: String?
+    - sourceType: String  # dict, search, explain, practice, highlight...
+    - query: String?
+    - content: Any?  # JSON 或字符串
+    - snippet: String?
+    - page: Int?
+  ios_note: content 使用 AnyCodable 处理任意 JSON
+
+# ========== 奖罚系统 ==========
+RuleType:
+  web: RuleType (Prisma)
+  ios: RuleType (RuleModels.swift)
+  shared_fields:
+    - id: String
+    - name: String
+    - description: String?
+    - isEnabled: Bool?
+
+RuleStandard:
+  web: RuleStandard (Prisma)
+  ios: RuleStandard (RuleModels.swift)
+  shared_fields:
+    - id: String
+    - name: String
+    - description: String?
+    - isEnabled: Bool?
+
+RuleTemplate:
+  web: RuleTemplate (Prisma)
+  ios: RuleTemplate (RuleModels.swift)
+  shared_fields:
+    - id: String
+    - name: String
+    - description: String?
+    - points: Int
+    - typeId: String?
+    - standardId: String?
+    - requireText: Bool
+    - requireImage: Bool
+    - requireLink: Bool
+    - requireAudio: Bool?
+    - allowQuantity: Bool?
+    - status: String?
+
+RuleSubmission:
+  web: RuleSubmission (Prisma)
+  ios: RuleSubmission (RuleModels.swift)
+  shared_fields:
+    - id: String
+    - userId: String
+    - templateId: String
+    - content: String?
+    - images: [String]?
+    - audios: [String]?
+    - link: String?
+    - quantity: Int?
+    - status: String  # PENDING, APPROVED, REJECTED
+    - reviewNote: String?
+
+# ========== 钱包系统 ==========
+Wallet:
+  web: Wallet (Prisma)
+  ios: Wallet (WalletModels.swift)
+  shared_fields:
+    - id: String?
+    - userId: String?
+    - balance: Decimal/FlexibleDouble
+  ios_note: balance 使用 FlexibleDouble 兼容字符串/数字
+
+WalletTransaction:
+  web: WalletTransaction (Prisma)
+  ios: WalletTransaction (WalletModels.swift)
+  shared_fields:
+    - id: String
+    - walletId: String?
+    - amount: Double
+    - type: String
+    - description: String?
+
+PointLog:
+  web: PointLog (Prisma)
+  ios: PointLog (WalletModels.swift)
+  shared_fields:
+    - id: String
+    - userId: String?
+    - points: Int
+    - description: String?
+    - ruleId: String?
+    - ruleName: String?
+
+# ========== 作品系统 ==========
+PoetryWork:
+  web: PoetryWork (Prisma)
+  ios: PoetryWorkData (WorksModels.swift)
+  shared_fields:
+    - id: String
+    - title: String
+    - htmlCode: String?
+    - status: String?
+    - authorId: String?
+    - likesCount: Int?
+  ios_naming: PoetryWorkData (避免与 SwiftUI 冲突)
+
+Diary:
+  web: Diary (Prisma)
+  ios: DiaryData (DiaryModels.swift)
+  shared_fields:
+    - id: String
+    - title: String
+    - content: String
+    - mood: String?
+    - weather: String?
+    - isPublic: Bool?
+    - diaryDate: String?
+  ios_naming: DiaryData (避免与系统类型冲突)
+
+# ========== 分页信息 ==========
+Pagination:
+  web: 各 API 响应中的 pagination 对象
+  ios: PaginationInfo (RuleModels.swift)
+  shared_fields:
+    - page: Int
+    - total: Int
+    - totalPages: Int
+    - pageSize: Int? / limit: Int?  # 两种命名都支持
+
+# ========== iOS 专用模型（无对应后端）==========
+ios_only:
+  local_storage:
+    - LocalReadingProgress  # 本地阅读进度
+    - LocalPracticeSession  # 本地练习会话
+    - LocalPracticeRecord   # 本地练习记录
+    - ChatSession          # 本地对话会话
+    - ChatMessageData      # 消息持久化数据
+
+  ui_models:
+    - StudyNote            # 本地笔记
+    - StudyNoteType        # 笔记类型枚举
+    - StudyNoteColor       # 笔记颜色枚举
+    - NoteAttachment       # 笔记附件
+    - NoteFilter           # 笔记过滤器
+
+  practice:
+    - PracticeItem         # 练习题目
+    - QuestionType         # 题目类型枚举
+    - OptionItem           # 选项
+    - UserAnswer           # 用户答案
+    - PracticeSession      # 练习会话（与 Local 版不同）
+    - PracticeSettings     # 练习设置
+
+  device_specific:
+    - RecognizedTextBlock  # 手写识别结果
+    - HandwritingBuffer    # 手写缓冲区
+    - CachedTextbook       # 离线缓存教材

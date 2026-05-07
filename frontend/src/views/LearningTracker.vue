@@ -291,19 +291,17 @@ import { useMessage } from 'naive-ui';
 import { learningAPI } from '@/api';
 import { formatDistanceToNow } from 'date-fns';
 import { zhCN } from 'date-fns/locale';
-import {
-  AddOutline,
-  TimeOutline,
-  CalendarOutline,
-  TrophyOutline,
-  PlayCircleOutline,
-  BookOutline,
-  EllipsisVerticalOutline,
-  HeartOutline,
-  Heart,
-  HeartCircleOutline,
-  StatsChartOutline
-} from '@vicons/ionicons5';
+import AddOutline from '@vicons/ionicons5/es/AddOutline'
+import TimeOutline from '@vicons/ionicons5/es/TimeOutline'
+import CalendarOutline from '@vicons/ionicons5/es/CalendarOutline'
+import TrophyOutline from '@vicons/ionicons5/es/TrophyOutline'
+import PlayCircleOutline from '@vicons/ionicons5/es/PlayCircleOutline'
+import BookOutline from '@vicons/ionicons5/es/BookOutline'
+import EllipsisVerticalOutline from '@vicons/ionicons5/es/EllipsisVerticalOutline'
+import HeartOutline from '@vicons/ionicons5/es/HeartOutline'
+import Heart from '@vicons/ionicons5/es/Heart'
+import HeartCircleOutline from '@vicons/ionicons5/es/HeartCircleOutline'
+import StatsChartOutline from '@vicons/ionicons5/es/StatsChartOutline'
 
 const router = useRouter();
 const message = useMessage();

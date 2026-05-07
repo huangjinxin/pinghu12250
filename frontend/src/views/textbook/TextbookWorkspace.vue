@@ -8,7 +8,7 @@
             <n-icon><ArrowBack /></n-icon>
           </template>
         </n-button>
-        <h1>教材录入工作台</h1>
+        <h1>教材共建工具区</h1>
       </div>
       <div class="header-right">
         <n-button @click="showAiDrawer = true">
@@ -321,18 +321,18 @@
       </template>
     </n-modal>
 
-    <!-- 上传PDF弹窗 -->
-    <n-modal v-model:show="showUploadModal" preset="card" title="上传教材PDF" style="width: 500px">
+    <!-- 上传教材弹窗 -->
+    <n-modal v-model:show="showUploadModal" preset="card" title="上传教材文件" style="width: 500px">
       <n-form>
-        <n-form-item label="PDF文件" required>
+        <n-form-item label="教材文件" required>
           <n-upload
             ref="uploadRef"
             :max="1"
-            accept=".pdf"
+            accept=".pdf,.epub"
             :default-upload="false"
             @change="handleUploadChange"
           >
-            <n-button class="upload-btn">选择PDF文件</n-button>
+            <n-button class="upload-btn">选择 PDF / EPUB 文件</n-button>
           </n-upload>
           <div v-if="uploadForm.file" class="upload-file-info">
             已选择: {{ uploadForm.file.name }} ({{ formatFileSize(uploadForm.file.size) }})
@@ -348,7 +348,7 @@
           <n-select
             v-model:value="uploadForm.textbookId"
             :options="textbookSelectOptions"
-            placeholder="请选择要上传PDF的教材"
+            placeholder="请选择要上传文件的教材"
             filterable
           />
         </n-form-item>
@@ -356,7 +356,7 @@
           <n-form-item label="教材名称">
             <n-input
               v-model:value="uploadForm.newTitle"
-              :placeholder="uploadForm.file ? uploadForm.file.name.replace('.pdf', '') : '不填则使用文件名'"
+              :placeholder="uploadForm.file ? uploadForm.file.name.replace(/\.(pdf|epub)$/i, '') : '不填则使用文件名'"
             />
           </n-form-item>
           <n-form-item label="学科">
@@ -408,8 +408,8 @@
       </n-drawer-content>
     </n-drawer>
 
-    <!-- 批量上传PDF弹窗 -->
-    <n-modal v-model:show="showBatchUploadModal" preset="card" title="批量上传教材PDF" style="width: 900px; max-width: 95vw;" :mask-closable="!batchUploading">
+    <!-- 批量上传弹窗 -->
+    <n-modal v-model:show="showBatchUploadModal" preset="card" title="批量上传教材文件" style="width: 900px; max-width: 95vw;" :mask-closable="!batchUploading">
       <div class="batch-upload-container">
         <!-- 上传进度显示 -->
         <div v-if="batchUploading" class="batch-upload-progress">
@@ -444,7 +444,7 @@
         <div v-if="batchFiles.length === 0" class="batch-upload-area">
           <n-upload
             multiple
-            accept=".pdf"
+            accept=".pdf,.epub"
             :default-upload="false"
             :show-file-list="false"
             @change="handleBatchFileChange"
@@ -452,8 +452,8 @@
             <n-upload-dragger>
               <div class="upload-dragger-content">
                 <n-icon size="48" color="#999"><CloudUploadOutline /></n-icon>
-                <p class="upload-dragger-text">点击或拖拽PDF文件到此处</p>
-                <p class="upload-dragger-hint">支持同时选择多个PDF文件</p>
+                <p class="upload-dragger-text">点击或拖拽文件到此处</p>
+                <p class="upload-dragger-hint">支持 PDF 和 EPUB 格式，可同时选择多个文件</p>
               </div>
             </n-upload-dragger>
           </n-upload>
@@ -468,7 +468,7 @@
               ref="batchFileInputRef"
               type="file"
               multiple
-              accept=".pdf"
+              accept=".pdf,.epub"
               style="display: none;"
               @change="handleAddMoreFiles"
             />
@@ -518,7 +518,7 @@
                     <n-input
                       v-model:value="item.title"
                       size="small"
-                      :placeholder="item.file.name.replace('.pdf', '')"
+                      :placeholder="item.file.name.replace(/\.(pdf|epub)$/i, '')"
                       :status="item.isDuplicate ? 'warning' : undefined"
                       style="flex: 2;"
                       @update:value="checkDuplicates"
@@ -574,7 +574,7 @@
     <!-- 上传设置弹窗 -->
     <n-modal v-model:show="showUploadSettingsModal" preset="card" title="上传设置" style="width: 600px;">
       <n-tabs type="line" animated>
-        <n-tab-pane name="subjects" tab="科目管理">
+        <n-tab-pane name="subjects" tab="科目设置">
           <div class="settings-section">
             <div class="settings-header">
               <span>自定义科目列表</span>
@@ -598,7 +598,7 @@
             </div>
           </div>
         </n-tab-pane>
-        <n-tab-pane name="grades" tab="年级管理">
+        <n-tab-pane name="grades" tab="年级设置">
           <div class="settings-section">
             <div class="settings-header">
               <span>自定义年级列表</span>
@@ -622,7 +622,7 @@
             </div>
           </div>
         </n-tab-pane>
-        <n-tab-pane name="semesters" tab="学期管理">
+        <n-tab-pane name="semesters" tab="学期设置">
           <div class="settings-section">
             <div class="settings-header">
               <span>自定义学期列表</span>
@@ -649,7 +649,6 @@
       </n-tabs>
       <template #footer>
         <n-space justify="end">
-          <n-button @click="resetUploadSettings">恢复默认</n-button>
           <n-button type="primary" @click="saveUploadSettings">保存设置</n-button>
         </n-space>
       </template>
@@ -722,7 +721,18 @@
 import { ref, computed, onMounted, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { useMessage, useDialog } from 'naive-ui';
-import { ArrowBack, Add, ChevronDown, ChevronForward, BookOutline, CloudUploadOutline, CloseCircleOutline, SettingsOutline, EllipsisVertical, SearchOutline, CheckmarkCircle, CloseCircle } from '@vicons/ionicons5';
+import ArrowBack from '@vicons/ionicons5/es/ArrowBack'
+import Add from '@vicons/ionicons5/es/Add'
+import ChevronDown from '@vicons/ionicons5/es/ChevronDown'
+import ChevronForward from '@vicons/ionicons5/es/ChevronForward'
+import BookOutline from '@vicons/ionicons5/es/BookOutline'
+import CloudUploadOutline from '@vicons/ionicons5/es/CloudUploadOutline'
+import CloseCircleOutline from '@vicons/ionicons5/es/CloseCircleOutline'
+import SettingsOutline from '@vicons/ionicons5/es/SettingsOutline'
+import EllipsisVertical from '@vicons/ionicons5/es/EllipsisVertical'
+import SearchOutline from '@vicons/ionicons5/es/SearchOutline'
+import CheckmarkCircle from '@vicons/ionicons5/es/CheckmarkCircle'
+import CloseCircle from '@vicons/ionicons5/es/CloseCircle'
 import { textbookAPI } from '@/api/index';
 import AiApiConfigList from '@/components/textbook/AiApiConfigList.vue';
 import AiPromptManager from '@/components/textbook/AiPromptManager.vue';
@@ -972,49 +982,88 @@ const defaultSemesters = [
   { label: '下册', value: 'DOWN' },
 ];
 
-// 自定义配置（从本地存储加载）
+// 自定义配置（从服务器加载）
 const customSubjects = ref([...defaultSubjects]);
 const customGrades = ref([...defaultGrades]);
 const customSemesters = ref([...defaultSemesters]);
 
-// 加载自定义设置
-const loadUploadSettings = () => {
+// 已使用的选项值（用于检查引用）
+const usedSubjects = ref(new Set());
+const usedGrades = ref(new Set());
+const usedSemesters = ref(new Set());
+
+// 从服务器加载上传设置
+const loadUploadSettings = async () => {
   try {
-    const saved = localStorage.getItem('textbook_upload_settings');
-    if (saved) {
-      const settings = JSON.parse(saved);
-      if (settings.subjects?.length) customSubjects.value = settings.subjects;
-      if (settings.grades?.length) customGrades.value = settings.grades;
-      if (settings.semesters?.length) customSemesters.value = settings.semesters;
+    const response = await textbookAPI.getUploadSettings();
+    if (response?.success && response.data) {
+      const { subjects, grades, semesters } = response.data;
+      if (subjects?.length) {
+        customSubjects.value = subjects;
+      }
+      if (grades?.length) {
+        customGrades.value = grades;
+      }
+      if (semesters?.length) {
+        customSemesters.value = semesters;
+      }
     }
   } catch (e) {
-    console.warn('加载上传设置失败:', e);
+    console.warn('从服务器加载上传设置失败:', e);
+    // 使用默认值
   }
 };
 
-// 保存自定义设置
-const saveUploadSettings = () => {
+// 从已有教材中获取已使用的选项值
+const loadUsedOptions = async () => {
+  try {
+    const response = await textbookAPI.getTextbookOptions();
+    if (response) {
+      if (response.subjects?.length) {
+        usedSubjects.value = new Set(response.subjects.map(s => String(s.value)));
+      }
+      if (response.grades?.length) {
+        usedGrades.value = new Set(response.grades.map(g => String(g.value)));
+      }
+      if (response.semesters?.length) {
+        usedSemesters.value = new Set(response.semesters.map(s => String(s.value)));
+      }
+    }
+  } catch (e) {
+    console.warn('获取已使用选项失败:', e);
+  }
+};
+
+// 保存上传设置到服务器
+const saveUploadSettings = async () => {
   try {
     const settings = {
       subjects: customSubjects.value.filter(s => s.label && s.value),
       grades: customGrades.value.filter(g => g.label && g.value),
       semesters: customSemesters.value.filter(s => s.label && s.value),
     };
-    localStorage.setItem('textbook_upload_settings', JSON.stringify(settings));
-    message.success('设置已保存');
-    showUploadSettingsModal.value = false;
+    const response = await textbookAPI.saveUploadSettings(settings);
+    if (response?.success) {
+      message.success('设置已保存到服务器');
+      showUploadSettingsModal.value = false;
+    } else {
+      message.error(response?.error || '保存失败');
+    }
   } catch (e) {
+    console.error('保存设置失败:', e);
     message.error('保存设置失败');
   }
 };
 
 // 恢复默认设置
-const resetUploadSettings = () => {
+const resetUploadSettings = async () => {
+  localStorage.removeItem('textbook_upload_settings');
+  // 重新从服务器加载（会包含数据库中已有的值）
   customSubjects.value = [...defaultSubjects];
   customGrades.value = [...defaultGrades];
   customSemesters.value = [...defaultSemesters];
-  localStorage.removeItem('textbook_upload_settings');
-  message.success('已恢复默认设置');
+  await loadOptionsFromServer();
+  message.success('已恢复默认设置（保留数据库中已有的选项）');
 };
 
 // 添加/删除自定义项
@@ -1611,10 +1660,10 @@ const closeUploadModal = () => {
   }
 };
 
-// 上传PDF
+// 上传教材文件（PDF 或 EPUB）
 const uploadPdf = async () => {
   if (!uploadForm.value.file) {
-    message.warning('请选择PDF文件');
+    message.warning('请选择教材文件');
     return;
   }
 
@@ -1623,15 +1672,19 @@ const uploadPdf = async () => {
     return;
   }
 
+  // 判断文件类型
+  const fileName = uploadForm.value.file.name;
+  const isEpub = fileName.toLowerCase().endsWith('.epub');
+
   uploading.value = true;
   try {
     let targetTextbookId = uploadForm.value.textbookId;
 
     // 如果是创建新教材模式
     if (uploadForm.value.uploadMode === 'new') {
-      // 使用文件名作为默认名称（去掉.pdf后缀）
-      const fileName = uploadForm.value.file.name.replace(/\.pdf$/i, '');
-      const title = uploadForm.value.newTitle.trim() || fileName;
+      // 使用文件名作为默认名称（去掉后缀）
+      const baseName = fileName.replace(/\.(pdf|epub)$/i, '');
+      const title = uploadForm.value.newTitle.trim() || baseName;
 
       // 先创建教材
       const result = await textbookAPI.createTextbook({
@@ -1644,29 +1697,35 @@ const uploadPdf = async () => {
       targetTextbookId = result.textbook.id;
     }
 
-    // 上传PDF
+    // 根据文件类型上传
     const formData = new FormData();
-    formData.append('pdf', uploadForm.value.file);
-    const uploadResult = await textbookAPI.uploadPdf(targetTextbookId, formData);
-
-    // 生成并保存封面缩略图
-    if (uploadResult.pdfUrl) {
-      message.success('PDF上传成功，正在生成封面...');
-      // 清除旧缓存
-      coverCache.delete(targetTextbookId);
-      delete coverImages.value[targetTextbookId];
-      // 渲染并保存封面
-      await renderAndSavePdfCover(targetTextbookId, uploadResult.pdfUrl);
-      message.success('封面已保存');
+    if (isEpub) {
+      formData.append('epub', uploadForm.value.file);
+      await textbookAPI.uploadEpub(targetTextbookId, formData);
+      message.success('EPUB 上传成功');
     } else {
-      message.success('PDF上传成功');
+      formData.append('pdf', uploadForm.value.file);
+      const uploadResult = await textbookAPI.uploadPdf(targetTextbookId, formData);
+
+      // 生成并保存封面缩略图（仅 PDF）
+      if (uploadResult.pdfUrl) {
+        message.success('PDF上传成功，正在生成封面...');
+        // 清除旧缓存
+        coverCache.delete(targetTextbookId);
+        delete coverImages.value[targetTextbookId];
+        // 渲染并保存封面
+        await renderAndSavePdfCover(targetTextbookId, uploadResult.pdfUrl);
+        message.success('封面已保存');
+      } else {
+        message.success('PDF上传成功');
+      }
     }
 
     closeUploadModal();
     // 刷新教材列表以更新封面
     loadTextbooks();
   } catch (error) {
-    message.error(error.error || 'PDF上传失败');
+    message.error(error.error || '上传失败');
   } finally {
     uploading.value = false;
   }
@@ -1767,8 +1826,8 @@ const checkDuplicates = () => {
   const existingTitles = new Set(textbooks.value.map(t => t.title.toLowerCase()));
 
   batchFiles.value.forEach(item => {
-    const fileName = item.file.name.replace(/\.pdf$/i, '');
-    const title = (item.title.trim() || fileName).toLowerCase();
+    const baseName = item.file.name.replace(/\.(pdf|epub)$/i, '');
+    const title = (item.title.trim() || baseName).toLowerCase();
     item.isDuplicate = existingTitles.has(title);
   });
 };
@@ -1789,10 +1848,10 @@ const closeBatchUploadModal = () => {
   };
 };
 
-// 批量上传PDF
+// 批量上传教材文件
 const batchUploadPdf = async () => {
   if (batchFiles.value.length === 0) {
-    message.warning('请选择PDF文件');
+    message.warning('请选择教材文件');
     return;
   }
 
@@ -1834,8 +1893,9 @@ const batchUploadPdf = async () => {
   try {
     for (let i = 0; i < batchFiles.value.length; i++) {
       const item = batchFiles.value[i];
-      const fileName = item.file.name.replace(/\.pdf$/i, '');
-      const title = item.title.trim() || fileName;
+      const isEpub = item.file.name.toLowerCase().endsWith('.epub');
+      const baseName = item.file.name.replace(/\.(pdf|epub)$/i, '');
+      const title = item.title.trim() || baseName;
 
       // 更新当前进度
       uploadProgress.value.currentFile = item.file.name;
@@ -1852,14 +1912,19 @@ const batchUploadPdf = async () => {
           version: '人教版',
         });
 
-        // 上传PDF
+        // 根据文件类型上传
         const formData = new FormData();
-        formData.append('pdf', item.file);
-        const uploadResult = await textbookAPI.uploadPdf(result.textbook.id, formData);
+        if (isEpub) {
+          formData.append('epub', item.file);
+          await textbookAPI.uploadEpub(result.textbook.id, formData);
+        } else {
+          formData.append('pdf', item.file);
+          const uploadResult = await textbookAPI.uploadPdf(result.textbook.id, formData);
 
-        // 生成并保存封面（异步，不阻塞批量上传）
-        if (uploadResult.pdfUrl) {
-          renderAndSavePdfCover(result.textbook.id, uploadResult.pdfUrl);
+          // 生成并保存封面（异步，不阻塞批量上传，仅 PDF）
+          if (uploadResult.pdfUrl) {
+            renderAndSavePdfCover(result.textbook.id, uploadResult.pdfUrl);
+          }
         }
 
         successCount++;

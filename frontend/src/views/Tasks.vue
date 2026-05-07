@@ -365,21 +365,19 @@ import { ref, onMounted, computed } from 'vue';
 import { useMessage } from 'naive-ui';
 import { useAuthStore } from '@/stores/auth';
 import { boardAPI } from '@/api';
-import {
-  AddOutline,
-  ArrowBackOutline,
-  PersonAdd,
-  EllipsisHorizontalOutline,
-  CalendarOutline,
-  ChatboxOutline,
-  AttachOutline,
-  DocumentTextOutline,
-  BookOutline,
-  CreateOutline,
-  SchoolOutline,
-  CodeSlashOutline,
-  CheckboxOutline,
-} from '@vicons/ionicons5';
+import AddOutline from '@vicons/ionicons5/es/AddOutline'
+import ArrowBackOutline from '@vicons/ionicons5/es/ArrowBackOutline'
+import PersonAdd from '@vicons/ionicons5/es/PersonAdd'
+import EllipsisHorizontalOutline from '@vicons/ionicons5/es/EllipsisHorizontalOutline'
+import CalendarOutline from '@vicons/ionicons5/es/CalendarOutline'
+import ChatboxOutline from '@vicons/ionicons5/es/ChatboxOutline'
+import AttachOutline from '@vicons/ionicons5/es/AttachOutline'
+import DocumentTextOutline from '@vicons/ionicons5/es/DocumentTextOutline'
+import BookOutline from '@vicons/ionicons5/es/BookOutline'
+import CreateOutline from '@vicons/ionicons5/es/CreateOutline'
+import SchoolOutline from '@vicons/ionicons5/es/SchoolOutline'
+import CodeSlashOutline from '@vicons/ionicons5/es/CodeSlashOutline'
+import CheckboxOutline from '@vicons/ionicons5/es/CheckboxOutline'
 
 const message = useMessage();
 const authStore = useAuthStore();

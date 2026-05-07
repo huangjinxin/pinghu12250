@@ -61,10 +61,8 @@
 </template>
 
 <script setup>
-import {
-  NotificationsOutline,
-  CloseOutline
-} from '@vicons/ionicons5';
+import NotificationsOutline from '@vicons/ionicons5/es/NotificationsOutline'
+import CloseOutline from '@vicons/ionicons5/es/CloseOutline'
 import SystemMessageItem from './SystemMessageItem.vue';
 import { computed } from 'vue';
 

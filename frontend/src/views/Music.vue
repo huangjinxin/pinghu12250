@@ -114,7 +114,7 @@ import { ref, onMounted, watch } from 'vue';
 import { useMessage } from 'naive-ui';
 import { musicAPI } from '@/api';
 import { format } from 'date-fns';
-import { AddOutline } from '@vicons/ionicons5';
+import AddOutline from '@vicons/ionicons5/es/AddOutline'
 
 const message = useMessage();
 

@@ -1,0 +1,39 @@
+# @AI:DIR views
+permit: add
+naming: "[Name].vue 或 [module]/[Name].vue"
+layer: page
+
+# 子目录
+subdirs:
+  textbook:   教材系统页面
+  admin:      管理后台页面
+  teacher:    教师端页面
+  works-tabs: 作品Tab组件(待整合)
+
+# 可导入
+import:
+  - "@/components/*"
+  - "@/composables/*"
+  - "@/stores/*"
+  - "@/utils/*"
+  - "@/api/*"           # view层可直接调用(但建议用composable)
+
+# 废弃文件
+deprecated:
+  - "*.vue.old"
+  - "*.vue.backup"
+  - works-tabs/HtmlWorksTab.vue
+  - works-tabs/PoetryWorksTab.vue
+
+# 页面规范
+pattern: |
+  <template>
+    <div class="[page-name]-page">
+      <!-- 使用组件组合 -->
+    </div>
+  </template>
+
+  <script setup>
+  import { use[Feature] } from '@/composables/use[Feature]'
+  const { data, methods } = use[Feature]()
+  </script>

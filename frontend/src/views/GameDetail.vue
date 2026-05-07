@@ -283,15 +283,13 @@ import { ref, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useMessage } from 'naive-ui';
 import { gameAPI } from '@/api';
-import {
-  GameControllerOutline,
-  AddCircleOutline,
-  CheckmarkCircleOutline,
-  ChatboxOutline,
-  CreateOutline,
-  HeartOutline,
-  ChatbubbleOutline,
-} from '@vicons/ionicons5';
+import GameControllerOutline from '@vicons/ionicons5/es/GameControllerOutline'
+import AddCircleOutline from '@vicons/ionicons5/es/AddCircleOutline'
+import CheckmarkCircleOutline from '@vicons/ionicons5/es/CheckmarkCircleOutline'
+import ChatboxOutline from '@vicons/ionicons5/es/ChatboxOutline'
+import CreateOutline from '@vicons/ionicons5/es/CreateOutline'
+import HeartOutline from '@vicons/ionicons5/es/HeartOutline'
+import ChatbubbleOutline from '@vicons/ionicons5/es/ChatbubbleOutline'
 
 const route = useRoute();
 const router = useRouter();

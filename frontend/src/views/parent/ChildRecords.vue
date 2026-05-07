@@ -103,14 +103,12 @@ import { useMessage } from 'naive-ui';
 import { userAPI, recordAPI } from '@/api';
 import { format, startOfWeek, addDays } from 'date-fns';
 import { zhCN } from 'date-fns/locale';
-import {
-  ArrowBackOutline,
-  CheckmarkCircleOutline,
-  RestaurantOutline,
-  BedOutline,
-  FootballOutline,
-  DocumentTextOutline,
-} from '@vicons/ionicons5';
+import ArrowBackOutline from '@vicons/ionicons5/es/ArrowBackOutline'
+import CheckmarkCircleOutline from '@vicons/ionicons5/es/CheckmarkCircleOutline'
+import RestaurantOutline from '@vicons/ionicons5/es/RestaurantOutline'
+import BedOutline from '@vicons/ionicons5/es/BedOutline'
+import FootballOutline from '@vicons/ionicons5/es/FootballOutline'
+import DocumentTextOutline from '@vicons/ionicons5/es/DocumentTextOutline'
 
 const route = useRoute();
 const message = useMessage();

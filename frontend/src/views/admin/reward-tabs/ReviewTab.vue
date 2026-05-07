@@ -243,13 +243,11 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue';
 import { useMessage } from 'naive-ui';
-import {
-  CheckmarkCircleOutline,
-  CheckmarkOutline,
-  CloseOutline,
-  RefreshOutline,
-  LinkOutline
-} from '@vicons/ionicons5';
+import CheckmarkCircleOutline from '@vicons/ionicons5/es/CheckmarkCircleOutline'
+import CheckmarkOutline from '@vicons/ionicons5/es/CheckmarkOutline'
+import CloseOutline from '@vicons/ionicons5/es/CloseOutline'
+import RefreshOutline from '@vicons/ionicons5/es/RefreshOutline'
+import LinkOutline from '@vicons/ionicons5/es/LinkOutline'
 import api from '@/api';
 import { useSubmissionStore } from '@/stores/submission';
 import { formatDistanceToNow } from 'date-fns';

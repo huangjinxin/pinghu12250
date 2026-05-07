@@ -66,7 +66,21 @@
 
       <!-- 渲染内容 -->
       <div class="output-body" ref="outputBodyRef">
-        <div v-html="renderedContent"></div>
+        <SelectableContent
+          :textbook-id="textbookId"
+          :current-page="currentPage"
+          source-type="ai_output"
+          @save-note="handleSelectionSaveNote"
+          @send-to-input="handleSelectionSendToInput"
+          @ask-ai="handleSelectionAskAI"
+        >
+          <RichContent
+            :content="content"
+            :fold-thinking="true"
+            :enable-code-highlight="true"
+            :enable-math="true"
+          />
+        </SelectableContent>
         <span v-if="streaming" class="cursor-blink">|</span>
       </div>
     </div>
@@ -74,16 +88,16 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, nextTick, onUnmounted } from 'vue';
+import { ref, watch, nextTick, onUnmounted } from 'vue';
 import { useMessage } from 'naive-ui';
-import {
-  SparklesOutline,
-  ChatboxOutline,
-  BookmarkOutline,
-  VolumeHighOutline,
-  RefreshOutline
-} from '@vicons/ionicons5';
+import SparklesOutline from '@vicons/ionicons5/es/SparklesOutline'
+import ChatboxOutline from '@vicons/ionicons5/es/ChatboxOutline'
+import BookmarkOutline from '@vicons/ionicons5/es/BookmarkOutline'
+import VolumeHighOutline from '@vicons/ionicons5/es/VolumeHighOutline'
+import RefreshOutline from '@vicons/ionicons5/es/RefreshOutline'
 import { textbookNoteAPI } from '@/api/index';
+import RichContent from './RichContent.vue';
+import SelectableContent from './SelectableContent.vue';
 
 const message = useMessage();
 
@@ -124,7 +138,7 @@ const props = defineProps({
   }
 });
 
-const emit = defineEmits(['quote-to-chat', 'save-note', 'regenerate']);
+const emit = defineEmits(['quote-to-chat', 'save-note', 'regenerate', 'send-to-input', 'ask-ai']);
 
 const outputBodyRef = ref(null);
 
@@ -141,37 +155,6 @@ const savingNote = ref(false);
 const isSpeaking = ref(false);
 let speechSynthesis = null;
 let currentUtterance = null;
-
-// 简单的 Markdown 渲染
-const renderedContent = computed(() => {
-  if (!props.content) return '';
-
-  let html = props.content
-    // 代码块
-    .replace(/```(\w*)\n([\s\S]*?)```/g, '<pre><code class="language-$1">$2</code></pre>')
-    // 行内代码
-    .replace(/`([^`]+)`/g, '<code>$1</code>')
-    // 标题
-    .replace(/^### (.+)$/gm, '<h3>$1</h3>')
-    .replace(/^## (.+)$/gm, '<h2>$1</h2>')
-    .replace(/^# (.+)$/gm, '<h1>$1</h1>')
-    // 粗体
-    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-    // 斜体
-    .replace(/\*(.+?)\*/g, '<em>$1</em>')
-    // 无序列表
-    .replace(/^[-*] (.+)$/gm, '<li>$1</li>')
-    // 有序列表
-    .replace(/^\d+\. (.+)$/gm, '<li>$1</li>')
-    // 换行
-    .replace(/\n\n/g, '</p><p>')
-    .replace(/\n/g, '<br>');
-
-  // 包装列表
-  html = html.replace(/(<li>.*?<\/li>)+/gs, '<ul>$&</ul>');
-
-  return `<p>${html}</p>`;
-});
 
 // 引用到聊天
 const quoteToChat = () => {
@@ -245,6 +228,22 @@ const speakContent = () => {
 // 重新生成
 const regenerate = () => {
   emit('regenerate');
+};
+
+// ===== 文字选中事件处理 =====
+// 选中文字保存笔记
+const handleSelectionSaveNote = (data) => {
+  emit('save-note', data);
+};
+
+// 选中文字发送到输入框
+const handleSelectionSendToInput = (text) => {
+  emit('send-to-input', text);
+};
+
+// 选中文字 AI 解释
+const handleSelectionAskAI = (text) => {
+  emit('ask-ai', text);
 };
 
 // 清理

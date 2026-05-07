@@ -8,6 +8,7 @@ const { authenticate } = require('../middleware/auth');
 const pointService = require('../services/pointService');
 const challengeService = require('../services/challengeService');
 const achievementService = require('../services/achievementService');
+const creditService = require('../services/creditService');
 
 // 使用 Prisma 单例
 const prisma = require('../lib/prisma');
@@ -282,8 +283,15 @@ router.post('/stop', authenticate, async (req, res, next) => {
       // 4. 检查学习连续天数成就
       achievementService.checkAchievements(req.user.id, 'study_streak', {});
     } catch (error) {
-      console.error('积分奖励失败:', error);
+      console.error('积分/成就奖励失败:', error);
     }
+
+    // 触发信用评分
+    await creditService.recordBehavior(req.user.id, 'LEARNING', 'STUDY_SESSION', {
+      duration: duration * 60, // 转换为秒
+      description: `完成学习番茄钟: ${content.substring(0, 20)}...`,
+      sourceId: session.id
+    }).catch(err => console.error('Credit error:', err));
 
     res.status(201).json({ session, message: '学习记录保存成功' });
   } catch (error) {

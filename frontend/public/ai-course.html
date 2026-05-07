@@ -1,0 +1,833 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI驱动的跨领域智能创造——Pico硬件协作实践</title>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --primary-light: #3b82f6;
+            --secondary: #0891b2;
+            --accent: #f59e0b;
+            --text: #1e293b;
+            --text-light: #64748b;
+            --bg: #ffffff;
+            --bg-alt: #f8fafc;
+            --bg-card: #ffffff;
+            --border: #e2e8f0;
+            --shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -2px rgba(0,0,0,0.1);
+            --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -4px rgba(0,0,0,0.1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "PingFang SC", "Microsoft YaHei", sans-serif;
+            color: var(--text);
+            line-height: 1.7;
+            background: var(--bg);
+        }
+
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 0 24px;
+        }
+
+        /* Hero Section */
+        .hero {
+            background: linear-gradient(135deg, #1e3a5f 0%, #2563eb 50%, #0891b2 100%);
+            color: white;
+            padding: 80px 0 100px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.05'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+            opacity: 0.5;
+        }
+
+        .hero-content {
+            position: relative;
+            z-index: 1;
+        }
+
+        .hero-badge {
+            display: inline-block;
+            background: rgba(255,255,255,0.15);
+            backdrop-filter: blur(10px);
+            padding: 8px 20px;
+            border-radius: 50px;
+            font-size: 14px;
+            margin-bottom: 24px;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .hero h1 {
+            font-size: clamp(28px, 5vw, 42px);
+            font-weight: 700;
+            margin-bottom: 20px;
+            letter-spacing: -0.5px;
+        }
+
+        .hero-subtitle {
+            font-size: clamp(18px, 3vw, 22px);
+            opacity: 0.95;
+            max-width: 700px;
+            margin: 0 auto 16px;
+            font-weight: 400;
+        }
+
+        .hero-note {
+            font-size: 15px;
+            opacity: 0.8;
+            margin-top: 20px;
+        }
+
+        /* Section Base */
+        section {
+            padding: 80px 0;
+        }
+
+        section:nth-child(even) {
+            background: var(--bg-alt);
+        }
+
+        .section-header {
+            text-align: center;
+            margin-bottom: 50px;
+        }
+
+        .section-tag {
+            display: inline-block;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            padding: 6px 16px;
+            border-radius: 50px;
+            font-size: 13px;
+            font-weight: 500;
+            margin-bottom: 16px;
+        }
+
+        .section-title {
+            font-size: clamp(24px, 4vw, 32px);
+            font-weight: 700;
+            color: var(--text);
+            margin-bottom: 12px;
+        }
+
+        .section-desc {
+            color: var(--text-light);
+            font-size: 16px;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        /* What Section */
+        .what-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+        }
+
+        .what-card {
+            background: var(--bg-card);
+            border-radius: 16px;
+            padding: 32px;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border);
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+
+        .what-card:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .what-icon {
+            width: 56px;
+            height: 56px;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 20px;
+            font-size: 28px;
+        }
+
+        .what-card h3 {
+            font-size: 20px;
+            margin-bottom: 12px;
+            color: var(--text);
+        }
+
+        .what-card p {
+            color: var(--text-light);
+            font-size: 15px;
+        }
+
+        /* Why Section */
+        .why-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 40px;
+            align-items: center;
+        }
+
+        @media (max-width: 768px) {
+            .why-content {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .why-text h3 {
+            font-size: 22px;
+            margin-bottom: 16px;
+            color: var(--text);
+        }
+
+        .why-text p {
+            color: var(--text-light);
+            margin-bottom: 20px;
+            font-size: 15px;
+        }
+
+        .why-list {
+            list-style: none;
+        }
+
+        .why-list li {
+            padding: 12px 0;
+            padding-left: 32px;
+            position: relative;
+            color: var(--text);
+            font-size: 15px;
+        }
+
+        .why-list li::before {
+            content: '✓';
+            position: absolute;
+            left: 0;
+            color: var(--secondary);
+            font-weight: bold;
+            font-size: 16px;
+        }
+
+        .why-visual {
+            background: linear-gradient(135deg, #f0f9ff, #e0f2fe);
+            border-radius: 20px;
+            padding: 40px;
+            text-align: center;
+        }
+
+        .why-visual-icon {
+            font-size: 80px;
+            margin-bottom: 20px;
+        }
+
+        .why-visual-text {
+            font-size: 18px;
+            color: var(--primary);
+            font-weight: 600;
+        }
+
+        /* Outcomes Section */
+        .outcomes-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 24px;
+        }
+
+        .outcome-card {
+            background: var(--bg-card);
+            border-radius: 16px;
+            padding: 28px;
+            text-align: center;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border);
+            transition: transform 0.3s;
+        }
+
+        .outcome-card:hover {
+            transform: translateY(-4px);
+        }
+
+        .outcome-icon {
+            width: 64px;
+            height: 64px;
+            margin: 0 auto 16px;
+            background: linear-gradient(135deg, var(--bg-alt), #e2e8f0);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+        }
+
+        .outcome-card h4 {
+            font-size: 18px;
+            margin-bottom: 10px;
+            color: var(--text);
+        }
+
+        .outcome-card p {
+            font-size: 14px;
+            color: var(--text-light);
+        }
+
+        .outcomes-note {
+            text-align: center;
+            margin-top: 40px;
+            padding: 24px;
+            background: linear-gradient(135deg, #fef3c7, #fde68a);
+            border-radius: 12px;
+            font-size: 15px;
+            color: #92400e;
+        }
+
+        /* How Section - Timeline */
+        .timeline {
+            position: relative;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .timeline::before {
+            content: '';
+            position: absolute;
+            left: 24px;
+            top: 0;
+            bottom: 0;
+            width: 3px;
+            background: linear-gradient(180deg, var(--primary), var(--secondary));
+            border-radius: 2px;
+        }
+
+        @media (min-width: 768px) {
+            .timeline::before {
+                left: 50%;
+                transform: translateX(-50%);
+            }
+        }
+
+        .timeline-item {
+            position: relative;
+            padding-left: 60px;
+            padding-bottom: 40px;
+        }
+
+        @media (min-width: 768px) {
+            .timeline-item {
+                padding-left: 0;
+                padding-right: 0;
+            }
+
+            .timeline-item:nth-child(odd) {
+                padding-right: calc(50% + 40px);
+                text-align: right;
+            }
+
+            .timeline-item:nth-child(even) {
+                padding-left: calc(50% + 40px);
+            }
+        }
+
+        .timeline-dot {
+            position: absolute;
+            left: 16px;
+            width: 20px;
+            height: 20px;
+            background: var(--primary);
+            border-radius: 50%;
+            border: 4px solid var(--bg);
+            box-shadow: var(--shadow);
+        }
+
+        @media (min-width: 768px) {
+            .timeline-dot {
+                left: 50%;
+                transform: translateX(-50%);
+            }
+        }
+
+        .timeline-content {
+            background: var(--bg-card);
+            padding: 24px;
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border);
+        }
+
+        .timeline-step {
+            display: inline-block;
+            background: var(--primary);
+            color: white;
+            padding: 4px 12px;
+            border-radius: 50px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+
+        .timeline-content h4 {
+            font-size: 18px;
+            margin-bottom: 8px;
+            color: var(--text);
+        }
+
+        .timeline-content p {
+            font-size: 14px;
+            color: var(--text-light);
+        }
+
+        /* Safety Section */
+        .safety-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 30px;
+        }
+
+        .safety-card {
+            background: var(--bg-card);
+            border-radius: 16px;
+            padding: 32px;
+            box-shadow: var(--shadow);
+            border-left: 4px solid var(--secondary);
+        }
+
+        .safety-card h4 {
+            font-size: 18px;
+            margin-bottom: 12px;
+            color: var(--text);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .safety-card p {
+            font-size: 14px;
+            color: var(--text-light);
+        }
+
+        /* Policy Section */
+        .policy-content {
+            background: linear-gradient(135deg, #1e3a5f, #2563eb);
+            border-radius: 20px;
+            padding: 50px;
+            color: white;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .policy-content::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -20%;
+            width: 400px;
+            height: 400px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 50%;
+        }
+
+        .policy-content h3 {
+            font-size: 24px;
+            margin-bottom: 20px;
+            position: relative;
+        }
+
+        .policy-list {
+            list-style: none;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            position: relative;
+        }
+
+        .policy-list li {
+            background: rgba(255,255,255,0.1);
+            padding: 20px;
+            border-radius: 12px;
+            font-size: 15px;
+            backdrop-filter: blur(10px);
+        }
+
+        .policy-list li strong {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 16px;
+        }
+
+        /* Footer/Closing */
+        .closing {
+            background: var(--bg-alt);
+            padding: 80px 0;
+            text-align: center;
+        }
+
+        .closing-icon {
+            font-size: 60px;
+            margin-bottom: 24px;
+        }
+
+        .closing h2 {
+            font-size: clamp(22px, 4vw, 28px);
+            color: var(--text);
+            margin-bottom: 20px;
+        }
+
+        .closing-text {
+            max-width: 700px;
+            margin: 0 auto;
+            color: var(--text-light);
+            font-size: 16px;
+            line-height: 1.8;
+        }
+
+        .closing-highlight {
+            margin-top: 40px;
+            padding: 30px;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            border-radius: 16px;
+            color: white;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .closing-highlight p {
+            font-size: 18px;
+            font-weight: 500;
+        }
+
+        /* Footer */
+        footer {
+            background: #1e293b;
+            color: rgba(255,255,255,0.7);
+            padding: 30px 0;
+            text-align: center;
+            font-size: 14px;
+        }
+
+        /* Animations */
+        .fade-in {
+            opacity: 0;
+            transform: translateY(30px);
+            transition: opacity 0.6s ease, transform 0.6s ease;
+        }
+
+        .fade-in.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* Responsive */
+        @media (max-width: 480px) {
+            section {
+                padding: 50px 0;
+            }
+
+            .hero {
+                padding: 60px 0 80px;
+            }
+
+            .what-card, .outcome-card, .safety-card {
+                padding: 24px;
+            }
+
+            .policy-content {
+                padding: 30px 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="container hero-content">
+            <div class="hero-badge">中华路小学人工智能通识教育课程</div>
+            <h1>AI驱动的跨领域智能创造<br>——Pico硬件协作实践</h1>
+            <p class="hero-subtitle">让孩子从"技术的使用者"成长为"技术的创造者"，<br>在安全的环境中探索科技与创造的乐趣</p>
+            <p class="hero-note">适合小学阶段学生 · 无需编程基础 · 注重思维培养</p>
+        </div>
+    </section>
+
+    <!-- What Section -->
+    <section>
+        <div class="container">
+            <div class="section-header fade-in">
+                <span class="section-tag">课程是什么</span>
+                <h2 class="section-title">这门课程在学什么？</h2>
+                <p class="section-desc">用通俗的语言，带您了解孩子在课堂上的真实学习体验</p>
+            </div>
+            <div class="what-grid">
+                <div class="what-card fade-in">
+                    <div class="what-icon">💡</div>
+                    <h3>认识智能技术</h3>
+                    <p>通过与智能助手的自然对话，孩子学会用语言清晰表达自己的想法和需求。这不是"玩电脑"，而是学习如何与智能工具有效沟通——一项未来世界的必备能力。</p>
+                </div>
+                <div class="what-card fade-in">
+                    <div class="what-icon">🔧</div>
+                    <h3>动手控制硬件</h3>
+                    <p>使用小巧的Pico开发板，孩子可以让LED灯按照自己设计的节奏闪烁。看到自己的想法变成真实的灯光效果，这种成就感是任何虚拟游戏无法替代的。</p>
+                </div>
+                <div class="what-card fade-in">
+                    <div class="what-icon">✨</div>
+                    <h3>修改即创作</h3>
+                    <p>孩子不需要从零编写复杂代码，而是在现有基础上调整参数——改变闪烁速度、变换灯光节奏。通过"微调"体验创作，建立对技术的信心和掌控感。</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Why Section -->
+    <section>
+        <div class="container">
+            <div class="section-header fade-in">
+                <span class="section-tag">为什么要学</span>
+                <h2 class="section-title">为什么小学阶段就要接触这些？</h2>
+            </div>
+            <div class="why-content">
+                <div class="why-text fade-in">
+                    <h3>抓住思维发展的关键期</h3>
+                    <p>小学阶段是孩子好奇心最旺盛、思维最活跃的时期。这时候接触智能技术，不是为了"超前学习"，而是在最佳时机播下创造力的种子。</p>
+
+                    <h3>从"会用"到"会想"</h3>
+                    <p>很多孩子会用手机、平板，但只是被动接受内容。这门课程让孩子理解：技术是可以被创造和改变的。当孩子意识到"我可以让机器按我的想法工作"，思维方式就发生了根本转变。</p>
+
+                    <ul class="why-list">
+                        <li>培养主动探索而非被动接受的习惯</li>
+                        <li>建立"问题可以被解决"的积极心态</li>
+                        <li>在试错中学会坚持与调整</li>
+                        <li>为未来学习打下思维基础</li>
+                    </ul>
+                </div>
+                <div class="why-visual fade-in">
+                    <div class="why-visual-icon">🚀</div>
+                    <p class="why-visual-text">从使用者到创造者<br>这是思维方式的根本转变</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Outcomes Section -->
+    <section>
+        <div class="container">
+            <div class="section-header fade-in">
+                <span class="section-tag">学习收获</span>
+                <h2 class="section-title">孩子能获得什么？</h2>
+                <p class="section-desc">超越知识本身，培养受益终身的能力与素养</p>
+            </div>
+            <div class="outcomes-grid">
+                <div class="outcome-card fade-in">
+                    <div class="outcome-icon">🧠</div>
+                    <h4>计算思维</h4>
+                    <p>学会把复杂问题拆解成简单步骤，用有条理的方式思考和解决问题</p>
+                </div>
+                <div class="outcome-card fade-in">
+                    <div class="outcome-icon">⚙️</div>
+                    <h4>工程意识</h4>
+                    <p>理解"设计—实现—测试—改进"的完整过程，体验真实的创造流程</p>
+                </div>
+                <div class="outcome-card fade-in">
+                    <div class="outcome-icon">💬</div>
+                    <h4>表达能力</h4>
+                    <p>通过描述需求、解释想法，锻炼清晰、准确表达的能力</p>
+                </div>
+                <div class="outcome-card fade-in">
+                    <div class="outcome-icon">🤝</div>
+                    <h4>合作与自信</h4>
+                    <p>在互助学习中建立自信，学会帮助他人也接受帮助</p>
+                </div>
+            </div>
+            <div class="outcomes-note fade-in">
+                <strong>我们的理念：</strong>允许试错、尊重差异、不追求统一结果。每个孩子都有自己的学习节奏和创作风格。
+            </div>
+        </div>
+    </section>
+
+    <!-- How Section -->
+    <section>
+        <div class="container">
+            <div class="section-header fade-in">
+                <span class="section-tag">教学方式</span>
+                <h2 class="section-title">课堂是如何进行的？</h2>
+                <p class="section-desc">一节课的真实体验</p>
+            </div>
+            <div class="timeline">
+                <div class="timeline-item fade-in">
+                    <div class="timeline-dot"></div>
+                    <div class="timeline-content">
+                        <span class="timeline-step">第一步</span>
+                        <h4>情境引入：失控的实验室</h4>
+                        <p>老师展示学长学姐完成的灯光作品，引出有趣的任务背景——"实验室的灯光系统需要你来修复和改造！"孩子们立刻被吸引，跃跃欲试。</p>
+                    </div>
+                </div>
+                <div class="timeline-item fade-in">
+                    <div class="timeline-dot"></div>
+                    <div class="timeline-content">
+                        <span class="timeline-step">第二步</span>
+                        <h4>智能协作：表达想法</h4>
+                        <p>孩子用自己的话描述想要的灯光效果，智能助手帮助生成基础方案。低年级学生可以口述，识字困难也不影响参与。</p>
+                    </div>
+                </div>
+                <div class="timeline-item fade-in">
+                    <div class="timeline-dot"></div>
+                    <div class="timeline-content">
+                        <span class="timeline-step">第三步</span>
+                        <h4>动手创作：修改参数</h4>
+                        <p>通过调整简单的数字参数，孩子让灯光闪得更快、更慢，或形成独特的节奏。"改一个数字，灯就不一样了！"——这种即时反馈让学习充满乐趣。</p>
+                    </div>
+                </div>
+                <div class="timeline-item fade-in">
+                    <div class="timeline-dot"></div>
+                    <div class="timeline-content">
+                        <span class="timeline-step">第四步</span>
+                        <h4>互助成长：小老师机制</h4>
+                        <p>先完成的同学成为"小老师"，帮助其他同学解决问题。教会别人的过程，也是自己理解更深入的过程。</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Safety Section -->
+    <section>
+        <div class="container">
+            <div class="section-header fade-in">
+                <span class="section-tag">安全保障</span>
+                <h2 class="section-title">因材施教与学习安全</h2>
+                <p class="section-desc">让每个孩子都能安心参与、收获成长</p>
+            </div>
+            <div class="safety-grid">
+                <div class="safety-card fade-in">
+                    <h4>🔒 本地安全环境</h4>
+                    <p>所有学习活动在本地设备完成，不涉及互联网风险内容。孩子接触的是经过精心设计的学习环境，家长可以完全放心。</p>
+                </div>
+                <div class="safety-card fade-in">
+                    <h4>👨‍🏫 教师全程引导</h4>
+                    <p>专业教师在场指导，帮助孩子理解、鼓励探索、及时答疑。不是放任自学，而是有温度的陪伴成长。</p>
+                </div>
+                <div class="safety-card fade-in">
+                    <h4>📊 分层支持设计</h4>
+                    <p>不同基础的孩子有不同的参与方式：可以语音描述、可以修改数字、可以尝试更复杂的创作。人人都能找到自己的位置。</p>
+                </div>
+                <div class="safety-card fade-in">
+                    <h4>🌱 包容试错文化</h4>
+                    <p>课堂上没有"失败"，只有"还没成功"。一次不亮的灯、一个需要调整的参数，都是学习过程的一部分。</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Policy Section -->
+    <section>
+        <div class="container">
+            <div class="section-header fade-in">
+                <span class="section-tag">教育方向</span>
+                <h2 class="section-title">与国家教育方向同行</h2>
+            </div>
+            <div class="policy-content fade-in">
+                <h3>我们的课程设计契合国家人工智能教育的整体规划</h3>
+                <ul class="policy-list">
+                    <li>
+                        <strong>核心素养培育</strong>
+                        响应新课标对"信息意识""计算思维""数字化学习与创新"的培养要求
+                    </li>
+                    <li>
+                        <strong>实践能力导向</strong>
+                        强调动手实践、解决真实问题，而非单纯的知识记忆
+                    </li>
+                    <li>
+                        <strong>创新思维启蒙</strong>
+                        鼓励学生大胆尝试、勇于创造，培养面向未来的创新能力
+                    </li>
+                    <li>
+                        <strong>科学稳妥推进</strong>
+                        学校在国家政策指引下，提前、稳妥、科学地开展智能教育探索
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </section>
+
+    <!-- Closing Section -->
+    <section class="closing">
+        <div class="container">
+            <div class="fade-in">
+                <div class="closing-icon">🌟</div>
+                <h2>写给家长的话</h2>
+                <div class="closing-text">
+                    <p>我们深知，家长对孩子接触智能技术可能有疑虑：会不会太早？会不会沉迷？会不会有风险？</p>
+                    <p style="margin-top: 16px;">这门课程的设计初衷，正是为了让孩子在安全、可控、有引导的环境中，建立对技术的正确认知。我们不是要培养"小程序员"，而是希望每个孩子都能理解：<strong>技术是可以被理解、被创造、被掌控的</strong>。</p>
+                    <p style="margin-top: 16px;">在这里，我们关注的不是孩子做出了多"厉害"的作品，而是他们如何思考问题、如何表达想法、如何面对困难、如何与同伴合作。</p>
+                </div>
+                <div class="closing-highlight">
+                    <p>技术是工具，思考才是目的。<br>我们关注孩子如何思考，而不只是做出什么。</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+        <div class="container">
+            <p>中华路小学科技开放日 · 人工智能通识教育课程展示</p>
+        </div>
+    </footer>
+
+    <script>
+        // Fade in animation on scroll
+        function handleScroll() {
+            const elements = document.querySelectorAll('.fade-in');
+            elements.forEach(el => {
+                const rect = el.getBoundingClientRect();
+                const windowHeight = window.innerHeight;
+                if (rect.top < windowHeight * 0.85) {
+                    el.classList.add('visible');
+                }
+            });
+        }
+
+        // Initial check
+        handleScroll();
+
+        // Throttled scroll listener
+        let ticking = false;
+        window.addEventListener('scroll', () => {
+            if (!ticking) {
+                window.requestAnimationFrame(() => {
+                    handleScroll();
+                    ticking = false;
+                });
+                ticking = true;
+            }
+        });
+
+        // Smooth scroll for any anchor links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({ behavior: 'smooth' });
+                }
+            });
+        });
+    </script>
+</body>
+</html>

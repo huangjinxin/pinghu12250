@@ -1,0 +1,6 @@
+{
+  "Dynamic.likes": "Like",
+  "Dynamic.comments": "Comment",
+  "Dynamic.author": "user",
+  "User.reviewsReceived": "PeerReview_PeerReview_toUserIdToUser"
+}

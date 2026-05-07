@@ -53,7 +53,7 @@ import { computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { useChatStore } from '@/stores/chat';
 import { useMessage } from 'naive-ui';
-import { ChatbubbleOutline } from '@vicons/ionicons5';
+import ChatbubbleOutline from '@vicons/ionicons5/es/ChatbubbleOutline'
 import FollowButton from './FollowButton.vue';
 
 const props = defineProps({
@@ -99,9 +99,7 @@ const getFollowStatus = computed(() => {
 });
 
 const handleSendMessage = () => {
-  // 打开聊天面板
-  chatStore.requestOpenPanel();
-  message.success('正在打开聊天');
+  router.push(`/users/${props.user.id}`);
 };
 </script>
 

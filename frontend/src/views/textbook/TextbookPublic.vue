@@ -8,7 +8,7 @@
       <div class="nav-right">
         <template v-if="!selectedTextbook">
           <n-button v-if="isLoggedIn" type="primary" size="small" @click="goToWorkspace">
-            进入工作台
+            共建工具区
           </n-button>
           <n-button v-else text @click="goToLogin">
             登录
@@ -165,15 +165,13 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { useRouter } from 'vue-router';
 import axios from 'axios';
-import {
-  ArrowBack,
-  Expand,
-  Contract,
-  ChevronBack,
-  ChevronForward,
-  MenuOutline,
-  CloseOutline,
-} from '@vicons/ionicons5';
+import ArrowBack from '@vicons/ionicons5/es/ArrowBack'
+import Expand from '@vicons/ionicons5/es/Expand'
+import Contract from '@vicons/ionicons5/es/Contract'
+import ChevronBack from '@vicons/ionicons5/es/ChevronBack'
+import ChevronForward from '@vicons/ionicons5/es/ChevronForward'
+import MenuOutline from '@vicons/ionicons5/es/MenuOutline'
+import CloseOutline from '@vicons/ionicons5/es/CloseOutline'
 import { useAuthStore } from '@/stores/auth';
 
 const router = useRouter();

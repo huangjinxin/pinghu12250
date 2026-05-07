@@ -299,16 +299,14 @@ import { useRoute, useRouter } from 'vue-router';
 import { useMessage, useDialog } from 'naive-ui';
 import { useAuthStore } from '@/stores/auth';
 import api from '@/api';
-import {
-  AddOutline,
-  BookOutline,
-  CreateOutline,
-  ThumbsUpOutline,
-  ThumbsUp,
-  ThumbsDownOutline,
-  ThumbsDown,
-  TrashOutline,
-} from '@vicons/ionicons5';
+import AddOutline from '@vicons/ionicons5/es/AddOutline'
+import BookOutline from '@vicons/ionicons5/es/BookOutline'
+import CreateOutline from '@vicons/ionicons5/es/CreateOutline'
+import ThumbsUpOutline from '@vicons/ionicons5/es/ThumbsUpOutline'
+import ThumbsUp from '@vicons/ionicons5/es/ThumbsUp'
+import ThumbsDownOutline from '@vicons/ionicons5/es/ThumbsDownOutline'
+import ThumbsDown from '@vicons/ionicons5/es/ThumbsDown'
+import TrashOutline from '@vicons/ionicons5/es/TrashOutline'
 
 const route = useRoute();
 const router = useRouter();

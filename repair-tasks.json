@@ -1,0 +1,38 @@
+[
+  {
+    "id": "TASK-001",
+    "type": "logic",
+    "module": "submissions",
+    "symptom": "规则已被禁用",
+    "root_cause": "Select block in findUnique missed status field",
+    "fix_strategy": "Remove select block to fetch all fields",
+    "status": "done"
+  },
+  {
+    "id": "TASK-002",
+    "type": "prisma_error",
+    "module": "photos",
+    "symptom": "500 error on photos GET/POST",
+    "root_cause": "Relation names mismatch (author->user, likes->Like)",
+    "fix_strategy": "Update include and map structure to match schema.prisma",
+    "status": "done"
+  },
+  {
+    "id": "TASK-003",
+    "type": "prisma_error",
+    "module": "reviewService",
+    "symptom": "prisma.user.findMany 报错",
+    "root_cause": "Using incorrect relation name reviewsReceived",
+    "fix_strategy": "Rename to PeerReview_PeerReview_toUserIdToUser",
+    "status": "done"
+  },
+  {
+    "id": "TASK-004",
+    "type": "cors",
+    "module": "socket.io",
+    "symptom": "WebSocket CORS error",
+    "root_cause": "origin: true instead of origin: \"*\"",
+    "fix_strategy": "Set origin to \"*\"",
+    "status": "done"
+  }
+]

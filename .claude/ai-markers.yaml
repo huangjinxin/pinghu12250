@@ -1,0 +1,103 @@
+# @AI 标记系统
+# AI在读取代码时自动识别这些标记并遵守
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# 文件级标记（放在文件开头）
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+markers:
+  "@AI:LOCK":
+    meaning: 此文件禁止修改
+    action: 跳过,不要尝试编辑
+
+  "@AI:DEPRECATED":
+    meaning: 此文件已废弃
+    action: 不修改,不引用,建议使用替代方案
+
+  "@AI:DO-NOT-MODIFY":
+    meaning: 此文件不应被修改
+    action: 仅阅读,不编辑
+
+  "@AI:LARGE-FILE":
+    meaning: 此文件过大,需要重构
+    action: 新功能提取到composables,不在此文件新增
+
+  "@AI:MODIFY":
+    meaning: 此文件可修改但有限制
+    action: 遵循后续说明
+
+  "@AI:SINGLETON":
+    meaning: 单例模式,全项目唯一实例
+    action: 不要创建新实例
+
+  "@AI:TEMPLATE":
+    meaning: 模板文件
+    action: 复制使用,不直接修改
+
+  "@AI:EXTRACT":
+    meaning: 需要提取的逻辑列表
+    action: 新功能优先放到列出的composables中
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# 目录级标记（.ai文件中）
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+dir_markers:
+  "permit: none":
+    meaning: 禁止任何操作
+
+  "permit: modify-only":
+    meaning: 仅允许修改现有文件,禁止新增
+
+  "permit: add":
+    meaning: 允许新增文件
+
+  "naming:":
+    meaning: 文件命名规范
+
+  "import:":
+    meaning: 允许导入的模块
+
+  "!import:":
+    meaning: 禁止导入的模块
+
+  "deprecated:":
+    meaning: 废弃文件列表
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# 代码块标记
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+block_markers:
+  "@AI:EXTEND":
+    meaning: 扩展点,新增内容放这里
+    example: "// @AI:EXTEND 新API加在这里"
+
+  "@AI:PATTERN":
+    meaning: 代码模式说明
+    example: "// @AI:PATTERN [module]API = { ... }"
+
+  "@AI:USAGE":
+    meaning: 正确的使用方式
+    example: "// @AI:USAGE const prisma = require('../lib/prisma')"
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# AI行为规则
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+behavior:
+  on_read_file:
+    - 检查文件头部是否有@AI标记
+    - 如有@AI:LOCK或@AI:DEPRECATED,不要修改
+    - 如有@AI:LARGE-FILE,建议提取到composables
+
+  on_modify_dir:
+    - 读取目录下的.ai文件(如存在)
+    - 遵守permit规则
+    - 遵守naming规则
+    - 遵守import/!import规则
+
+  on_create_file:
+    - 检查目录权限(permit)
+    - 遵守命名规范(naming)
+    - 如有_template文件,参考其格式

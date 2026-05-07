@@ -173,13 +173,11 @@ import { useRoute, useRouter } from 'vue-router';
 import { useMessage } from 'naive-ui';
 import { useAuthStore } from '@/stores/auth';
 import { gameAPI } from '@/api';
-import {
-  HeartOutline,
-  Heart,
-  EllipsisHorizontalOutline,
-  ImageOutline,
-  CloudUploadOutline,
-} from '@vicons/ionicons5';
+import HeartOutline from '@vicons/ionicons5/es/HeartOutline'
+import Heart from '@vicons/ionicons5/es/Heart'
+import EllipsisHorizontalOutline from '@vicons/ionicons5/es/EllipsisHorizontalOutline'
+import ImageOutline from '@vicons/ionicons5/es/ImageOutline'
+import CloudUploadOutline from '@vicons/ionicons5/es/CloudUploadOutline'
 
 const route = useRoute();
 const router = useRouter();

@@ -333,6 +333,58 @@ class FollowService {
   }
 
   /**
+   * 解除好友关系
+   * @param {string} currentUserId - 当前用户ID
+   * @param {string} targetUserId - 目标用户ID
+   * @returns {Promise<{success: boolean, data?: object, error?: string}>}
+   */
+  async unfriend(currentUserId, targetUserId) {
+    try {
+      if (!targetUserId) {
+        return { success: false, error: '目标用户ID不能为空' };
+      }
+
+      if (currentUserId === targetUserId) {
+        return { success: false, error: '不能解除自己与自己的好友关系' };
+      }
+
+      const friendship = await this.getFriendship(currentUserId, targetUserId);
+      if (!friendship) {
+        return { success: false, error: '当前不是好友关系' };
+      }
+
+      await prisma.$transaction([
+        prisma.friendship.delete({
+          where: { id: friendship.id }
+        }),
+        prisma.user.update({
+          where: { id: currentUserId },
+          data: { friendsCount: { decrement: 1 } }
+        }),
+        prisma.user.update({
+          where: { id: targetUserId },
+          data: { friendsCount: { decrement: 1 } }
+        })
+      ]);
+
+      return {
+        success: true,
+        data: {
+          targetUserId,
+          relationStatus: 'none',
+          isFriend: false,
+          canMessage: false,
+          conversationDeleted: true,
+          historyDeleted: true
+        }
+      };
+    } catch (error) {
+      console.error('解除好友关系失败:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  /**
    * 获取关注列表
    * @param {string} userId - 用户ID
    * @param {object} options - 选项 {page, limit}
@@ -514,7 +566,18 @@ class FollowService {
 
       // 提取好友用户（排除自己）
       const users = friendships.map(friendship => {
-        return friendship.userId1 === userId ? friendship.user2 : friendship.user1;
+        const friend = friendship.userId1 === userId ? friendship.user2 : friendship.user1;
+        return {
+          id: friend.id,
+          username: friend.username,
+          nickname: friend.profile?.nickname,
+          avatar: friend.avatar,
+          role: friend.role,
+          followersCount: friend.followersCount,
+          followingCount: friend.followingCount,
+          friendsCount: friend.friendsCount,
+          bio: friend.profile?.bio
+        };
       });
 
       return {

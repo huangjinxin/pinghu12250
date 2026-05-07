@@ -314,7 +314,16 @@ import { useMessage, useDialog } from 'naive-ui';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
 import { questionAPI, pointAPI } from '@/api';
-import { Add, Diamond, ChatbubbleEllipses, Eye, EllipsisHorizontal, CreateOutline, TrashOutline, Search, Close as CloseIcon, TrendingUp } from '@vicons/ionicons5';
+import Add from '@vicons/ionicons5/es/Add'
+import Diamond from '@vicons/ionicons5/es/Diamond'
+import ChatbubbleEllipses from '@vicons/ionicons5/es/ChatbubbleEllipses'
+import Eye from '@vicons/ionicons5/es/Eye'
+import EllipsisHorizontal from '@vicons/ionicons5/es/EllipsisHorizontal'
+import CreateOutline from '@vicons/ionicons5/es/CreateOutline'
+import TrashOutline from '@vicons/ionicons5/es/TrashOutline'
+import Search from '@vicons/ionicons5/es/Search'
+import { default as CloseIcon } from '@vicons/ionicons5/es/Close'
+import TrendingUp from '@vicons/ionicons5/es/TrendingUp'
 
 const message = useMessage();
 const dialog = useDialog();

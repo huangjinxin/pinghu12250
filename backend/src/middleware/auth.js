@@ -11,7 +11,8 @@ const prisma = require('../lib/prisma');
  */
 const authenticate = async (req, res, next) => {
   try {
-    const token = req.headers.authorization?.replace('Bearer ', '');
+    // 优先从 Cookie 读取，兼容 Header
+    const token = req.cookies?.accessToken || req.headers.authorization?.replace('Bearer ', '');
 
     if (!token) {
       return res.status(401).json({ error: '未提供认证令牌' });
@@ -19,6 +20,7 @@ const authenticate = async (req, res, next) => {
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
+    // 获取完整用户信息以校验安全状态
     const user = await prisma.user.findUnique({
       where: { id: decoded.userId },
       select: {
@@ -27,11 +29,18 @@ const authenticate = async (req, res, next) => {
         username: true,
         role: true,
         avatar: true,
+        passwordChangedAt: true,
       },
     });
 
     if (!user) {
       return res.status(401).json({ error: '用户不存在' });
+    }
+
+    // 安全校验：如果 Token 签发时间早于密码修改时间，则失效
+    const tokenIat = decoded.iat * 1000;
+    if (user.passwordChangedAt && tokenIat < new Date(user.passwordChangedAt).getTime()) {
+      return res.status(401).json({ error: '密码已修改，请重新登录', code: 'PASSWORD_CHANGED' });
     }
 
     req.user = user;
@@ -41,7 +50,7 @@ const authenticate = async (req, res, next) => {
       return res.status(401).json({ error: '无效的令牌' });
     }
     if (error.name === 'TokenExpiredError') {
-      return res.status(401).json({ error: '令牌已过期' });
+      return res.status(401).json({ error: '令牌已过期', code: 'TOKEN_EXPIRED' });
     }
     next(error);
   }
@@ -85,7 +94,7 @@ const isAdmin = (req, res, next) => {
  */
 const optionalAuth = async (req, res, next) => {
   try {
-    const token = req.headers.authorization?.replace('Bearer ', '');
+    const token = req.cookies?.accessToken || req.headers.authorization?.replace('Bearer ', '');
 
     if (!token) {
       return next();
@@ -101,11 +110,16 @@ const optionalAuth = async (req, res, next) => {
         username: true,
         role: true,
         avatar: true,
+        passwordChangedAt: true,
       },
     });
 
     if (user) {
-      req.user = user;
+      // 安全校验：如果 Token 签发时间早于密码修改时间，则不设置 user
+      const tokenIat = decoded.iat * 1000;
+      if (!user.passwordChangedAt || tokenIat >= new Date(user.passwordChangedAt).getTime()) {
+        req.user = user;
+      }
     }
 
     next();

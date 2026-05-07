@@ -28,37 +28,46 @@
 
           <!-- 消息内容 -->
           <div class="message-body">
-            <!-- 用户消息 -->
-            <template v-if="msg.role === 'user'">
-              <div class="user-text">{{ msg.content }}</div>
-            </template>
+            <SelectableContent
+              :textbook-id="textbookId"
+              :current-page="msg.page || currentPage"
+              :source-type="msg.role === 'user' ? 'user_message' : msg.role"
+              @save-note="(data) => handleSelectionSaveNote(msg, data)"
+              @send-to-input="(text) => emit('send-to-input', text)"
+              @ask-ai="(text) => emit('ask-ai', text)"
+            >
+              <!-- 用户消息 -->
+              <template v-if="msg.role === 'user'">
+                <div class="user-text">{{ msg.content }}</div>
+              </template>
 
-            <!-- 系统搜索结果 -->
-            <template v-else-if="msg.role === 'system'">
-              <div class="search-results" v-if="msg.data?.matches?.length">
-                <div
-                  v-for="(match, idx) in msg.data.matches"
-                  :key="idx"
-                  class="result-item"
-                  @click="$emit('go-to-page', match.page, msg.data.query)"
-                >
-                  <div class="result-page">
-                    <n-icon size="12"><DocumentOutline /></n-icon>
-                    第{{ match.page }}页
+              <!-- 系统搜索结果 -->
+              <template v-else-if="msg.role === 'system'">
+                <div class="search-results" v-if="msg.data?.matches?.length">
+                  <div
+                    v-for="(match, idx) in msg.data.matches"
+                    :key="idx"
+                    class="result-item"
+                    @click="$emit('go-to-page', match.page, msg.data.query)"
+                  >
+                    <div class="result-page">
+                      <n-icon size="12"><DocumentOutline /></n-icon>
+                      第{{ match.page }}页
+                    </div>
+                    <div class="result-text">{{ match.text }}</div>
                   </div>
-                  <div class="result-text">{{ match.text }}</div>
                 </div>
-              </div>
-              <div v-else class="no-results">
-                <n-icon size="16"><SearchOutline /></n-icon>
-                未在教材中找到相关内容
-              </div>
-            </template>
+                <div v-else class="no-results">
+                  <n-icon size="16"><SearchOutline /></n-icon>
+                  未在教材中找到相关内容
+                </div>
+              </template>
 
-            <!-- AI 回复（预留） -->
-            <template v-else>
-              <div class="ai-text" v-html="msg.content"></div>
-            </template>
+              <!-- AI 回复 -->
+              <template v-else>
+                <div class="ai-text" v-html="msg.content"></div>
+              </template>
+            </SelectableContent>
           </div>
 
           <!-- 消息操作栏 -->
@@ -108,18 +117,17 @@
 <script setup>
 import { ref, watch, nextTick } from 'vue';
 import { useMessage } from 'naive-ui';
-import {
-  ChatbubblesOutline,
-  DocumentOutline,
-  SearchOutline,
-  NavigateOutline,
-  VolumeHighOutline,
-  StopCircleOutline,
-  Bookmark,
-  BookmarkOutline
-} from '@vicons/ionicons5';
+import ChatbubblesOutline from '@vicons/ionicons5/es/ChatbubblesOutline'
+import DocumentOutline from '@vicons/ionicons5/es/DocumentOutline'
+import SearchOutline from '@vicons/ionicons5/es/SearchOutline'
+import NavigateOutline from '@vicons/ionicons5/es/NavigateOutline'
+import VolumeHighOutline from '@vicons/ionicons5/es/VolumeHighOutline'
+import StopCircleOutline from '@vicons/ionicons5/es/StopCircleOutline'
+import Bookmark from '@vicons/ionicons5/es/Bookmark'
+import BookmarkOutline from '@vicons/ionicons5/es/BookmarkOutline'
 import { textbookNoteAPI } from '@/api/index';
 import { speak, stopSpeaking, isSpeaking } from '@/utils/speechService';
+import SelectableContent from './SelectableContent.vue';
 
 const message = useMessage();
 
@@ -142,7 +150,7 @@ const props = defineProps({
   }
 });
 
-const emit = defineEmits(['go-to-page', 'update:messages', 'note-saved']);
+const emit = defineEmits(['go-to-page', 'update:messages', 'note-saved', 'send-to-input', 'ask-ai']);
 
 const listRef = ref(null);
 const speakingMsgId = ref(null); // 当前正在朗读的消息ID
@@ -222,7 +230,7 @@ const toggleSaveMessage = async (msg) => {
     } else {
       // 保存笔记
       const snippet = buildSnippet(msg);
-      const res = await textbookNoteAPI.create({
+      const noteData = {
         textbookId: props.textbookId,
         sessionId: props.sessionId,
         sourceType: msg.role === 'user' ? 'user_message' : msg.role,
@@ -230,7 +238,8 @@ const toggleSaveMessage = async (msg) => {
         content: msg.role === 'user' ? { text: msg.content } : msg.data,
         snippet,
         page: msg.page || props.currentPage
-      });
+      };
+      const res = await textbookNoteAPI.create(noteData);
 
       updatedMessages[msgIndex] = {
         ...updatedMessages[msgIndex],
@@ -239,7 +248,12 @@ const toggleSaveMessage = async (msg) => {
         noteId: res.data?.id
       };
       emit('update:messages', updatedMessages);
-      emit('note-saved'); // 通知父组件刷新笔记列表
+      // 传递完整笔记数据用于实时更新
+      emit('note-saved', {
+        id: res.data?.id,
+        ...noteData,
+        createdAt: new Date().toISOString()
+      });
       message.success('已保存到笔记');
     }
   } catch (error) {
@@ -266,6 +280,33 @@ const buildSnippet = (msg) => {
     return `分析"${msg.data?.query}": 无结果`.slice(0, 100);
   }
   return msg.content?.slice(0, 100) || '';
+};
+
+// 处理文字选中保存笔记
+const handleSelectionSaveNote = async (msg, data) => {
+  if (!data?.text || !props.textbookId) return;
+
+  try {
+    const noteData = {
+      textbookId: props.textbookId,
+      sessionId: props.sessionId,
+      sourceType: data.sourceType || 'selection',
+      query: data.text.slice(0, 50),
+      content: { text: data.text, originalMessage: msg.content?.slice(0, 200) },
+      snippet: data.text.slice(0, 100),
+      page: data.page || msg.page || props.currentPage
+    };
+    const res = await textbookNoteAPI.create(noteData);
+    emit('note-saved', {
+      id: res.data?.id,
+      ...noteData,
+      createdAt: new Date().toISOString()
+    });
+    message.success('已保存到笔记');
+  } catch (error) {
+    console.error('保存笔记失败:', error);
+    message.error('保存失败');
+  }
 };
 
 // 滚动到底部

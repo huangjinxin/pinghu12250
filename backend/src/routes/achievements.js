@@ -6,6 +6,7 @@ const express = require('express');
 const router = express.Router();
 const achievementService = require('../services/achievementService');
 const { authenticate } = require('../middleware/auth');
+const prisma = require('../lib/prisma');
 
 // ========== 公开接口 ==========
 
@@ -17,15 +18,22 @@ router.get('/', async (req, res) => {
   try {
     const userId = req.user?.id || null;
     const achievements = await achievementService.getAllAchievements(userId);
+    const stats = userId ? await achievementService.getAchievementStats(userId) : null;
 
     // 如果用户未登录，过滤掉隐藏成就
-    const filteredAchievements = userId
+    let filteredAchievements = userId
       ? achievements
       : achievements.filter(a => !a.isHidden);
+
+    // 过滤分类（如果在后端做过滤的话）
+    if (req.query.category && req.query.category !== 'all') {
+      filteredAchievements = filteredAchievements.filter(a => a.category.toLowerCase() === req.query.category.toLowerCase());
+    }
 
     res.json({
       success: true,
       achievements: filteredAchievements,
+      stats,
     });
   } catch (error) {
     console.error('获取成就列表失败:', error);

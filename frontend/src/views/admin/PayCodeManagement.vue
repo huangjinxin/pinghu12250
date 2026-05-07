@@ -4,8 +4,8 @@
     <n-card class="header-card">
       <div class="header">
         <div>
-          <h2>收款码管理</h2>
-          <p class="text-gray-500">创建和管理扫码支付收款码</p>
+          <h2>财务管理</h2>
+          <p class="subtitle">收款码、分期付款与交易管理</p>
         </div>
       </div>
     </n-card>
@@ -13,20 +13,16 @@
     <!-- Tab 导航 -->
     <n-card class="tabs-card">
       <n-tabs v-model:value="activeTab" type="line" @update:value="handleTabChange">
-        <n-tab-pane name="list" tab="收款码列表">
-          <PayCodeListTab ref="listTabRef" @created="handleCreated" />
+        <n-tab-pane name="codes" tab="收款码管理">
+          <PayCodeManager ref="codesTabRef" />
         </n-tab-pane>
 
-        <n-tab-pane name="qrcode" tab="二维码打印">
-          <QRCodePrintTab ref="qrcodeTabRef" />
+        <n-tab-pane name="transactions" tab="交易管理">
+          <TransactionManager ref="transactionsTabRef" />
         </n-tab-pane>
 
-        <n-tab-pane name="records" tab="支付记录">
-          <PaymentRecordsTab ref="recordsTabRef" />
-        </n-tab-pane>
-
-        <n-tab-pane name="analysis" tab="数据分析">
-          <DataAnalysisTab ref="analysisTabRef" />
+        <n-tab-pane name="installments" tab="分期管理">
+          <InstallmentManager ref="installmentsTabRef" />
         </n-tab-pane>
       </n-tabs>
     </n-card>
@@ -35,31 +31,21 @@
 
 <script setup>
 import { ref } from 'vue';
-import PayCodeListTab from './paycode-tabs/PayCodeListTab.vue';
-import QRCodePrintTab from './paycode-tabs/QRCodePrintTab.vue';
-import PaymentRecordsTab from './paycode-tabs/PaymentRecordsTab.vue';
-import DataAnalysisTab from './paycode-tabs/DataAnalysisTab.vue';
+import PayCodeManager from './payment-tabs/PayCodeManager.vue';
+import TransactionManager from './payment-tabs/TransactionManager.vue';
+import InstallmentManager from './payment-tabs/InstallmentManager.vue';
 
-const activeTab = ref('list');
-const listTabRef = ref(null);
-const qrcodeTabRef = ref(null);
-const recordsTabRef = ref(null);
-const analysisTabRef = ref(null);
+const activeTab = ref('codes');
+const codesTabRef = ref(null);
+const transactionsTabRef = ref(null);
+const installmentsTabRef = ref(null);
 
 const handleTabChange = (tabName) => {
-  // 切换 Tab 时刷新对应数据
-  if (tabName === 'qrcode') {
-    qrcodeTabRef.value?.loadPayCodes();
-  } else if (tabName === 'records') {
-    recordsTabRef.value?.loadOrders();
-  } else if (tabName === 'analysis') {
-    analysisTabRef.value?.loadData();
+  if (tabName === 'transactions') {
+    transactionsTabRef.value?.loadOrders?.();
+  } else if (tabName === 'installments') {
+    installmentsTabRef.value?.loadPlans?.();
   }
-};
-
-const handleCreated = () => {
-  // 创建新收款码后，刷新二维码打印页
-  qrcodeTabRef.value?.loadPayCodes();
 };
 </script>
 
@@ -84,8 +70,9 @@ const handleCreated = () => {
   font-weight: 600;
 }
 
-.header p {
+.header .subtitle {
   margin: 4px 0 0 0;
   font-size: 14px;
+  color: #999;
 }
 </style>

@@ -130,17 +130,15 @@
 
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue';
-import {
-  ChevronBack,
-  ChevronForward,
-  Expand,
-  Contract,
-  Add,
-  Remove,
-  VolumeHigh,
-  VolumeMute,
-  ArrowUndoOutline
-} from '@vicons/ionicons5';
+import ChevronBack from '@vicons/ionicons5/es/ChevronBack'
+import ChevronForward from '@vicons/ionicons5/es/ChevronForward'
+import Expand from '@vicons/ionicons5/es/Expand'
+import Contract from '@vicons/ionicons5/es/Contract'
+import Add from '@vicons/ionicons5/es/Add'
+import Remove from '@vicons/ionicons5/es/Remove'
+import VolumeHigh from '@vicons/ionicons5/es/VolumeHigh'
+import VolumeMute from '@vicons/ionicons5/es/VolumeMute'
+import ArrowUndoOutline from '@vicons/ionicons5/es/ArrowUndoOutline'
 import FlipBook from '@/components/FlipBook.vue';
 
 const props = defineProps({

@@ -211,66 +211,24 @@
             <n-empty v-else description="暂无读书笔记" class="py-10" />
           </n-tab-pane>
 
-          <n-tab-pane name="games" tab="游戏">
-            <div v-if="loadingGames" class="flex justify-center py-10">
+          <n-tab-pane name="questions" tab="勤学好问">
+            <div v-if="loadingQuestions" class="flex justify-center py-10">
               <n-spin />
             </div>
-            <div v-else-if="games.length > 0" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div v-for="game in games" :key="game.id" class="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
-                <div class="flex gap-3">
-                  <img v-if="game.game?.coverImage" :src="game.game.coverImage" class="w-20 h-20 object-cover rounded" />
-                  <div class="flex-1">
-                    <div class="font-medium text-gray-800">{{ game.game?.title }}</div>
-                    <div class="text-xs text-gray-500 mt-1">{{ game.game?.developer }}</div>
-                    <div class="flex gap-2 mt-2">
-                      <n-tag size="small" :type="game.status === 'COMPLETED' ? 'success' : 'info'">
-                        {{ game.status === 'COMPLETED' ? '已通关' : game.status === 'PLAYING' ? '在玩' : '想玩' }}
-                      </n-tag>
-                      <n-tag v-if="game.rating" size="small">⭐ {{ game.rating }}/10</n-tag>
-                    </div>
-                  </div>
+            <div v-else-if="questionsSummary.linked" class="space-y-4">
+              <div class="flex gap-4 text-sm text-gray-600">
+                <span>总提问 <strong>{{ questionsSummary.totalQuestions }}</strong> 次</span>
+                <span>会话 <strong>{{ questionsSummary.chatCount }}</strong> 个</span>
+              </div>
+              <div v-if="questionsSummary.recentMessages?.length" class="space-y-2">
+                <div class="text-sm font-medium text-gray-500">最近提问</div>
+                <div v-for="(msg, i) in questionsSummary.recentMessages" :key="i" class="border border-gray-200 rounded-lg p-3">
+                  <div class="text-sm text-gray-800 line-clamp-2">{{ msg.content }}</div>
+                  <div class="text-xs text-gray-400 mt-1">{{ formatTime(msg.createdAt) }}</div>
                 </div>
               </div>
             </div>
-            <n-empty v-else description="暂无游戏记录" class="py-10" />
-          </n-tab-pane>
-
-          <n-tab-pane name="music" tab="音乐">
-            <div v-if="loadingMusicLogs" class="flex justify-center py-10">
-              <n-spin />
-            </div>
-            <div v-else-if="musicLogs.length > 0" class="space-y-3">
-              <div v-for="log in musicLogs" :key="log.id" class="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
-                <div class="flex gap-3">
-                  <img v-if="log.music?.coverUrl" :src="log.music.coverUrl" class="w-16 h-16 object-cover rounded" />
-                  <div class="flex-1">
-                    <div class="font-medium text-gray-800">{{ log.music?.title }}</div>
-                    <div class="text-xs text-gray-500 mt-1">{{ log.music?.artist }} · {{ formatTime(log.createdAt) }}</div>
-                    <p class="text-sm text-gray-600 mt-2 line-clamp-2">{{ log.content }}</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <n-empty v-else description="暂无音乐记录" class="py-10" />
-          </n-tab-pane>
-
-          <n-tab-pane name="movies" tab="影视">
-            <div v-if="loadingMovieLogs" class="flex justify-center py-10">
-              <n-spin />
-            </div>
-            <div v-else-if="movieLogs.length > 0" class="space-y-3">
-              <div v-for="log in movieLogs" :key="log.id" class="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
-                <div class="flex gap-3">
-                  <img v-if="log.movie?.posterUrl" :src="log.movie.posterUrl" class="w-16 h-20 object-cover rounded" />
-                  <div class="flex-1">
-                    <div class="font-medium text-gray-800">{{ log.movie?.title }}</div>
-                    <div class="text-xs text-gray-500 mt-1">{{ log.movie?.director }} · {{ formatTime(log.createdAt) }}</div>
-                    <p class="text-sm text-gray-600 mt-2 line-clamp-2">{{ log.content }}</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <n-empty v-else description="暂无影视记录" class="py-10" />
+            <n-empty v-else description="暂无提问记录" class="py-10" />
           </n-tab-pane>
 
           <n-tab-pane name="works" tab="作品">
@@ -337,6 +295,25 @@
             </div>
             <n-empty v-else description="暂无成就" class="py-10" />
           </n-tab-pane>
+
+          <n-tab-pane v-if="isFriend" name="chat" tab="聊天">
+            <div v-if="chatLoading" class="flex justify-center py-10"><n-spin /></div>
+            <template v-else>
+              <div class="chat-messages" ref="chatListRef">
+                <div v-if="chatMessages.length === 0" class="text-center text-gray-400 py-10">暂无消息，发一条吧</div>
+                <div v-for="msg in chatMessages" :key="msg.id" class="mb-3" :class="msg.fromUserId === authStore.user?.id ? 'text-right' : 'text-left'">
+                  <div class="inline-block max-w-[70%] px-3 py-2 rounded-lg text-sm" :class="msg.fromUserId === authStore.user?.id ? 'bg-primary-500 text-white' : 'bg-gray-100 text-gray-800'">
+                    {{ msg.content }}
+                  </div>
+                  <div class="text-xs text-gray-400 mt-1">{{ formatTime(msg.createdAt) }}</div>
+                </div>
+              </div>
+              <div class="flex gap-2 mt-3">
+                <n-input v-model:value="chatInput" placeholder="输入消息..." @keyup.enter="sendChatMessage" />
+                <n-button type="primary" :loading="chatSending" :disabled="!chatInput.trim()" @click="sendChatMessage">发送</n-button>
+              </div>
+            </template>
+          </n-tab-pane>
         </n-tabs>
       </n-card>
     </div>
@@ -357,16 +334,14 @@ import { useRoute, useRouter } from 'vue-router';
 import { useMessage, NTag } from 'naive-ui';
 import { useAuthStore } from '@/stores/auth';
 import { useChatStore } from '@/stores/chat';
-import api from '@/api';
+import api, { imessageAPI } from '@/api';
 import { formatDistanceToNow, format } from 'date-fns';
 import { zhCN } from 'date-fns/locale';
-import {
-  ChatbubbleOutline,
-  PersonAdd,
-  CheckmarkCircleOutline,
-  HeartOutline,
-  GitBranchOutline
-} from '@vicons/ionicons5';
+import ChatbubbleOutline from '@vicons/ionicons5/es/ChatbubbleOutline'
+import PersonAdd from '@vicons/ionicons5/es/PersonAdd'
+import CheckmarkCircleOutline from '@vicons/ionicons5/es/CheckmarkCircleOutline'
+import HeartOutline from '@vicons/ionicons5/es/HeartOutline'
+import GitBranchOutline from '@vicons/ionicons5/es/GitBranchOutline'
 
 const route = useRoute();
 const router = useRouter();
@@ -393,9 +368,7 @@ const diaries = ref([]);
 const homeworks = ref([]);
 const notes = ref([]);
 const readingLogs = ref([]);
-const games = ref([]);
-const musicLogs = ref([]);
-const movieLogs = ref([]);
+const questionsSummary = ref({});
 const loadingDynamics = ref(false);
 const loadingWorks = ref(false);
 const loadingAchievements = ref(false);
@@ -403,9 +376,11 @@ const loadingDiaries = ref(false);
 const loadingHomeworks = ref(false);
 const loadingNotes = ref(false);
 const loadingReadings = ref(false);
-const loadingGames = ref(false);
-const loadingMusicLogs = ref(false);
-const loadingMovieLogs = ref(false);
+const loadingQuestions = ref(false);
+const chatMessages = ref([]);
+const chatInput = ref('');
+const chatLoading = ref(false);
+const chatSending = ref(false);
 
 const isCurrentUser = computed(() => userInfo.value?.id === authStore.user?.id);
 const isFriend = computed(() => relationshipStatus.value.isFriend);
@@ -507,45 +482,16 @@ async function loadReadingLogs() {
   }
 }
 
-// 加载游戏记录
-async function loadGames() {
-  loadingGames.value = true;
+// 加载提问摘要
+async function loadQuestions() {
+  loadingQuestions.value = true;
   try {
-    const data = await api.get(`/users/${userId.value}/games`);
-    games.value = data.games || [];
-  } catch (error) {
-    console.error('加载游戏记录失败:', error);
-    games.value = [];
+    const res = await imessageAPI.getUserSummary(userId.value);
+    questionsSummary.value = res.success ? res.data : {};
+  } catch {
+    questionsSummary.value = {};
   } finally {
-    loadingGames.value = false;
-  }
-}
-
-// 加载音乐记录
-async function loadMusicLogs() {
-  loadingMusicLogs.value = true;
-  try {
-    const data = await api.get(`/users/${userId.value}/music-logs`);
-    musicLogs.value = data.musicLogs || [];
-  } catch (error) {
-    console.error('加载音乐记录失败:', error);
-    musicLogs.value = [];
-  } finally {
-    loadingMusicLogs.value = false;
-  }
-}
-
-// 加载影视记录
-async function loadMovieLogs() {
-  loadingMovieLogs.value = true;
-  try {
-    const data = await api.get(`/users/${userId.value}/movie-logs`);
-    movieLogs.value = data.movieLogs || [];
-  } catch (error) {
-    console.error('加载影视记录失败:', error);
-    movieLogs.value = [];
-  } finally {
-    loadingMovieLogs.value = false;
+    loadingQuestions.value = false;
   }
 }
 
@@ -615,22 +561,48 @@ async function handleFollowToggle() {
   }
 }
 
-// 发送消息
+// 发送消息 - 切换到聊天tab
 function handleSendMessage() {
   if (!isFriend.value) {
     message.warning('只能向好友发送消息');
     return;
   }
+  activeTab.value = 'chat';
+}
 
-  // 打开聊天窗口
-  chatStore.openChat({
-    id: userInfo.value.id,
-    username: userInfo.value.username,
-    avatar: userInfo.value.avatar,
-    nickname: userInfo.value.profile?.nickname
-  });
+// 加载聊天记录
+async function loadChatMessages() {
+  chatLoading.value = true;
+  try {
+    const data = await api.get(`/messages/${userId.value}`);
+    chatMessages.value = data.messages || [];
+  } catch (e) {
+    chatMessages.value = [];
+  } finally {
+    chatLoading.value = false;
+  }
+}
 
-  message.success('已打开聊天窗口');
+// 发送聊天消息
+async function sendChatMessage() {
+  const text = chatInput.value.trim();
+  if (!text) return;
+  chatSending.value = true;
+  try {
+    chatStore.sendMessage(userId.value, text);
+    chatMessages.value.push({
+      id: Date.now(),
+      fromUserId: authStore.user.id,
+      toUserId: userId.value,
+      content: text,
+      createdAt: new Date().toISOString()
+    });
+    chatInput.value = '';
+  } catch (e) {
+    message.error('发送失败');
+  } finally {
+    chatSending.value = false;
+  }
 }
 
 // 格式化时间
@@ -700,16 +672,14 @@ watch(activeTab, (newTab) => {
     loadNotes();
   } else if (newTab === 'readings' && readingLogs.value.length === 0) {
     loadReadingLogs();
-  } else if (newTab === 'games' && games.value.length === 0) {
-    loadGames();
-  } else if (newTab === 'music' && musicLogs.value.length === 0) {
-    loadMusicLogs();
-  } else if (newTab === 'movies' && movieLogs.value.length === 0) {
-    loadMovieLogs();
+  } else if (newTab === 'questions' && !questionsSummary.value.linked) {
+    loadQuestions();
   } else if (newTab === 'works' && works.value.length === 0) {
     loadWorks();
   } else if (newTab === 'achievements' && achievements.value.length === 0) {
     loadAchievements();
+  } else if (newTab === 'chat') {
+    loadChatMessages();
   }
 });
 
@@ -725,9 +695,8 @@ watch(userId, () => {
   homeworks.value = [];
   notes.value = [];
   readingLogs.value = [];
-  games.value = [];
-  musicLogs.value = [];
-  movieLogs.value = [];
+  questionsSummary.value = {};
+  chatMessages.value = [];
   activeTab.value = 'dynamics';
 });
 
@@ -748,5 +717,11 @@ onMounted(() => {
 
 .card:hover {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.chat-messages {
+  max-height: 400px;
+  overflow-y: auto;
+  padding: 8px 0;
 }
 </style>

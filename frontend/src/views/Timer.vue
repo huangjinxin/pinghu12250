@@ -243,15 +243,13 @@ import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useMessage, useDialog } from 'naive-ui';
 import { learningAPI } from '@/api';
-import {
-  ArrowBackOutline,
-  BookOutline,
-  PlayOutline,
-  PauseOutline,
-  StopOutline,
-  SwapHorizontalOutline,
-} from '@vicons/ionicons5';
-import { CloseCircleOutline } from '@vicons/ionicons5';
+import ArrowBackOutline from '@vicons/ionicons5/es/ArrowBackOutline'
+import BookOutline from '@vicons/ionicons5/es/BookOutline'
+import PlayOutline from '@vicons/ionicons5/es/PlayOutline'
+import PauseOutline from '@vicons/ionicons5/es/PauseOutline'
+import StopOutline from '@vicons/ionicons5/es/StopOutline'
+import SwapHorizontalOutline from '@vicons/ionicons5/es/SwapHorizontalOutline'
+import CloseCircleOutline from '@vicons/ionicons5/es/CloseCircleOutline'
 
 const route = useRoute();
 const router = useRouter();

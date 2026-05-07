@@ -3,6 +3,7 @@
  */
 
 const pointService = require('../services/pointService');
+const creditService = require('../services/creditService');
 
 // 使用 Prisma 单例
 const prisma = require('../lib/prisma');
@@ -322,12 +323,18 @@ exports.toggleLike = async (req, res, next) => {
       res.json({ message: '取消点赞', isLiked: false });
     } else {
       // 点赞
-      await prisma.like.create({
+      const like = await prisma.like.create({
         data: {
           userId: req.user.id,
           dynamicId: id,
         },
       });
+
+      // 触发信用评分
+      await creditService.recordBehavior(req.user.id, 'SOCIAL', 'LIKE', {
+        description: '点赞了动态',
+        sourceId: like.id
+      }).catch(err => console.error('Credit error:', err));
 
       res.json({ message: '点赞成功', isLiked: true });
     }

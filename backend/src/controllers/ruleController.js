@@ -1,5 +1,6 @@
 // 使用 Prisma 单例
 const prisma = require('../lib/prisma');
+const { randomUUID } = require('crypto');
 
 // ========== 技术类型管理 ==========
 
@@ -171,14 +172,14 @@ async function getRuleTemplates(req, res) {
     if (standardId) where.standardId = standardId;
     if (status) where.status = status;
 
-    const [total, templates] = await Promise.all([
+    const [total, rawTemplates] = await Promise.all([
       prisma.ruleTemplate.count({ where }),
       prisma.ruleTemplate.findMany({
         where,
         include: {
           type: true,
-          standard: true,
-          creator: {
+          RuleStandard: true,
+          author: {
             select: {
               id: true,
               username: true,
@@ -191,6 +192,11 @@ async function getRuleTemplates(req, res) {
         take
       })
     ]);
+
+    const templates = rawTemplates.map(t => {
+      const { author, RuleStandard, ...rest } = t;
+      return { ...rest, creator: author, standard: RuleStandard };
+    });
 
     res.json({
       templates,
@@ -214,15 +220,7 @@ async function getRuleTemplate(req, res) {
     const template = await prisma.ruleTemplate.findUnique({
       where: { id },
       include: {
-        type: true,
-        standard: true,
-        creator: {
-          select: {
-            id: true,
-            username: true,
-            avatar: true
-          }
-        }
+        type: true
       }
     });
 
@@ -266,6 +264,7 @@ async function createRuleTemplate(req, res) {
 
     const template = await prisma.ruleTemplate.create({
       data: {
+        id: randomUUID(),
         name: name.trim(),
         description: description?.trim() || null,
         typeId,
@@ -282,11 +281,15 @@ async function createRuleTemplate(req, res) {
       },
       include: {
         type: true,
-        standard: true
+        RuleStandard: true,
+        author: {
+          select: { id: true, username: true, avatar: true }
+        }
       }
     });
 
-    res.json({ template });
+    const { author, RuleStandard, ...rest } = template;
+    res.json({ template: { ...rest, creator: author, standard: RuleStandard } });
   } catch (error) {
     console.error('创建规则模板失败:', error);
     res.status(500).json({ error: '创建规则模板失败' });
@@ -308,7 +311,8 @@ async function updateRuleTemplate(req, res) {
       textMaxLength,
       audioUrl,
       points,
-      allowQuantity
+      allowQuantity,
+      dailyLimit
     } = req.body;
 
     const data = {};
@@ -324,17 +328,22 @@ async function updateRuleTemplate(req, res) {
     if (audioUrl !== undefined) data.audioUrl = audioUrl || null;
     if (points !== undefined) data.points = parseInt(points);
     if (allowQuantity !== undefined) data.allowQuantity = !!allowQuantity;
+    if (dailyLimit !== undefined) data.dailyLimit = parseInt(dailyLimit) || 0;
 
     const template = await prisma.ruleTemplate.update({
       where: { id },
       data,
       include: {
         type: true,
-        standard: true
+        RuleStandard: true,
+        author: {
+          select: { id: true, username: true, avatar: true }
+        }
       }
     });
 
-    res.json({ template });
+    const { author, RuleStandard, ...rest } = template;
+    res.json({ template: { ...rest, creator: author, standard: RuleStandard } });
   } catch (error) {
     console.error('更新规则模板失败:', error);
     res.status(500).json({ error: '更新规则模板失败' });
@@ -382,11 +391,15 @@ async function toggleRuleStatus(req, res) {
       data: { status: newStatus },
       include: {
         type: true,
-        standard: true
+        RuleStandard: true,
+        author: {
+          select: { id: true, username: true, avatar: true }
+        }
       }
     });
 
-    res.json({ template: updated });
+    const { author, RuleStandard, ...rest } = updated;
+    res.json({ template: { ...rest, creator: author, standard: RuleStandard } });
   } catch (error) {
     console.error('切换规则状态失败:', error);
     res.status(500).json({ error: '切换规则状态失败' });
@@ -396,13 +409,18 @@ async function toggleRuleStatus(req, res) {
 // 获取所有启用的规则模板（用户端）
 async function getActiveTemplates(req, res) {
   try {
-    const templates = await prisma.ruleTemplate.findMany({
+    const rawTemplates = await prisma.ruleTemplate.findMany({
       where: { status: 'ENABLED' },
       include: {
         type: true,
-        standard: true
+        RuleStandard: true
       },
       orderBy: { createdAt: 'desc' }
+    });
+
+    const templates = rawTemplates.map(t => {
+      const { RuleStandard, ...rest } = t;
+      return { ...rest, standard: RuleStandard };
     });
 
     res.json({ templates });

@@ -356,7 +356,21 @@ import { useAuthStore } from '@/stores/auth';
 import { htmlWorkAPI } from '@/api';
 import { format, formatDistanceToNow } from 'date-fns';
 import { zhCN } from 'date-fns/locale';
-import { ArrowBackOutline, CreateOutline, GitBranchOutline, HeartOutline, Heart, ExpandOutline, ContractOutline, CloseOutline, TrashOutline, LockClosedOutline, CodeSlashOutline, Cart, Gift, Wallet, Ribbon } from '@vicons/ionicons5';
+import ArrowBackOutline from '@vicons/ionicons5/es/ArrowBackOutline'
+import CreateOutline from '@vicons/ionicons5/es/CreateOutline'
+import GitBranchOutline from '@vicons/ionicons5/es/GitBranchOutline'
+import HeartOutline from '@vicons/ionicons5/es/HeartOutline'
+import Heart from '@vicons/ionicons5/es/Heart'
+import ExpandOutline from '@vicons/ionicons5/es/ExpandOutline'
+import ContractOutline from '@vicons/ionicons5/es/ContractOutline'
+import CloseOutline from '@vicons/ionicons5/es/CloseOutline'
+import TrashOutline from '@vicons/ionicons5/es/TrashOutline'
+import LockClosedOutline from '@vicons/ionicons5/es/LockClosedOutline'
+import CodeSlashOutline from '@vicons/ionicons5/es/CodeSlashOutline'
+import Cart from '@vicons/ionicons5/es/Cart'
+import Gift from '@vicons/ionicons5/es/Gift'
+import Wallet from '@vicons/ionicons5/es/Wallet'
+import Ribbon from '@vicons/ionicons5/es/Ribbon'
 import api from '@/api';
 
 const route = useRoute();

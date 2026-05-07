@@ -39,7 +39,7 @@
 
 <script setup>
 import { ref, computed } from 'vue';
-import { HappyOutline } from '@vicons/ionicons5';
+import HappyOutline from '@vicons/ionicons5/es/HappyOutline'
 
 const emit = defineEmits(['select']);
 

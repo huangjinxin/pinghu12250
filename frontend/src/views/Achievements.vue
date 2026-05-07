@@ -14,11 +14,11 @@
 
     <n-tabs v-model:value="activeCategory" type="line" animated @update:value="loadAchievements">
       <n-tab-pane name="all" tab="全部" />
-      <n-tab-pane name="creative" tab="创作" />
-      <n-tab-pane name="learning" tab="学习" />
-      <n-tab-pane name="persistence" tab="坚持" />
-      <n-tab-pane name="social" tab="社交" />
-      <n-tab-pane name="special" tab="特殊" />
+      <n-tab-pane name="CREATION" tab="创作" />
+      <n-tab-pane name="LEARNING" tab="学习" />
+      <n-tab-pane name="PERSISTENCE" tab="坚持" />
+      <n-tab-pane name="SOCIAL" tab="社交" />
+      <n-tab-pane name="SPECIAL" tab="特殊" />
     </n-tabs>
 
     <n-spin :show="loading">
@@ -26,16 +26,16 @@
         <div
           v-for="achievement in achievements"
           :key="achievement.id"
-          :class="['achievement-card', getRarityClass(achievement.rarity), { unlocked: achievement.unlocked }]"
+          :class="['achievement-card', getRarityClass(achievement.rarity), { unlocked: achievement.isUnlocked }]"
           @click="handleAchievementClick(achievement)"
         >
           <div class="achievement-icon">{{ achievement.icon }}</div>
           <h3 class="achievement-name">{{ achievement.name }}</h3>
           <p class="achievement-desc">{{ achievement.description }}</p>
-          <div v-if="!achievement.unlocked && achievement.progress !== undefined" class="mt-2">
-            <n-progress type="line" :percentage="getProgressPercentage(achievement)" :show-indicator="false" />
+          <div v-if="!achievement.isUnlocked && achievement.progress" class="mt-2">
+            <n-progress type="line" :percentage="achievement.progress.percentage" :show-indicator="false" />
           </div>
-          <n-tag v-if="achievement.unlocked" type="success" size="tiny" class="mt-2">已解锁</n-tag>
+          <n-tag v-if="achievement.isUnlocked" type="success" size="tiny" class="mt-2">已解锁</n-tag>
         </div>
       </div>
       <n-empty v-else description="暂无成就" class="py-12" />
@@ -61,11 +61,21 @@ const loadAchievements = async () => {
   try {
     const params = {};
     if (activeCategory.value !== 'all') params.category = activeCategory.value;
-    const response = await api.get('/achievements/my', { params });
+    // 使用通用成就接口，它会返回所有成就及当前用户的解锁/进度状态
+    const response = await api.get('/achievements', { params });
     achievements.value = response.achievements || [];
-    if (response.stats) Object.assign(stats, response.stats);
+    
+    // 如果后端返回了统计数据，更新它
+    if (response.stats) {
+      stats.unlocked = response.stats.unlockedCount || 0;
+      stats.total = response.stats.totalAchievements || 0;
+      stats.percentage = response.stats.unlockedPercentage || 0;
+      // 稀有成就可以从 rarityCount 中计算
+      stats.rare = (response.stats.rarityCount?.EPIC || 0) + (response.stats.rarityCount?.LEGENDARY || 0);
+    }
   } catch (error) {
-    message.error(error.error || '加载成就失败');
+    console.error('加载成就失败:', error);
+    message.error(error.response?.data?.error || '加载成就失败');
   } finally {
     loading.value = false;
   }
@@ -73,21 +83,17 @@ const loadAchievements = async () => {
 
 const getRarityClass = (rarity) => {
   const classes = {
-    common: 'rarity-common',
-    rare: 'rarity-rare',
-    epic: 'rarity-epic',
-    legendary: 'rarity-legendary'
+    COMMON: 'rarity-common',
+    RARE: 'rarity-rare',
+    EPIC: 'rarity-epic',
+    LEGENDARY: 'rarity-legendary'
   };
   return classes[rarity] || 'rarity-common';
 };
 
-const getProgressPercentage = (achievement) => {
-  if (!achievement.target) return 0;
-  return Math.min(100, Math.round((achievement.progress / achievement.target) * 100));
-};
-
 const handleAchievementClick = (achievement) => {
-  router.push(`/achievements/${achievement.id}`);
+  // 暂时没有详情页，可以显示提示
+  message.info(`成就：${achievement.name}\n${achievement.description}`);
 };
 
 onMounted(() => loadAchievements());

@@ -55,9 +55,8 @@
         </template>
       </n-button>
 
-      <!-- 更多操作下拉菜单（仅原版教材模式） -->
+      <!-- 更多操作下拉菜单 -->
       <n-dropdown
-        v-if="mode === 'flipbook'"
         trigger="click"
         :options="moreOptions"
         @select="handleMoreSelect"
@@ -73,7 +72,7 @@
       <n-upload
         ref="uploadRef"
         :custom-request="handleUpload"
-        accept=".pdf"
+        accept=".pdf,.epub"
         :show-file-list="false"
         style="display: none;"
       >
@@ -86,7 +85,14 @@
 <script setup>
 import { ref, computed, h } from 'vue';
 import { NIcon } from 'naive-ui';
-import { ArrowBack, TrashOutline, Expand, Add, Remove, BookOutline, EllipsisVertical, CloudUploadOutline } from '@vicons/ionicons5';
+import ArrowBack from '@vicons/ionicons5/es/ArrowBack'
+import TrashOutline from '@vicons/ionicons5/es/TrashOutline'
+import Expand from '@vicons/ionicons5/es/Expand'
+import Add from '@vicons/ionicons5/es/Add'
+import Remove from '@vicons/ionicons5/es/Remove'
+import BookOutline from '@vicons/ionicons5/es/BookOutline'
+import EllipsisVertical from '@vicons/ionicons5/es/EllipsisVertical'
+import CloudUploadOutline from '@vicons/ionicons5/es/CloudUploadOutline'
 
 const props = defineProps({
   title: {

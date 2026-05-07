@@ -1,3 +1,5 @@
+<!-- @AI:DEPRECATED 使用 textbook/ChatMessageList.vue 替代 -->
+<!-- @AI:DO-NOT-MODIFY 此文件将被废弃,不要修改或新增功能 -->
 <template>
   <div class="chat-window">
     <!-- 聊天窗口头部 -->
@@ -99,12 +101,10 @@ import { useChatStore } from '@/stores/chat';
 import { useAuthStore } from '@/stores/auth';
 import { formatDistanceToNow } from 'date-fns';
 import { zhCN } from 'date-fns/locale';
-import {
-  CloseOutline,
-  ChatbubblesOutline,
-  CheckmarkCircleOutline,
-  EllipseOutline
-} from '@vicons/ionicons5';
+import CloseOutline from '@vicons/ionicons5/es/CloseOutline'
+import ChatbubblesOutline from '@vicons/ionicons5/es/ChatbubblesOutline'
+import CheckmarkCircleOutline from '@vicons/ionicons5/es/CheckmarkCircleOutline'
+import EllipseOutline from '@vicons/ionicons5/es/EllipseOutline'
 
 const chatStore = useChatStore();
 const authStore = useAuthStore();

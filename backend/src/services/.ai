@@ -1,0 +1,47 @@
+# @AI:DIR services
+permit: add
+naming: "[module]Service.js"
+layer: business-logic
+
+# 职责
+role: 业务逻辑层,从controller抽离复杂逻辑
+
+# 可导入
+import:
+  - "../lib/prisma"      # 必须用单例
+  - "../utils/*"
+  - "其他service"        # 可跨service调用
+
+# 禁止
+!import:
+  - "@prisma/client"     # 禁止 new PrismaClient()
+  - "../controllers/*"   # 禁止反向依赖
+  - "../routes/*"        # 禁止反向依赖
+
+# 现有services
+files:
+  - aiService.js         # AI分析
+  - pointService.js      # 积分计算
+  - achievementService.js # 成就系统
+  - challengeService.js  # 每日挑战
+  - followService.js     # 关注/好友
+  - walletService.js     # 钱包交易
+  - transactionService.js # 交易记录
+  - tagService.js        # 标签系统
+  - syncService.js       # 数据同步
+  - poetryCoverService.js # 诗歌封面
+  - epubService.js       # EPUB解析
+
+# 导出规范
+pattern: |
+  const prisma = require('../lib/prisma');
+
+  const [module]Service = {
+    async getList(params) { return prisma.[model].findMany(...) },
+    async getById(id) { return prisma.[model].findUnique(...) },
+    async create(data) { return prisma.[model].create(...) },
+    async update(id, data) { return prisma.[model].update(...) },
+    async delete(id) { return prisma.[model].delete(...) },
+  };
+
+  module.exports = [module]Service;

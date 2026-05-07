@@ -608,93 +608,62 @@ router.post('/exchange', authenticate, async (req, res, next) => {
       return res.status(400).json({ error: '兑换积分必须大于0' });
     }
 
-    // 获取兑换比例
     const rateSetting = await prisma.systemSetting.findUnique({
       where: { key: 'point_exchange_rate' },
     });
     const rate = rateSetting ? JSON.parse(rateSetting.value) : { points: 100, coins: 10 };
 
-    // 获取每日上限
-    const limitSetting = await prisma.systemSetting.findUnique({
-      where: { key: 'daily_exchange_limit' },
-    });
-    const dailyLimit = limitSetting ? parseInt(limitSetting.value) : 5000;
-
-    // 检查今日额度
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    const todayExchanges = await prisma.pointExchange.findMany({
-      where: {
-        userId,
-        createdAt: {
-          gte: today,
-        },
-      },
-    });
-
-    const todayUsed = todayExchanges.reduce((sum, ex) => sum + ex.pointsSpent, 0);
-
-    if (todayUsed + points > dailyLimit) {
-      return res.status(400).json({
-        error: '超过每日兑换上限',
-        remainingLimit: dailyLimit - todayUsed,
-      });
-    }
-
-    // 检查用户积分余额
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { totalPoints: true },
-    });
-
-    if (user.totalPoints < points) {
-      return res.status(400).json({ error: '积分余额不足' });
-    }
-
-    // 计算兑换的学习币
     const coins = Math.floor((points / rate.points) * rate.coins);
 
     if (coins <= 0) {
       return res.status(400).json({ error: `至少需要 ${rate.points} 积分才能兑换` });
     }
 
-    // 执行兑换事务
     const result = await prisma.$transaction(async (tx) => {
-      // 1. 扣除积分
-      await pointService.deductPoints(
-        userId,
-        points,
-        'point_exchange',
-        null,
-        `积分兑换学习币 (${points}积分 → ${coins}学习币)`
-      );
-
-      // 2. 获取或创建钱包
-      let wallet = await tx.wallet.findUnique({
-        where: { userId },
+      const user = await tx.user.findUnique({
+        where: { id: userId },
+        select: { totalPoints: true },
       });
 
-      if (!wallet) {
-        wallet = await tx.wallet.create({
-          data: {
-            userId,
-            balance: 0,
-          },
-        });
+      if (!user || user.totalPoints < points) {
+        throw new Error('积分余额不足');
       }
 
-      // 3. 增加学习币
-      await tx.wallet.update({
-        where: { id: wallet.id },
+      await tx.pointLog.create({
         data: {
-          balance: {
-            increment: coins,
-          },
+          userId,
+          points: -points,
+          description: `积分兑换学习币 (${points}积分 → ${coins}学习币)`,
+          targetType: 'point_exchange',
         },
       });
 
-      // 4. 创建钱包交易记录
+      await tx.user.update({
+        where: { id: userId },
+        data: { totalPoints: { decrement: points } },
+      });
+
+      await tx.userPoints.update({
+        where: { userId },
+        data: {
+          totalPoints: { decrement: points },
+          todayPoints: { decrement: points },
+        },
+      });
+
+      let wallet = await tx.wallet.findUnique({ where: { userId } });
+
+      if (!wallet) {
+        wallet = await tx.wallet.create({
+          data: { userId, balance: 0 },
+        });
+      }
+
+      await tx.wallet.update({
+        where: { id: wallet.id },
+        data: { balance: { increment: coins } },
+      });
+
       await tx.walletTransaction.create({
         data: {
           walletId: wallet.id,
@@ -705,7 +674,6 @@ router.post('/exchange', authenticate, async (req, res, next) => {
         },
       });
 
-      // 5. 创建兑换记录
       const exchange = await tx.pointExchange.create({
         data: {
           userId,
@@ -719,12 +687,16 @@ router.post('/exchange', authenticate, async (req, res, next) => {
     });
 
     res.json({
+      success: true,
       message: '兑换成功',
       pointsSpent: points,
       coinsGained: result.coins,
       exchangeRate: `${rate.points}:${rate.coins}`,
     });
   } catch (error) {
+    if (error.message === '积分余额不足') {
+      return res.status(400).json({ error: '积分余额不足' });
+    }
     console.error('积分兑换失败:', error);
     next(error);
   }

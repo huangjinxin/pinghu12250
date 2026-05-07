@@ -102,17 +102,15 @@ import { useChatStore } from '@/stores/chat';
 import { useAuthStore } from '@/stores/auth';
 import { format } from 'date-fns';
 import { zhCN } from 'date-fns/locale';
-import {
-  ShareSocialOutline,
-  BookOutline,
-  DocumentTextOutline,
-  BrushOutline,
-  LibraryOutline,
-  GameControllerOutline,
-  TrophyOutline,
-  HelpCircleOutline,
-  HappyOutline
-} from '@vicons/ionicons5';
+import ShareSocialOutline from '@vicons/ionicons5/es/ShareSocialOutline'
+import BookOutline from '@vicons/ionicons5/es/BookOutline'
+import DocumentTextOutline from '@vicons/ionicons5/es/DocumentTextOutline'
+import BrushOutline from '@vicons/ionicons5/es/BrushOutline'
+import LibraryOutline from '@vicons/ionicons5/es/LibraryOutline'
+import GameControllerOutline from '@vicons/ionicons5/es/GameControllerOutline'
+import TrophyOutline from '@vicons/ionicons5/es/TrophyOutline'
+import HelpCircleOutline from '@vicons/ionicons5/es/HelpCircleOutline'
+import HappyOutline from '@vicons/ionicons5/es/HappyOutline'
 import ShareSelector from './ShareSelector.vue';
 import ShareCard from './ShareCard.vue';
 import EmojiPicker from './EmojiPicker.vue';

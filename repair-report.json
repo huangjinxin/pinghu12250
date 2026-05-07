@@ -1,0 +1,13 @@
+{
+  "lastRun": "2026-04-25T00:52:16.846Z",
+  "tests": [
+    {
+      "endpoint": "/health",
+      "status": 200
+    },
+    {
+      "endpoint": "/api/public/boards/global",
+      "status": 404
+    }
+  ]
+}

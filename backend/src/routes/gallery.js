@@ -65,8 +65,8 @@ router.get('/', authenticate, async (req, res) => {
     if (search) {
       where.user = {
         OR: [
-          { username: { contains: search } },
-          { profile: { nickname: { contains: search } } }
+          { username: { contains: search, mode: 'insensitive' } },
+          { profile: { is: { nickname: { contains: search, mode: 'insensitive' } } } }
         ]
       };
     }
@@ -90,9 +90,10 @@ router.get('/', authenticate, async (req, res) => {
             }
           },
           template: {
-            include: {
-              type: true,
-              standard: true
+            select: {
+              id: true,
+              name: true,
+              type: true
             }
           }
         },
@@ -118,7 +119,7 @@ router.get('/', authenticate, async (req, res) => {
         id: s.template.id,
         name: s.template.name,
         type: s.template.type,
-        standard: s.template.standard
+        standard: s.template.standardId ? { id: s.template.standardId } : undefined
       },
       createdAt: s.createdAt
     }));
@@ -173,7 +174,11 @@ router.get('/public', async (req, res) => {
             }
           },
           template: {
-            include: { type: true, standard: true }
+            select: {
+              id: true,
+              name: true,
+              type: true
+            }
           }
         },
         orderBy: { createdAt: 'desc' },
@@ -197,7 +202,7 @@ router.get('/public', async (req, res) => {
         id: s.template.id,
         name: s.template.name,
         type: s.template.type,
-        standard: s.template.standard
+        standard: s.template.standardId ? { id: s.template.standardId } : undefined
       },
       createdAt: s.createdAt
     }));
@@ -284,7 +289,11 @@ router.get('/recitation/public', async (req, res) => {
             }
           },
           template: {
-            include: { type: true, standard: true }
+            select: {
+              id: true,
+              name: true,
+              type: true
+            }
           }
         },
         orderBy: { createdAt: 'desc' },
@@ -380,8 +389,8 @@ router.get('/recitation', authenticate, async (req, res) => {
     if (search) {
       where.user = {
         OR: [
-          { username: { contains: search } },
-          { profile: { nickname: { contains: search } } }
+          { username: { contains: search, mode: 'insensitive' } },
+          { profile: { is: { nickname: { contains: search, mode: 'insensitive' } } } }
         ]
       };
     }
@@ -410,9 +419,10 @@ router.get('/recitation', authenticate, async (req, res) => {
             }
           },
           template: {
-            include: {
-              type: true,
-              standard: true
+            select: {
+              id: true,
+              name: true,
+              type: true
             }
           }
         },
@@ -438,7 +448,7 @@ router.get('/recitation', authenticate, async (req, res) => {
         id: s.template.id,
         name: s.template.name,
         type: s.template.type,
-        standard: s.template.standard
+        standard: s.template.standardId ? { id: s.template.standardId } : undefined
       },
       createdAt: s.createdAt
     }));
@@ -487,9 +497,11 @@ router.get('/recitation/:id', async (req, res) => {
           }
         },
         template: {
-          include: {
+          select: {
+            id: true,
+            name: true,
             type: true,
-            standard: true
+            standardId: true
           }
         }
       }
@@ -501,7 +513,7 @@ router.get('/recitation/:id', async (req, res) => {
 
     const work = {
       id: submission.id,
-      audio: submission.audios[0],
+audio: submission.audios[0],
       audios: submission.audios,
       content: submission.content,
       author: {
@@ -511,12 +523,13 @@ router.get('/recitation/:id', async (req, res) => {
         avatar: submission.user.avatar
       },
       template: {
-        id: submission.template.id,
-        name: submission.template.name,
-        type: submission.template.type,
-        standard: submission.template.standard
-      },
-      createdAt: submission.createdAt
+        select: {
+          id: true,
+          name: true,
+          type: true,
+          standardId: true
+        }
+      }
     };
 
     res.json({ work });
@@ -554,9 +567,11 @@ router.get('/:id', async (req, res) => {
           }
         },
         template: {
-          include: {
+          select: {
+            id: true,
+            name: true,
             type: true,
-            standard: true
+            standardId: true
           }
         }
       }
@@ -568,7 +583,7 @@ router.get('/:id', async (req, res) => {
 
     const work = {
       id: submission.id,
-      image: submission.images[0],
+image: submission.images[0],
       images: submission.images,
       content: submission.content,
       author: {
@@ -578,12 +593,13 @@ router.get('/:id', async (req, res) => {
         avatar: submission.user.avatar
       },
       template: {
-        id: submission.template.id,
-        name: submission.template.name,
-        type: submission.template.type,
-        standard: submission.template.standard
-      },
-      createdAt: submission.createdAt
+        select: {
+          id: true,
+          name: true,
+          type: true,
+          standardId: true
+        }
+      }
     };
 
     res.json({ work });

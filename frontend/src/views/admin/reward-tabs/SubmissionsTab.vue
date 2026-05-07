@@ -177,7 +177,7 @@
 <script setup>
 import { ref, h, onMounted, reactive } from 'vue';
 import { NButton, NTag, NImage, NIcon, NTooltip, NPopconfirm, NSpace, useMessage } from 'naive-ui';
-import { SearchOutline } from '@vicons/ionicons5';
+import SearchOutline from '@vicons/ionicons5/es/SearchOutline'
 import { useSubmissionStore } from '@/stores/submission';
 import { useRewardRuleStore } from '@/stores/rewardRule';
 

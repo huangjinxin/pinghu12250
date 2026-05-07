@@ -61,7 +61,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue';
 import { payAPI } from '@/api';
-import { QrCodeOutline } from '@vicons/ionicons5';
+import QrCodeOutline from '@vicons/ionicons5/es/QrCodeOutline'
 
 const loading = ref(false);
 const payCodes = ref([]);

@@ -1,7 +1,7 @@
 <template>
   <div class="chat-input-box" ref="containerRef">
-    <!-- 深入学习按钮 -->
-    <div class="deep-learn-tab" v-if="showDeepLearn && mode !== 'ai'">
+    <!-- 深入学习按钮（仅在解析/AI模式显示） -->
+    <div class="deep-learn-tab" v-if="showDeepLearn && mode === 'ai'">
       <button
         class="deep-learn-tab-btn"
         :class="{ loading: deepLearnLoading }"
@@ -18,12 +18,29 @@
       </button>
     </div>
 
+    <!-- 附件预览 -->
+    <div v-if="attachedImage" class="attachment-preview">
+      <div class="preview-item">
+        <img :src="attachedImage.preview" alt="附件预览" />
+        <button class="remove-btn" @click="removeAttachment">
+          <n-icon size="14"><CloseCircleOutline /></n-icon>
+        </button>
+      </div>
+    </div>
+
     <!-- 动态光线边框容器 -->
     <div class="input-glow-wrapper" :class="{ focused: isFocused, 'ai-mode': mode === 'ai' }">
       <!-- 流动光线层 -->
       <div class="glow-border"></div>
       <!-- 内容层 -->
       <div class="input-inner">
+        <!-- 附件按钮（仅 AI 模式显示） -->
+        <div class="attach-wrapper" v-if="mode === 'ai'">
+          <button class="attach-btn" @click="handleSelectImage" title="添加图片 (也可 Ctrl/Cmd+V 粘贴)">
+            <n-icon size="20"><ImageOutline /></n-icon>
+          </button>
+        </div>
+
         <textarea
           ref="textareaRef"
           v-model="inputText"
@@ -37,8 +54,8 @@
         />
         <button
           class="send-btn"
-          :class="{ active: inputText.trim(), stop: isStreaming }"
-          :disabled="!inputText.trim() && !isStreaming || (loading && !isStreaming)"
+          :class="{ active: inputText.trim() || attachedImage, stop: isStreaming }"
+          :disabled="(!inputText.trim() && !attachedImage && !isStreaming) || (loading && !isStreaming)"
           @click="handleButtonClick"
         >
           <n-icon v-if="loading && !isStreaming" size="22">
@@ -50,16 +67,30 @@
           <n-icon v-else-if="mode === 'ai'" size="22">
             <SparklesOutline />
           </n-icon>
+          <n-icon v-else-if="mode === 'notes'" size="22">
+            <BookmarkOutline />
+          </n-icon>
           <n-icon v-else size="22">
             <SearchOutline />
           </n-icon>
         </button>
       </div>
     </div>
+
+    <!-- 隐藏的文件输入 -->
+    <input
+      ref="fileInputRef"
+      type="file"
+      accept="image/*"
+      style="display: none;"
+      @change="handleFileChange"
+    />
+
     <div class="input-hint">
       <span v-if="mode === 'ai'">
         {{ isStreaming ? '点击停止按钮中断生成' : 'Enter 发送给 AI，Shift + Enter 换行' }}
       </span>
+      <span v-else-if="mode === 'notes'">Enter 保存笔记，Shift + Enter 换行</span>
       <span v-else>Enter 搜索 PDF，Shift + Enter 换行</span>
     </div>
   </div>
@@ -67,7 +98,15 @@
 
 <script setup>
 import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue';
-import { SendOutline, SyncOutline, SparklesOutline, SearchOutline, StopOutline } from '@vicons/ionicons5';
+import { useMessage } from 'naive-ui';
+import SendOutline from '@vicons/ionicons5/es/SendOutline'
+import SyncOutline from '@vicons/ionicons5/es/SyncOutline'
+import SparklesOutline from '@vicons/ionicons5/es/SparklesOutline'
+import SearchOutline from '@vicons/ionicons5/es/SearchOutline'
+import StopOutline from '@vicons/ionicons5/es/StopOutline'
+import ImageOutline from '@vicons/ionicons5/es/ImageOutline'
+import CloseCircleOutline from '@vicons/ionicons5/es/CloseCircleOutline'
+import BookmarkOutline from '@vicons/ionicons5/es/BookmarkOutline'
 
 const props = defineProps({
   placeholder: {
@@ -110,18 +149,24 @@ const props = defineProps({
   }
 });
 
-const emit = defineEmits(['submit', 'update:insertText', 'deep-learn', 'ai-chat', 'stop-stream']);
+const emit = defineEmits(['submit', 'update:insertText', 'deep-learn', 'ai-chat', 'stop-stream', 'attach-image', 'save-note']);
 
+const message = useMessage();
 const containerRef = ref(null);
 const textareaRef = ref(null);
+const fileInputRef = ref(null);
 const inputText = ref('');
 const isFocused = ref(false);
 const maxTextareaHeight = ref(150); // 默认最大高度
+const attachedImage = ref(null); // 附加的图片 { file, preview }
 
 // 根据模式切换 placeholder
 const currentPlaceholder = computed(() => {
   if (props.mode === 'ai') {
     return '输入问题与 AI 对话...';
+  }
+  if (props.mode === 'notes') {
+    return '记录学习笔记...';
   }
   return props.placeholder || '搜索 PDF 内容...';
 });
@@ -172,14 +217,35 @@ const handleButtonClick = () => {
 // 提交
 const handleSubmit = () => {
   const text = inputText.value.trim();
-  if (!text || props.loading) return;
 
+  // AI 模式：允许仅发送图片（无文字）
   if (props.mode === 'ai') {
-    emit('ai-chat', text);
+    if (!text && !attachedImage.value) return;
+    if (props.loading) return;
+
+    // 发送文本和图片（如有）
+    emit('ai-chat', text || '请分析这张图片', attachedImage.value);
+    inputText.value = '';
+
+    // 清理附件
+    if (attachedImage.value?.preview) {
+      URL.revokeObjectURL(attachedImage.value.preview);
+    }
+    attachedImage.value = null;
+  } else if (props.mode === 'notes') {
+    // 笔记模式：直接保存到笔记
+    if (!text) return;
+    if (props.loading) return;
+
+    emit('save-note', text);
+    inputText.value = '';
+    // 成功消息由父组件 AssistMode 显示（包含页码信息）
   } else {
+    // 搜索模式：必须有文字
+    if (!text || props.loading) return;
     emit('submit', text);
+    inputText.value = '';
   }
-  inputText.value = '';
 
   nextTick(() => {
     adjustHeight();
@@ -218,7 +284,78 @@ const focus = () => {
 // 清空输入框
 const clear = () => {
   inputText.value = '';
+  attachedImage.value = null;
   nextTick(() => adjustHeight());
+};
+
+// ===== 附件功能 =====
+// 选择图片
+const handleSelectImage = () => {
+  fileInputRef.value?.click();
+};
+
+// 处理文件选择
+const handleFileChange = (e) => {
+  const file = e.target.files?.[0];
+  if (!file) return;
+
+  // 检查文件类型
+  if (!file.type.startsWith('image/')) {
+    message.error('请选择图片文件');
+    return;
+  }
+
+  // 检查文件大小（最大 10MB）
+  if (file.size > 10 * 1024 * 1024) {
+    message.error('图片大小不能超过 10MB');
+    return;
+  }
+
+  const preview = URL.createObjectURL(file);
+  attachedImage.value = { file, preview };
+  message.success('图片已添加');
+  emit('attach-image', { file, preview });
+
+  // 清空 input 以便重复选择同一文件
+  e.target.value = '';
+};
+
+// 移除附件
+const removeAttachment = () => {
+  if (attachedImage.value?.preview) {
+    URL.revokeObjectURL(attachedImage.value.preview);
+  }
+  attachedImage.value = null;
+};
+
+// 处理粘贴事件（支持 Ctrl/Cmd+V 粘贴图片）
+const handlePaste = async (e) => {
+  // 仅在 AI 模式下处理图片粘贴
+  if (props.mode !== 'ai') return;
+
+  const items = e.clipboardData?.items;
+  if (!items) return;
+
+  for (const item of items) {
+    if (item.type.startsWith('image/')) {
+      e.preventDefault();
+
+      const file = item.getAsFile();
+      if (!file) continue;
+
+      // 检查文件大小（最大 10MB）
+      if (file.size > 10 * 1024 * 1024) {
+        message.error('图片大小不能超过 10MB');
+        return;
+      }
+
+      const preview = URL.createObjectURL(file);
+      attachedImage.value = { file, preview };
+      message.success('已粘贴图片');
+      emit('attach-image', { file, preview });
+      return;
+    }
+  }
 };
 
 // 监听外部插入文本
@@ -235,11 +372,18 @@ onMounted(() => {
   adjustHeight();
   // 监听窗口大小变化
   window.addEventListener('resize', updateMaxHeight);
+  // 监听粘贴事件
+  document.addEventListener('paste', handlePaste);
 });
 
 // 清理
 onUnmounted(() => {
   window.removeEventListener('resize', updateMaxHeight);
+  document.removeEventListener('paste', handlePaste);
+  // 清理图片预览 URL
+  if (attachedImage.value?.preview) {
+    URL.revokeObjectURL(attachedImage.value.preview);
+  }
 });
 
 // 暴露方法
@@ -475,5 +619,93 @@ defineExpose({
   box-shadow:
     0 0 20px rgba(102, 126, 234, 0.3),
     0 0 40px rgba(118, 75, 162, 0.2);
+}
+
+/* ===== 附件功能样式 ===== */
+/* 附件预览 */
+.attachment-preview {
+  margin-bottom: 10px;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.preview-item {
+  position: relative;
+  width: 80px;
+  height: 80px;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 2px solid #e0e0e0;
+}
+
+.preview-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.preview-item .remove-btn {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(0, 0, 0, 0.6);
+  color: white;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s;
+}
+
+.preview-item .remove-btn:hover {
+  background: rgba(255, 77, 79, 0.9);
+}
+
+/* 附件按钮容器 */
+.attach-wrapper {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.attach-btn {
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: 50%;
+  background: #f0f0f0;
+  color: #666;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.attach-btn:hover {
+  background: #e0e0e0;
+  color: #333;
+}
+
+/* 触摸设备优化 */
+@media (pointer: coarse) {
+  .attach-btn {
+    width: 42px;
+    height: 42px;
+  }
+
+  .preview-item {
+    width: 90px;
+    height: 90px;
+  }
+
+  .preview-item .remove-btn {
+    width: 28px;
+    height: 28px;
+  }
 }
 </style>

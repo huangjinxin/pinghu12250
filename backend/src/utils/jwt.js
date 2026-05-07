@@ -5,15 +5,28 @@
 const jwt = require('jsonwebtoken');
 
 /**
- * 生成JWT token
+ * 生成JWT Access Token (短期)
  * @param {string} userId - 用户ID
  * @returns {string} JWT token
  */
-const generateToken = (userId) => {
+const generateAccessToken = (userId) => {
   return jwt.sign(
     { userId },
     process.env.JWT_SECRET,
-    { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
+    { expiresIn: '15m' }
+  );
+};
+
+/**
+ * 生成JWT Refresh Token (长期)
+ * @param {string} userId - 用户ID
+ * @returns {string} JWT token
+ */
+const generateRefreshToken = (userId) => {
+  return jwt.sign(
+    { userId },
+    process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET,
+    { expiresIn: '7d' }
   );
 };
 
@@ -26,4 +39,8 @@ const verifyToken = (token) => {
   return jwt.verify(token, process.env.JWT_SECRET);
 };
 
-module.exports = { generateToken, verifyToken };
+const verifyRefreshToken = (token) => {
+  return jwt.verify(token, process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET);
+};
+
+module.exports = { generateAccessToken, generateRefreshToken, verifyToken, verifyRefreshToken };

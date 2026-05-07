@@ -123,13 +123,11 @@ import { ref, computed, onMounted } from 'vue';
 import { statsAPI, diaryAPI, noteAPI, readingNoteAPI, htmlWorkAPI } from '@/api';
 import { format, formatDistanceToNow } from 'date-fns';
 import { zhCN } from 'date-fns/locale';
-import {
-  BookOutline,
-  CodeSlashOutline,
-  DocumentTextOutline,
-  CreateOutline,
-  SchoolOutline,
-} from '@vicons/ionicons5';
+import BookOutline from '@vicons/ionicons5/es/BookOutline'
+import CodeSlashOutline from '@vicons/ionicons5/es/CodeSlashOutline'
+import DocumentTextOutline from '@vicons/ionicons5/es/DocumentTextOutline'
+import CreateOutline from '@vicons/ionicons5/es/CreateOutline'
+import SchoolOutline from '@vicons/ionicons5/es/SchoolOutline'
 import Heatmap from '@/components/Heatmap.vue';
 
 const stats = ref({});

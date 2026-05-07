@@ -107,9 +107,9 @@
           </div>
         </div>
       </div>
-      <n-empty v-else description="还没有游戏记录，去游戏大厅找找喜欢的游戏吧！">
+      <n-empty v-else description="还没有游戏记录，去益智乐园找找喜欢的游戏吧！">
         <template #extra>
-          <n-button type="primary" @click="$router.push('/games')">前往游戏大厅</n-button>
+          <n-button type="primary" @click="$router.push('/games')">前往益智乐园</n-button>
         </template>
       </n-empty>
     </n-spin>
@@ -130,12 +130,10 @@ import { ref, reactive, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useMessage } from 'naive-ui';
 import { gameAPI } from '@/api';
-import {
-  ArrowBackOutline,
-  GameControllerOutline,
-  TimeOutline,
-  ChatboxOutline,
-} from '@vicons/ionicons5';
+import ArrowBackOutline from '@vicons/ionicons5/es/ArrowBackOutline'
+import GameControllerOutline from '@vicons/ionicons5/es/GameControllerOutline'
+import TimeOutline from '@vicons/ionicons5/es/TimeOutline'
+import ChatboxOutline from '@vicons/ionicons5/es/ChatboxOutline'
 
 const router = useRouter();
 const message = useMessage();

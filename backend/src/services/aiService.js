@@ -116,19 +116,25 @@ class AiService {
 
   /**
    * 获取默认 API 配置
+   * @param {string} configType - 配置类型，默认 'llm'，可选 'embedding', 'reranker'
    */
-  async getDefaultConfig() {
+  async getDefaultConfig(configType = 'llm') {
+    // 优先获取指定类型的默认配置
     const config = await prisma.aiApiConfig.findFirst({
       where: {
         isEnabled: true,
-        isDefault: true
+        isDefault: true,
+        configType: configType
       }
     });
 
     if (!config) {
-      // 尝试获取任意启用的配置
+      // 尝试获取指定类型的任意启用配置
       return await prisma.aiApiConfig.findFirst({
-        where: { isEnabled: true }
+        where: {
+          isEnabled: true,
+          configType: configType
+        }
       });
     }
 
@@ -221,12 +227,43 @@ class AiService {
   }
 
   /**
+   * 构建用户消息内容（支持 Vision API 图片格式）
+   * @param {string} textContent - 文本内容
+   * @param {string} imageBase64 - 图片的 base64 字符串（可选）
+   * @returns {string|Array} - 消息内容
+   */
+  buildUserContent(textContent, imageBase64 = null) {
+    if (!imageBase64) {
+      return textContent;
+    }
+
+    // Vision API 格式：多模态消息
+    const content = [
+      { type: 'text', text: textContent }
+    ];
+
+    // 添加图片（确保格式正确）
+    let imageUrl = imageBase64;
+    if (!imageBase64.startsWith('data:')) {
+      imageUrl = `data:image/jpeg;base64,${imageBase64}`;
+    }
+    content.push({
+      type: 'image_url',
+      image_url: { url: imageUrl }
+    });
+
+    return content;
+  }
+
+  /**
    * 调用 OpenAI 兼容 API（普通模式）
    * @param {object} apiConfig - API 配置
    * @param {string} systemPrompt - 系统提示词
    * @param {string} userPrompt - 用户提示词
+   * @param {string} imageBase64 - 图片 base64（可选，用于 Vision API）
+   * @param {number} timeout - 超时时间（毫秒），默认2分钟
    */
-  async callApi(apiConfig, systemPrompt, userPrompt) {
+  async callApi(apiConfig, systemPrompt, userPrompt, imageBase64 = null, timeout = 120000) {
     const startTime = Date.now();
 
     try {
@@ -245,7 +282,11 @@ class AiService {
       if (systemPrompt) {
         messages.push({ role: 'system', content: systemPrompt });
       }
-      messages.push({ role: 'user', content: userPrompt });
+      // 使用 buildUserContent 构建用户消息（支持图片）
+      messages.push({
+        role: 'user',
+        content: this.buildUserContent(userPrompt, imageBase64)
+      });
 
       const body = {
         model: apiConfig.model || 'default',
@@ -258,7 +299,8 @@ class AiService {
       const response = await fetch(url, {
         method: 'POST',
         headers,
-        body: JSON.stringify(body)
+        body: JSON.stringify(body),
+        signal: AbortSignal.timeout(timeout)
       });
 
       if (!response.ok) {
@@ -296,8 +338,9 @@ class AiService {
    * @param {string} userPrompt - 用户提示词
    * @param {function} onChunk - 收到数据块时的回调
    * @param {AbortSignal} signal - 中断信号
+   * @param {string} imageBase64 - 图片 base64（可选，用于 Vision API）
    */
-  async callApiStream(apiConfig, systemPrompt, userPrompt, onChunk, signal = null) {
+  async callApiStream(apiConfig, systemPrompt, userPrompt, onChunk, signal = null, imageBase64 = null) {
     const startTime = Date.now();
 
     try {
@@ -316,7 +359,11 @@ class AiService {
       if (systemPrompt) {
         messages.push({ role: 'system', content: systemPrompt });
       }
-      messages.push({ role: 'user', content: userPrompt });
+      // 使用 buildUserContent 构建用户消息（支持图片）
+      messages.push({
+        role: 'user',
+        content: this.buildUserContent(userPrompt, imageBase64)
+      });
 
       const body = {
         model: apiConfig.model || 'default',
@@ -555,7 +602,7 @@ class AiService {
    * @param {AbortSignal} signal - 中断信号
    */
   async chat(userId, textbookId, sessionId, userMessage, options = {}, onChunk = null, signal = null) {
-    const { subject = 'CHINESE', context = '' } = options;
+    const { subject = 'CHINESE', context = '', imageBase64 = null } = options;
 
     // 获取 API 配置
     const apiConfig = await this.getDefaultConfig();
@@ -569,17 +616,15 @@ class AiService {
     // 获取系统提示词
     const systemPrompt = await this.getSystemPrompt();
 
-    // 构建用户提示词（包含上下文）
+    // 构建用户提示词（不再使用文本上下文，改用图片）
     let userPrompt = userMessage;
-    if (context) {
-      userPrompt = `当前阅读内容：\n${context}\n\n用户问题：${userMessage}`;
-    }
+    // 注：如果有 imageBase64，context 将被忽略（因为图片已包含页面内容）
 
     // 根据是否有回调决定使用流式还是普通模式
     if (onChunk) {
-      return await this.callApiStream(apiConfig, systemPrompt, userPrompt, onChunk, signal);
+      return await this.callApiStream(apiConfig, systemPrompt, userPrompt, onChunk, signal, imageBase64);
     } else {
-      return await this.callApi(apiConfig, systemPrompt, userPrompt);
+      return await this.callApi(apiConfig, systemPrompt, userPrompt, imageBase64);
     }
   }
 }

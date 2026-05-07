@@ -58,10 +58,10 @@
               <div class="text-xs sm:text-sm text-gray-600 font-medium">学习币</div>
             </div>
             <div class="text-center py-2 px-1 sm:p-3 bg-white/70 rounded-lg">
-              <div class="text-lg sm:text-xl font-bold text-blue-600 truncate">
-                {{ Math.floor(child.stats?.worksCount || 0) }}
+              <div class="text-lg sm:text-xl font-bold text-green-600 truncate">
+                {{ Math.floor(child.stats?.approvedCount || 0) }}
               </div>
-              <div class="text-xs sm:text-sm text-gray-600 font-medium">作品</div>
+              <div class="text-xs sm:text-sm text-gray-600 font-medium">已通过</div>
             </div>
             <div class="text-center py-2 px-1 sm:p-3 bg-white/70 rounded-lg">
               <div class="text-lg sm:text-xl font-bold text-purple-600 truncate">
@@ -129,18 +129,35 @@
         </div>
 
         <!-- 操作按钮 -->
-        <div class="px-6 pb-6 flex gap-4">
-          <n-button type="primary" size="large" class="flex-1 h-12 text-lg" @click="goToWorks">
+        <div class="px-6 pb-4 flex gap-4">
+          <n-button type="primary" size="large" class="flex-1 h-12 text-lg" @click="goToReview">
             <template #icon>
-              <n-icon size="24"><EaselOutline /></n-icon>
+              <n-icon size="24"><ClipboardOutline /></n-icon>
             </template>
-            空间所有作品
+            自学成果
+            <span v-if="pendingCount > 0" class="ml-2 px-2 py-0.5 bg-white/30 rounded-full text-sm">{{ pendingCount }}待审</span>
           </n-button>
           <n-button size="large" class="flex-1 h-12 text-lg" @click="goToSubmissions(child)">
             <template #icon>
               <n-icon size="24"><CreateOutline /></n-icon>
             </template>
-            查看{{ getChildNickname(child) }}历程
+            {{ getChildNickname(child) }}历程
+          </n-button>
+        </div>
+
+        <!-- 学习圈和排行榜入口 -->
+        <div class="px-6 pb-6 flex gap-4">
+          <n-button size="large" class="flex-1 h-11" quaternary @click="goToMoments">
+            <template #icon>
+              <n-icon size="22"><PeopleOutline /></n-icon>
+            </template>
+            学习圈
+          </n-button>
+          <n-button size="large" class="flex-1 h-11" quaternary @click="goToLeaderboard">
+            <template #icon>
+              <n-icon size="22"><PodiumOutline /></n-icon>
+            </template>
+            排行榜
           </n-button>
         </div>
       </div>
@@ -232,16 +249,18 @@ import { useRouter } from 'vue-router';
 import { useMessage } from 'naive-ui';
 import { useParentStore } from '@/stores/parent';
 import api from '@/api';
-import {
-  EaselOutline,
-  CreateOutline,
-  DocumentTextOutline,
-  CodeSlashOutline,
-  BookOutline,
-  WalletOutline,
-  TrendingUpOutline,
-  CashOutline,
-} from '@vicons/ionicons5';
+import { submissionAPI } from '@/api';
+import EaselOutline from '@vicons/ionicons5/es/EaselOutline'
+import CreateOutline from '@vicons/ionicons5/es/CreateOutline'
+import DocumentTextOutline from '@vicons/ionicons5/es/DocumentTextOutline'
+import CodeSlashOutline from '@vicons/ionicons5/es/CodeSlashOutline'
+import BookOutline from '@vicons/ionicons5/es/BookOutline'
+import WalletOutline from '@vicons/ionicons5/es/WalletOutline'
+import TrendingUpOutline from '@vicons/ionicons5/es/TrendingUpOutline'
+import CashOutline from '@vicons/ionicons5/es/CashOutline'
+import ClipboardOutline from '@vicons/ionicons5/es/ClipboardOutline'
+import PeopleOutline from '@vicons/ionicons5/es/PeopleOutline'
+import PodiumOutline from '@vicons/ionicons5/es/PodiumOutline'
 import { formatDistanceToNow } from 'date-fns';
 import { zhCN } from 'date-fns/locale';
 
@@ -250,6 +269,7 @@ const message = useMessage();
 const parentStore = useParentStore();
 
 const loading = ref(false);
+const pendingCount = ref(0);
 
 // 使用 store 中的数据
 const children = computed(() => parentStore.children);
@@ -309,6 +329,16 @@ const loadChildren = async () => {
     console.error(error);
   } finally {
     loading.value = false;
+  }
+};
+
+// 加载待审核数量
+const loadPendingCount = async () => {
+  try {
+    const data = await submissionAPI.getParentPending({ pageSize: 1 });
+    pendingCount.value = data.stats?.pending || 0;
+  } catch (error) {
+    console.error('加载待审核数量失败:', error);
   }
 };
 
@@ -386,14 +416,24 @@ const getActivityText = (activity) => {
   return `提交了「${activity.title}」`;
 };
 
-// 跳转到作品广场（显示空间所有作品）
-const goToWorks = () => {
-  router.push({ path: '/works' });
+// 跳转到审核页面
+const goToReview = () => {
+  router.push({ path: '/parent/review' });
 };
 
 // 跳转到历程页面
 const goToSubmissions = (child) => {
   router.push({ path: '/parent/submissions', query: { childId: child.id } });
+};
+
+// 跳转到学习圈
+const goToMoments = () => {
+  router.push({ path: '/moments' });
+};
+
+// 跳转到排行榜
+const goToLeaderboard = () => {
+  router.push({ path: '/leaderboard' });
 };
 
 // 积分/学习币明细弹框
@@ -460,6 +500,7 @@ const formatChangeType = (log, type) => {
 
 onMounted(() => {
   loadChildren();
+  loadPendingCount();
 });
 </script>
 

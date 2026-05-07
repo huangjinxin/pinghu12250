@@ -1,0 +1,302 @@
+# AI 专用代码索引 - 结构化元数据
+# 更新时间: 2026-02-01
+
+project:
+  name: pinghu12250
+  desc: 苹湖少儿空间 - 儿童成长记录系统
+  stack: [Vue3, Vite, TailwindCSS, NaiveUI, Pinia, Express, Prisma, PostgreSQL]
+  ports:
+    frontend: 12250
+    backend: 12251
+    database: 12252
+  containers:
+    frontend: children-growth-frontend
+    backend: children-growth-backend
+    database: children-growth-postgres
+
+# 核心规则 - 必须遵守
+rules:
+  prisma: "必须使用 require('../lib/prisma') 单例"
+  response: "{ success: true, data } 或 { success: false, error }"
+  docker: "操作前确认容器名包含 children-growth"
+
+# 模块索引 - 按业务功能分组
+modules:
+  # ========== 核心业务 ==========
+  auth:
+    desc: 用户认证（注册、登录、JWT）
+    backend:
+      controller: authController.js
+      routes: [auth.js]
+    frontend:
+      views: [Login.vue, Register.vue]
+      api: authAPI
+    models: [User, Profile]
+
+  user:
+    desc: 用户管理（个人信息、头像、密码）
+    backend:
+      controller: userController.js
+      routes: [user.js, admin.js]
+    frontend:
+      views: [Profile.vue, UserProfile.vue]
+      api: [userAPI, adminAPI]
+    models: [User, Profile, Student, Teacher]
+
+  # ========== 内容创作 ==========
+  diary:
+    desc: 日记系统
+    backend:
+      routes: [diary.js]
+    frontend:
+      views: [Diaries.vue, DiaryDetail.vue]
+      api: diaryAPI
+    models: [Diary, DiaryComment]
+
+  homework:
+    desc: 作业管理
+    backend:
+      routes: [homework.js]
+    frontend:
+      views: [Homeworks.vue]
+      api: homeworkAPI
+    models: [Homework]
+
+  note:
+    desc: 笔记系统
+    backend:
+      routes: [note.js, readingNote.js]
+    frontend:
+      views: [Notes.vue]
+      api: [noteAPI, readingNoteAPI]
+    models: [Note, ReadingNote]
+
+  htmlWork:
+    desc: HTML作品（代码创作）
+    backend:
+      controller: htmlWorkController.js
+      routes: [htmlWork.js]
+    frontend:
+      views: [WorkEditor.vue, WorkDetail.vue, HtmlWorkView.vue]
+      api: htmlWorkAPI
+    models: [HTMLWork]
+
+  poetryWork:
+    desc: 诗歌作品
+    backend:
+      controller: poetryWorkController.js
+      routes: [poetryWork.js]
+    frontend:
+      views: [PoetryView.vue, works-tabs/PoetryWorksTab.vue]
+      api: poetryWorkAPI  # 在 frontend/src/api/index.js 中未单独导出
+    models: [PoetryWork, PoetryLike]
+
+  # ========== 教材系统（复杂模块）==========
+  textbook:
+    desc: 电子课本系统（PDF阅读、AI辅助学习）
+    backend:
+      controller: textbookController.js
+      routes: [textbook.js, textbookNote.js, textbookChat.js, aiAnalysis.js, aiConfig.js, aiPrompt.js]
+      services: [aiService.js]
+    frontend:
+      views_dir: views/textbook/  # 6个页面
+      components_dir: components/textbook/  # 23个组件
+      api: [textbookAPI, textbookNoteAPI, textbookChatAPI, aiAnalysisAPI, aiConfigAPI, aiPromptAPI]
+    models: [Textbook, TextbookUnit, TextbookLesson, TextbookChatMessage, TextbookPrompt, TextbookFavorite, AiApiConfig, AiPromptTemplate, AiAnalysisLog, SystemPrompt]
+
+  # ========== 积分与成就 ==========
+  points:
+    desc: 积分系统
+    backend:
+      routes: [point.js, pointFull.js]
+      services: [pointService.js]
+    frontend:
+      views: [Points.vue, FriendsLeaderboard.vue]
+      api: pointAPI
+    models: [PointRule, PointLog, UserPoints, DailyPointsLimit, PointExchange]
+    business_rules:
+      - 每日积分有上限（DailyPointsLimit）
+      - 登录、发帖、评论等行为触发积分
+
+  achievements:
+    desc: 成就系统
+    backend:
+      routes: [achievements.js]
+      services: [achievementService.js]
+    frontend:
+      views: [Achievements.vue, AchievementDetail.vue]
+      api: achievementAPI
+    models: [Achievement, UserAchievement, AchievementProgress]
+
+  challenge:
+    desc: 每日挑战
+    backend:
+      routes: [challenge.js]
+      services: [challengeService.js]
+    frontend:
+      views: [Challenges.vue, ChallengeHistory.vue]
+      api: challengeAPI
+    models: [ChallengeTemplate, DailyChallenge, UserChallengeRecord]
+
+  # ========== 社交系统 ==========
+  follow:
+    desc: 关注系统（单向关注、双向好友）
+    backend:
+      routes: [follows.js]
+      services: [followService.js]
+    frontend:
+      views: [Friends.vue]
+      api: friendAPI
+    models: [UserFollow, Friendship]
+
+  post:
+    desc: 动态系统
+    backend:
+      controller: postController.js
+      routes: [post.js]
+    frontend:
+      views: [Home.vue]  # 动态在首页展示
+      api: postAPI
+    models: [Dynamic, Like, Comment]
+
+  question:
+    desc: 知识问答
+    backend:
+      routes: [question.js]
+    frontend:
+      views: [Questions.vue, QuestionDetail.vue]
+      api: questionAPI
+    models: [Question, Answer, QuestionView, AnswerLike]
+
+  # ========== 媒体库 ==========
+  book:
+    desc: 书籍管理
+    backend:
+      controller: bookController.js
+      routes: [book.js]
+    frontend:
+      views: [Books.vue, BookDetail.vue]
+      api: bookAPI
+    models: [Book, UserBookshelf, ReadingLog, ReadingLogLike]
+
+  music:
+    desc: 音乐库
+    backend:
+      controller: musicController.js
+      routes: [music.js]
+    frontend:
+      views: [Music.vue]
+      api: musicAPI
+    models: [Music, UserMusicLibrary, MusicLog, MusicLogLike]
+
+  movie:
+    desc: 影视库
+    backend:
+      controller: movieController.js
+      routes: [movie.js]
+    frontend:
+      views: [Movies.vue]
+      api: movieAPI
+    models: [Movie, UserMovieLibrary, MovieLog, MovieLogLike]
+
+  game:
+    desc: 游戏系统
+    backend:
+      routes: [game.js]
+      services: [rawgService.js]
+    frontend:
+      views: [GameHall.vue, GameDetail.vue, GameLibrary.vue, MyGames.vue]
+      api: [gameAPI, adminGameAPI]
+    models: [Game, UserGameRecord, GameShortReview, GameLongReview, GameReviewComment, GameLongReviewLike]
+
+  # ========== 学习追踪 ==========
+  learning:
+    desc: 学习计时与统计
+    backend:
+      routes: [learning.js]
+    frontend:
+      views: [LearningTracker.vue, LearningStats.vue, Timer.vue]
+      api: learningAPI
+    models: [LearningProject, LearningSession, LearningSessionLike, ActiveTimer]
+
+  # ========== 班级与任务 ==========
+  class:
+    desc: 班级管理
+    backend:
+      controller: classController.js
+      routes: [class.js]
+    frontend:
+      views: [teacher/MyClasses.vue, teacher/ClassStudents.vue]
+      api: classAPI
+    models: [Class, School, TeacherClass]
+
+  task:
+    desc: 任务系统（老师发布、学生完成）
+    backend:
+      routes: [task.js, submissions.js]
+    frontend:
+      views: [Tasks.vue]
+      api: taskAPI
+    models: [Task, TaskSubmission]
+
+  # ========== 奖罚系统 ==========
+  reward:
+    desc: 奖罚规则与提交
+    backend:
+      controller: ruleController.js
+      routes: [rules.js, reward.js, submissions.js]
+    frontend:
+      views: [admin/RewardManagement.vue]
+      api: [rewardRuleAPI, submissionAPI]
+    models: [RuleType, RuleStandard, RuleTemplate, RuleSubmission, TemplateFavorite]
+
+  # ========== 支付与钱包 ==========
+  wallet:
+    desc: 钱包与市集
+    backend:
+      routes: [wallet.js, pay.js]
+      services: [walletService.js, transactionService.js]
+    frontend:
+      views: [Wallet.vue, Market.vue, MyShop.vue, MyPurchases.vue]
+      api: [walletAPI, payAPI]
+    models: [Wallet, WalletTransaction, PayCode, PayOrder, Transaction, PaidContent, ContentPurchase]
+
+  # ========== 管理后台 ==========
+  admin:
+    desc: 管理员功能
+    backend:
+      routes: [admin.js]
+    frontend:
+      views_dir: views/admin/  # 11个管理页面
+      api: adminAPI
+    pages: [UserManagement, ClassManagement, CampusManagement, GameManagement, RewardManagement, PayCodeManagement, ActivityLogs]
+
+# 文件路径模式 - 快速定位
+paths:
+  controller: "backend/src/controllers/{name}Controller.js"
+  route: "backend/src/routes/{name}.js"
+  service: "backend/src/services/{name}Service.js"
+  view: "frontend/src/views/{Name}.vue"
+  component: "frontend/src/components/{dir}/{Name}.vue"
+  api: "frontend/src/api/index.js"
+  prisma: "backend/prisma/schema.prisma"
+  prisma_client: "backend/src/lib/prisma.js"
+
+# 角色权限
+roles:
+  STUDENT: 学生 - 基础功能
+  PARENT: 家长 - 查看孩子信息
+  TEACHER: 老师 - 班级管理、发布任务
+  ADMIN: 管理员 - 全部权限
+
+# 测试账号
+test_accounts:
+  student: { username: xiaoming, password: "123456" }
+  parent: { username: parent_ming, password: "123456" }
+  teacher: { username: teacher_wang, password: "123456" }
+
+# 运维排障记录
+ops_notes:
+  ios_im_socket_kids_fix_20260325: .claude/ios-im-socket-kids-fix-2026-03-25.md
+  im_remove_friend_api_20260326: .claude/im-remove-friend-api-2026-03-26.md
+  im_apns_push_minimum_20260326: .claude/im-apns-push-minimum-2026-03-26.md

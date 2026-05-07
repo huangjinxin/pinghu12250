@@ -30,6 +30,76 @@
     <n-card class="tabs-card">
       <n-tabs v-model:value="activeTab" type="line" @update:value="handleTabChange">
         <n-tab-pane name="rules" tab="规则管理">
+          <!-- 每日挑战奖励配置 -->
+          <n-card size="small" class="mb-4">
+            <template #header>
+              <div class="flex items-center justify-between">
+                <span class="font-medium">每日挑战完成奖励配置</span>
+                <n-button
+                  size="small"
+                  quaternary
+                  @click="showChallengeConfig = !showChallengeConfig"
+                >
+                  {{ showChallengeConfig ? '收起' : '展开' }}
+                </n-button>
+              </div>
+            </template>
+            <n-collapse-transition :show="showChallengeConfig">
+              <n-spin :show="challengeConfigLoading">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-2">
+                  <div>
+                    <n-form-item label="基础奖励积分" label-placement="left">
+                      <n-input-number
+                        v-model:value="challengeConfig.basePoints"
+                        :min="0"
+                        :max="10000"
+                        placeholder="每日完成3项基础奖励"
+                      />
+                    </n-form-item>
+                    <div class="text-xs text-gray-500">每日完成3项审核通过后的基础奖励</div>
+                  </div>
+                  <div>
+                    <n-form-item label="连续天数单位奖励" label-placement="left">
+                      <n-input-number
+                        v-model:value="challengeConfig.streakBonus"
+                        :min="0"
+                        :max="1000"
+                        placeholder="每连续1天额外奖励"
+                      />
+                    </n-form-item>
+                    <div class="text-xs text-gray-500">每连续完成1天额外奖励的积分</div>
+                  </div>
+                  <div>
+                    <n-form-item label="连续天数封顶" label-placement="left">
+                      <n-input-number
+                        v-model:value="challengeConfig.streakMaxDays"
+                        :min="1"
+                        :max="365"
+                        placeholder="最多计算天数"
+                      />
+                    </n-form-item>
+                    <div class="text-xs text-gray-500">连续天数奖励最多计算到此天数</div>
+                  </div>
+                </div>
+                <div class="mt-4 flex items-center justify-between">
+                  <div class="text-sm text-gray-600">
+                    <span class="font-medium">公式：</span>
+                    {{ challengeConfig.basePoints }} + {{ challengeConfig.streakBonus }} × min(连续天数, {{ challengeConfig.streakMaxDays }})
+                    <span class="ml-2 text-blue-600">
+                      (最高可得 {{ challengeConfig.basePoints + challengeConfig.streakBonus * challengeConfig.streakMaxDays }} 积分)
+                    </span>
+                  </div>
+                  <n-button
+                    type="primary"
+                    :loading="challengeConfigSaving"
+                    @click="saveChallengeConfig"
+                  >
+                    保存配置
+                  </n-button>
+                </div>
+              </n-spin>
+            </n-collapse-transition>
+          </n-card>
           <RulesTab />
         </n-tab-pane>
 
@@ -50,32 +120,18 @@
           <template #tab>
             审核中心
             <n-badge
-              v-if="submissionStore.stats.pending > 0"
-              :value="submissionStore.stats.pending"
+              v-if="reviewTotalPending > 0"
+              :value="reviewTotalPending"
               :max="999"
               type="error"
               class="ml-2"
             />
           </template>
-          <ReviewTab />
+          <ReviewCenter ref="reviewCenterRef" @update:total-pending="reviewTotalPending = $event" />
         </n-tab-pane>
 
-        <n-tab-pane name="poetry-review">
-          <template #tab>
-            作品审核
-            <n-badge
-              v-if="poetryPendingCount > 0"
-              :value="poetryPendingCount"
-              :max="999"
-              type="warning"
-              class="ml-2"
-            />
-          </template>
-          <PoetryReviewTab ref="poetryReviewTabRef" />
-        </n-tab-pane>
-
-        <n-tab-pane name="poetry-history" tab="作品记录">
-          <PoetryHistoryTab />
+        <n-tab-pane name="category-manage" tab="栏目管理">
+          <CategoryManageTab />
         </n-tab-pane>
       </n-tabs>
     </n-card>
@@ -85,7 +141,7 @@
       v-model:show="showTechTypeDialog"
       preset="card"
       title="技术类型管理"
-      style="width: 500px"
+      style="width: 500px; max-width: 90vw;"
     >
       <div class="tech-type-manager">
         <div class="add-form">
@@ -138,7 +194,7 @@
       v-model:show="showStandardDialog"
       preset="card"
       title="展示标准管理"
-      style="width: 500px"
+      style="width: 500px; max-width: 90vw;"
     >
       <div class="tech-type-manager">
         <div class="add-form">
@@ -189,29 +245,38 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, reactive, onMounted, watch } from 'vue';
 import { useMessage, useDialog } from 'naive-ui';
-import { Add, SettingsOutline, TrashOutline } from '@vicons/ionicons5';
+import { useRoute } from 'vue-router';
+import Add from '@vicons/ionicons5/es/Add'
+import SettingsOutline from '@vicons/ionicons5/es/SettingsOutline'
+import TrashOutline from '@vicons/ionicons5/es/TrashOutline'
 import { useRewardRuleStore } from '@/stores/rewardRule';
 import { useSubmissionStore } from '@/stores/submission';
-import api from '@/api';
+import { submissionAPI } from '@/api';
 import RulesTab from './reward-tabs/RulesTab.vue';
 import SubmissionsTab from './reward-tabs/SubmissionsTab.vue';
-import ReviewTab from './reward-tabs/ReviewTab.vue';
-import PoetryReviewTab from './reward-tabs/PoetryReviewTab.vue';
-import PoetryHistoryTab from './reward-tabs/PoetryHistoryTab.vue';
+import ReviewCenter from './reward-tabs/ReviewCenter.vue';
+import CategoryManageTab from './reward-tabs/CategoryManageTab.vue';
 
 const message = useMessage();
 const dialog = useDialog();
+const route = useRoute();
 const rewardRuleStore = useRewardRuleStore();
 const submissionStore = useSubmissionStore();
 
 // 当前激活的 Tab - 默认显示提交列表
-const activeTab = ref('submissions');
+const activeTab = ref('review');
 
-// 诗词作品审核
-const poetryPendingCount = ref(0);
-const poetryReviewTabRef = ref(null);
+watch(() => route.query.tab, (tab) => {
+  if (tab && ['rules', 'submissions', 'review', 'category-manage'].includes(tab)) {
+    activeTab.value = tab;
+  }
+}, { immediate: true });
+
+// 审核中心
+const reviewTotalPending = ref(0);
+const reviewCenterRef = ref(null);
 
 // 技术类型管理
 const showTechTypeDialog = ref(false);
@@ -221,13 +286,47 @@ const newTechTypeName = ref('');
 const showStandardDialog = ref(false);
 const newStandardName = ref('');
 
-// 加载诗词待审核数量
-const loadPoetryPendingCount = async () => {
+// 每日挑战奖励配置
+const showChallengeConfig = ref(false);
+const challengeConfigLoading = ref(false);
+const challengeConfigSaving = ref(false);
+const challengeConfig = reactive({
+  basePoints: 300,
+  streakBonus: 88,
+  streakMaxDays: 100
+});
+
+// 加载挑战配置
+const loadChallengeConfig = async () => {
+  challengeConfigLoading.value = true;
   try {
-    const response = await api.get('/poetry-works/admin/stats');
-    poetryPendingCount.value = response.stats?.pending || 0;
+    const res = await submissionAPI.getChallengeConfig();
+    if (res.success && res.data) {
+      challengeConfig.basePoints = res.data.basePoints ?? 300;
+      challengeConfig.streakBonus = res.data.streakBonus ?? 88;
+      challengeConfig.streakMaxDays = res.data.streakMaxDays ?? 100;
+    }
   } catch (error) {
-    console.error('加载诗词待审核数量失败:', error);
+    console.error('加载挑战配置失败:', error);
+  } finally {
+    challengeConfigLoading.value = false;
+  }
+};
+
+// 保存挑战配置
+const saveChallengeConfig = async () => {
+  challengeConfigSaving.value = true;
+  try {
+    await submissionAPI.updateChallengeConfig({
+      basePoints: challengeConfig.basePoints,
+      streakBonus: challengeConfig.streakBonus,
+      streakMaxDays: challengeConfig.streakMaxDays
+    });
+    message.success('配置已保存');
+  } catch (error) {
+    message.error(error.error || '保存失败');
+  } finally {
+    challengeConfigSaving.value = false;
   }
 };
 
@@ -236,10 +335,9 @@ onMounted(async () => {
   await rewardRuleStore.fetchTypes();
   await rewardRuleStore.fetchStandards();
   await submissionStore.fetchStats();
+  await loadChallengeConfig();
   // 默认加载提交列表数据
   submissionStore.fetchAllSubmissions();
-  // 加载诗词待审核数量
-  loadPoetryPendingCount();
 });
 
 // Tab 切换
@@ -247,7 +345,7 @@ const handleTabChange = (tabName) => {
   if (tabName === 'submissions') {
     submissionStore.fetchAllSubmissions();
   } else if (tabName === 'review') {
-    submissionStore.fetchPendingSubmissions();
+    reviewCenterRef.value?.refresh();
   }
 };
 
@@ -323,6 +421,9 @@ const handleDeleteStandard = async (id) => {
 <style scoped>
 .reward-management {
   padding: 20px;
+  overflow: hidden;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .header-card {
@@ -379,5 +480,11 @@ const handleDeleteStandard = async (id) => {
 
 .ml-2 {
   margin-left: 8px;
+}
+
+@media (max-width: 768px) {
+  .reward-management { padding: 10px; }
+  .header { flex-direction: column; align-items: flex-start; gap: 10px; }
+  .header .actions { flex-wrap: wrap; }
 }
 </style>

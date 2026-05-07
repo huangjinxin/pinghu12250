@@ -6,7 +6,7 @@
     </div>
 
     <!-- 双货币卡片 -->
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
       <!-- 积分卡片 -->
       <n-card class="points-card">
         <div class="text-center py-8">
@@ -17,7 +17,10 @@
             <span class="text-lg font-medium">我的积分</span>
           </div>
           <div class="text-5xl font-bold mb-4">{{ userPoints || 0 }}</div>
-          <n-button @click="showPointsDetail">查看明细</n-button>
+          <div class="flex justify-center gap-2">
+            <n-button @click="showPointsDetail">查看明细</n-button>
+            <n-button @click="handleFinance">理财</n-button>
+          </div>
         </div>
       </n-card>
 
@@ -42,12 +45,39 @@
           </div>
         </div>
       </n-card>
+
+      <!-- 个人信用卡片 -->
+      <n-card
+        class="credit-card cursor-pointer hover:shadow-lg transition-shadow"
+        :class="getCreditCardBgClass(creditScore.creditScore)"
+        @click="goToCreditHistory"
+      >
+        <div class="text-center py-6">
+          <div class="flex items-center justify-center mb-2">
+            <n-icon size="24" class="mr-2">
+              <ShieldOutline />
+            </n-icon>
+            <span class="text-lg font-medium">个人信用</span>
+            <n-tag type="warning" size="small" class="ml-2">开发中</n-tag>
+          </div>
+          <n-spin :show="loadingCreditScore">
+            <div class="text-6xl font-bold mb-3" :class="getCreditScoreColor(creditScore.creditScore)">
+              {{ creditScore.creditScore || 800 }}
+            </div>
+            <div class="text-sm text-gray-600 mb-2">{{ creditScore.creditLevel || '优秀' }}</div>
+            <div class="text-xs text-gray-500">{{ creditScore.creditMessage || '表现稳定，继续保持' }}</div>
+            <div v-if="creditScore.thisWeekDeductionCount > 0" class="mt-2">
+              <n-tag type="warning" size="small">本周扣分 {{ creditScore.thisWeekDeductionCount }} 次</n-tag>
+            </div>
+          </n-spin>
+        </div>
+      </n-card>
     </div>
 
-    <!-- 兑换说明 -->
-    <n-alert title="兑换说明" type="info">
-      学习币是稀缺货币，可以通过积分兑换获得。当前兑换比例：{{ exchangeConfig.rate?.points || 100 }} 积分 = {{ exchangeConfig.rate?.coins || 10 }} 学习币。
-      每日兑换上限：{{ exchangeConfig.dailyLimit || 500 }} 积分，今日剩余：{{ exchangeConfig.remainingLimit || 0 }} 积分。
+<!-- 兑换说明 -->
+    <n-alert type="info">
+      <div>学习币是稀缺货币，可以通过积分兑换获得。</div>
+      <div class="mt-1">当前比例：{{ exchangeConfig.rate?.points || 100 }} 积分 = {{ exchangeConfig.rate?.coins || 10 }} 学习币。</div>
     </n-alert>
 
     <!-- 积分倒数排行榜 -->
@@ -148,17 +178,69 @@
 
         <!-- 支付记录 -->
         <n-tab-pane name="payment" tab="支付记录">
+          <!-- 筛选栏 -->
+          <div class="mb-4 p-3 bg-gray-50 rounded-lg">
+            <n-space wrap>
+              <n-date-picker
+                v-model:value="paymentFilters.dateRange"
+                type="daterange"
+                clearable
+                :shortcuts="dateRangeShortcuts"
+                size="small"
+                style="width: 240px"
+              />
+              <n-select
+                v-model:value="paymentFilters.category"
+                placeholder="选择分类"
+                :options="paymentCategoryOptions"
+                clearable
+                size="small"
+                style="width: 120px"
+              />
+              <n-input
+                v-model:value="paymentFilters.keyword"
+                placeholder="搜索商品名称"
+                clearable
+                size="small"
+                style="width: 140px"
+                @keyup.enter="handlePaymentSearch"
+              >
+                <template #prefix>
+                  <n-icon size="14"><SearchOutline /></n-icon>
+                </template>
+              </n-input>
+              <n-button size="small" type="primary" @click="handlePaymentSearch">搜索</n-button>
+              <n-button size="small" @click="handlePaymentReset">重置</n-button>
+            </n-space>
+            <!-- 筛选结果统计 -->
+            <div v-if="hasPaymentFilters" class="mt-2 text-sm text-gray-500">
+              筛选结果：{{ paymentSummary.totalCount }} 条记录
+              <span v-if="paymentSummary.walletCount">，学习币 <span class="text-red-600 font-medium">{{ paymentSummary.walletAmount.toFixed(2) }}</span></span>
+              <span v-if="paymentSummary.pointsCount">，积分 <span class="text-orange-500 font-medium">{{ paymentSummary.pointsAmount.toFixed(0) }}</span></span>
+            </div>
+          </div>
+
           <n-spin :show="loadingPayments">
             <div v-if="paymentOrders.length > 0" class="space-y-3">
               <div v-for="order in paymentOrders" :key="order.id" class="flex items-center justify-between py-3 border-b last:border-0">
                 <div>
                   <h4 class="font-medium">{{ order.title }}</h4>
                   <p class="text-xs text-gray-500">{{ formatDate(order.createdAt) }}</p>
-                  <p class="text-xs text-gray-600">订单号：{{ order.orderNo }}</p>
+                  <div class="flex items-center gap-2 mt-1">
+                    <span class="text-xs text-gray-600">订单号：{{ order.orderNo }}</span>
+                    <n-tag v-if="order.typeLabel" size="tiny" :type="order.type === 'installment' ? 'warning' : 'default'">
+                      {{ order.typeLabel }}
+                    </n-tag>
+                    <n-tag v-if="order.category || order.payCode?.category" size="tiny">
+                      {{ order.category || order.payCode?.category }}
+                    </n-tag>
+                  </div>
                 </div>
                 <div class="text-right flex items-center gap-2">
                   <div>
-                    <div class="text-red-600 font-bold">-{{ Number(order.amount).toFixed(2) }} 学习币</div>
+                    <div :class="['font-bold', order.paymentMethod === 'points' ? 'text-orange-500' : 'text-red-600']">
+                      -{{ order.paymentMethod === 'points' ? Number(order.amount).toFixed(0) + ' 积分' : Number(order.amount).toFixed(2) + ' 学习币' }}
+                    </div>
                     <n-tag type="success" size="small">已完成</n-tag>
                   </div>
                   <n-button size="small" quaternary @click="copyReceipt(order)">
@@ -169,6 +251,119 @@
             </div>
             <n-empty v-else description="暂无支付记录" />
           </n-spin>
+
+          <!-- 分页 -->
+          <div v-if="paymentPagination.total > paymentPagination.pageSize" class="mt-4 flex justify-center">
+            <n-pagination
+              v-model:page="paymentPagination.page"
+              :page-size="paymentPagination.pageSize"
+              :item-count="paymentPagination.total"
+              :page-sizes="[10, 20, 50]"
+              show-size-picker
+              @update:page="handlePaymentPageChange"
+              @update:page-size="handlePaymentPageSizeChange"
+            />
+          </div>
+        </n-tab-pane>
+
+        <!-- 付款计划 -->
+        <n-tab-pane name="paymentPlan" tab="付款计划">
+          <n-spin :show="loadingPaymentPlans">
+            <div v-if="paymentPlans.length > 0" class="space-y-4">
+              <div v-for="plan in paymentPlans" :key="plan.id" class="border rounded-lg p-4">
+                <div class="flex items-start justify-between mb-3">
+                  <div>
+                    <h4 class="font-medium text-lg">{{ plan.payCode?.title }}</h4>
+                    <p class="text-xs text-gray-500">创建于 {{ formatDate(plan.createdAt) }}</p>
+                  </div>
+                  <n-tag :type="getPlanStatusType(plan.status)" size="small">
+                    {{ getPlanStatusText(plan.status) }}
+                  </n-tag>
+                </div>
+
+                <!-- 进度条 -->
+                <div class="mb-3">
+                  <div class="flex justify-between text-sm mb-1">
+                    <span>还款进度</span>
+                    <span>{{ plan.paidInstallments }}/{{ plan.installments }} 期</span>
+                  </div>
+                  <n-progress
+                    type="line"
+                    :percentage="Math.round(plan.paidInstallments / plan.installments * 100)"
+                    :status="plan.status === 'completed' ? 'success' : plan.status === 'overdue' ? 'error' : 'default'"
+                  />
+                </div>
+
+                <!-- 金额信息 -->
+                <div class="grid grid-cols-3 gap-2 text-sm mb-3">
+                  <div class="text-center p-2 bg-gray-50 rounded">
+                    <div class="text-gray-500">总金额</div>
+                    <div class="font-bold">{{ Number(plan.totalAmount).toFixed(2) }}</div>
+                  </div>
+                  <div class="text-center p-2 bg-green-50 rounded">
+                    <div class="text-gray-500">已付</div>
+                    <div class="font-bold text-green-600">{{ Number(plan.paidAmount).toFixed(2) }}</div>
+                  </div>
+                  <div class="text-center p-2 bg-orange-50 rounded">
+                    <div class="text-gray-500">待付</div>
+                    <div class="font-bold text-orange-600">{{ getRemainingAmount(plan) }}</div>
+                  </div>
+                </div>
+
+                <!-- 当期信息和操作按钮 -->
+                <div v-if="plan.status !== 'completed'" class="flex items-center justify-between pt-3 border-t">
+                  <div class="text-sm">
+                    <span class="text-gray-500">下期还款：</span>
+                    <span class="font-medium">{{ Number(getCurrentSchedule(plan)?.amount || 0).toFixed(2) }} 学习币</span>
+                    <span class="text-gray-400 ml-2">
+                      ({{ new Date(plan.nextDueDate).toLocaleDateString('zh-CN') }})
+                    </span>
+                  </div>
+                  <div class="flex gap-2">
+                    <n-button size="small" type="primary" @click="openPayPlanModal(plan, 'pay')">
+                      还当期
+                    </n-button>
+                    <n-button size="small" @click="openPayPlanModal(plan, 'payAll')">
+                      一次还清
+                    </n-button>
+                  </div>
+                </div>
+
+                <!-- 还款日程展开 -->
+                <n-collapse class="mt-3">
+                  <n-collapse-item title="查看还款日程" name="schedule">
+                    <div class="space-y-2">
+                      <div
+                        v-for="schedule in plan.schedules"
+                        :key="schedule.id"
+                        class="flex items-center justify-between py-2 px-3 rounded text-sm"
+                        :class="{
+                          'bg-green-50': schedule.status === 'paid' || schedule.status === 'paid_late',
+                          'bg-red-50': schedule.status === 'overdue',
+                          'bg-gray-50': schedule.status === 'pending'
+                        }"
+                      >
+                        <div class="flex items-center gap-2">
+                          <span class="font-medium">第{{ schedule.installmentNo }}期</span>
+                          <span class="text-gray-500">{{ new Date(schedule.dueDate).toLocaleDateString('zh-CN') }}</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                          <span class="font-medium">{{ Number(schedule.amount).toFixed(2) }}</span>
+                          <n-tag
+                            size="tiny"
+                            :type="schedule.status === 'paid' ? 'success' : schedule.status === 'paid_late' ? 'warning' : schedule.status === 'overdue' ? 'error' : 'default'"
+                          >
+                            {{ schedule.status === 'paid' ? '已付' : schedule.status === 'paid_late' ? '逾期付' : schedule.status === 'overdue' ? '逾期' : '待付' }}
+                          </n-tag>
+                        </div>
+                      </div>
+                    </div>
+                  </n-collapse-item>
+                </n-collapse>
+              </div>
+            </div>
+            <n-empty v-else description="暂无付款计划" />
+          </n-spin>
         </n-tab-pane>
       </n-tabs>
     </n-card>
@@ -176,7 +371,10 @@
     <!-- 兑换弹窗 -->
     <n-modal v-model:show="showExchangeModal" preset="dialog" title="积分兑换学习币">
       <div class="space-y-4">
-        <n-alert type="info">
+        <n-alert v-if="exchangeConfig.unlimited" type="success">
+          周日不限量兑换！
+        </n-alert>
+        <n-alert v-else type="info">
           兑换比例：{{ exchangeConfig.rate?.points || 100 }} 积分 = {{ exchangeConfig.rate?.coins || 10 }} 学习币<br />
           今日剩余额度：{{ exchangeConfig.remainingLimit || 0 }} 积分
         </n-alert>
@@ -185,7 +383,7 @@
           <n-input-number
             v-model:value="exchangePoints"
             :min="0"
-            :max="exchangeConfig.remainingLimit"
+            :max="exchangeConfig.unlimited ? 1000000 : exchangeConfig.remainingLimit"
             :step="exchangeConfig.rate?.points || 100"
             placeholder="输入要兑换的积分"
             style="width: 100%"
@@ -400,14 +598,91 @@
         </div>
       </template>
     </n-modal>
+
+    <!-- 付款计划支付确认弹窗 -->
+    <n-modal v-model:show="showPayPlanModal" preset="dialog" :title="payPlanAction === 'payAll' ? '一次性还清' : '支付当期'">
+      <div v-if="currentPayPlan" class="space-y-4">
+        <n-alert :type="payPlanAction === 'payAll' ? 'warning' : 'info'">
+          {{ payPlanAction === 'payAll' ? '确认一次性还清所有剩余款项？' : '确认支付当期款项？' }}
+        </n-alert>
+
+        <div class="bg-gray-50 p-4 rounded-lg space-y-2">
+          <div class="flex justify-between">
+            <span class="text-gray-600">商品名称</span>
+            <span class="font-medium">{{ currentPayPlan.payCode?.title }}</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-gray-600">支付金额</span>
+            <span class="font-bold text-xl text-primary-600">
+              {{ payPlanAction === 'payAll' ? getRemainingAmount(currentPayPlan) : Number(getCurrentSchedule(currentPayPlan)?.amount || 0).toFixed(2) }} 学习币
+            </span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-gray-600">当前余额</span>
+            <span :class="Number(wallet.balance) >= (payPlanAction === 'payAll' ? Number(getRemainingAmount(currentPayPlan)) : Number(getCurrentSchedule(currentPayPlan)?.amount || 0)) ? 'text-green-600' : 'text-red-600'">
+              {{ Number(wallet.balance).toFixed(2) }} 学习币
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <template #action>
+        <div class="flex gap-2">
+          <n-button @click="showPayPlanModal = false">取消</n-button>
+          <n-button type="primary" @click="openPayPlanPasswordModal">确认支付</n-button>
+        </div>
+      </template>
+    </n-modal>
+
+    <!-- 付款计划支付密码弹窗 -->
+    <n-modal v-model:show="showPayPlanPasswordModal" preset="dialog" title="输入支付密码">
+      <div class="space-y-4">
+        <n-alert type="info">
+          请输入支付密码完成支付（默认密码：123456）
+        </n-alert>
+
+        <n-form-item label="支付密码">
+          <n-input
+            v-model:value="payPlanPassword"
+            type="password"
+            placeholder="请输入支付密码"
+            show-password-on="click"
+            @keyup.enter="handlePayPlan"
+          />
+        </n-form-item>
+      </div>
+
+      <template #action>
+        <div class="flex gap-2">
+          <n-button @click="showPayPlanPasswordModal = false">取消</n-button>
+          <n-button
+            type="primary"
+            @click="handlePayPlan"
+            :loading="payingPlan"
+            :disabled="!payPlanPassword"
+          >
+            确认支付
+          </n-button>
+        </div>
+      </template>
+    </n-modal>
   </div>
 </template>
 
 <script setup>
 import { ref, reactive, onMounted, onUnmounted, computed } from 'vue';
 import { useMessage } from 'naive-ui';
-import { pointAPI, walletAPI, payAPI } from '@/api';
-import { TrophyOutline, DiamondOutline, QrCodeOutline, CheckmarkCircleOutline, CameraOutline, CopyOutline } from '@vicons/ionicons5';
+import { pointAPI, walletAPI, payAPI, paymentPlanAPI } from '@/api';
+import TrophyOutline from '@vicons/ionicons5/es/TrophyOutline'
+import DiamondOutline from '@vicons/ionicons5/es/DiamondOutline'
+import QrCodeOutline from '@vicons/ionicons5/es/QrCodeOutline'
+import CheckmarkCircleOutline from '@vicons/ionicons5/es/CheckmarkCircleOutline'
+import CameraOutline from '@vicons/ionicons5/es/CameraOutline'
+import CopyOutline from '@vicons/ionicons5/es/CopyOutline'
+import SearchOutline from '@vicons/ionicons5/es/SearchOutline'
+import CalendarOutline from '@vicons/ionicons5/es/CalendarOutline'
+import WalletOutline from '@vicons/ionicons5/es/WalletOutline'
+import ShieldOutline from '@vicons/ionicons5/es/ShieldOutline'
 import { useRouter } from 'vue-router';
 import { Html5Qrcode } from 'html5-qrcode';
 import { useAuthStore } from '@/stores/auth';
@@ -435,9 +710,28 @@ const loadingCoins = ref(false);
 const loadingExchange = ref(false);
 const loadingPayments = ref(false);
 const loadingLeaderboard = ref(false);
+const loadingPaymentPlans = ref(false);
 
 // 排行榜数据
 const leaderboard = ref([]);
+
+// 信用分数据
+const creditScore = reactive({
+  creditScore: 0,
+  creditLevel: '',
+  creditMessage: '',
+  thisWeekDeductionCount: 0,
+});
+const loadingCreditScore = ref(false);
+
+// 付款计划数据
+const paymentPlans = ref([]);
+const showPayPlanModal = ref(false);
+const showPayPlanPasswordModal = ref(false);
+const currentPayPlan = ref(null);
+const payPlanPassword = ref('');
+const payingPlan = ref(false);
+const payPlanAction = ref(''); // 'pay' 或 'payAll'
 
 // UI 状态
 const activeTab = ref('points');
@@ -457,6 +751,51 @@ const scanning = ref(false);
 const paying = ref(false);
 const paymentOrders = ref([]);
 const paymentPassword = ref('');
+const paymentCategories = ref([]);
+const paymentSummary = reactive({ walletAmount: 0, walletCount: 0, pointsAmount: 0, pointsCount: 0, totalCount: 0 });
+const paymentPagination = reactive({ page: 1, pageSize: 20, total: 0 });
+const paymentFilters = reactive({
+  dateRange: null,
+  keyword: '',
+  category: null,
+});
+
+// 日期范围快捷选项
+const dateRangeShortcuts = {
+  '今天': () => {
+    const now = new Date();
+    const start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    return [start.getTime(), now.getTime()];
+  },
+  '最近7天': () => {
+    const now = new Date();
+    const start = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    return [start.getTime(), now.getTime()];
+  },
+  '最近30天': () => {
+    const now = new Date();
+    const start = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+    return [start.getTime(), now.getTime()];
+  },
+  '本月': () => {
+    const now = new Date();
+    const start = new Date(now.getFullYear(), now.getMonth(), 1);
+    return [start.getTime(), now.getTime()];
+  },
+};
+
+// 分类选项
+const paymentCategoryOptions = computed(() => {
+  return paymentCategories.value.map(c => ({
+    label: c,
+    value: c,
+  }));
+});
+
+// 是否有筛选条件
+const hasPaymentFilters = computed(() => {
+  return paymentFilters.dateRange || paymentFilters.keyword || paymentFilters.category;
+});
 
 // 摄像头扫码状态
 const showCameraScanner = ref(false);
@@ -545,6 +884,38 @@ const loadExchangeConfig = async () => {
   }
 };
 
+// 加载信用分
+const loadCreditScore = async () => {
+  loadingCreditScore.value = true;
+  try {
+    const response = await pointAPI.getCreditScore();
+    Object.assign(creditScore, response);
+  } catch (error) {
+    console.error('加载信用分失败:', error);
+  } finally {
+    loadingCreditScore.value = false;
+  }
+};
+
+// 跳转到信用历史页面
+const goToCreditHistory = () => {
+  router.push('/wallet/credit-history');
+};
+
+// 获取信用分颜色
+const getCreditScoreColor = (score) => {
+  if (score >= 800) return 'text-emerald-500';
+  if (score >= 600) return 'text-blue-500';
+  return 'text-orange-500';
+};
+
+// 获取卡片背景色
+const getCreditCardBgClass = (score) => {
+  if (score >= 800) return 'credit-card-green';
+  if (score >= 600) return 'credit-card-blue';
+  return 'credit-card-orange';
+};
+
 // 加载兑换历史
 const loadExchangeHistory = async () => {
   loadingExchange.value = true;
@@ -565,7 +936,7 @@ const handleExchange = async () => {
     return;
   }
 
-  if (exchangePoints.value > exchangeConfig.remainingLimit) {
+  if (!exchangeConfig.unlimited && exchangePoints.value > exchangeConfig.remainingLimit) {
     message.warning('超出今日兑换上限');
     return;
   }
@@ -597,17 +968,148 @@ const showPointsDetail = () => {
   activeTab.value = 'points';
 };
 
+// 理财功能（暂未开放）
+const handleFinance = () => {
+  message.info('理财功能即将上线，敬请期待');
+};
+
 // 加载支付记录
 const loadPaymentOrders = async () => {
   loadingPayments.value = true;
   try {
-    const data = await payAPI.getMyOrders({ limit: 50 });
+    const params = {
+      page: paymentPagination.page,
+      limit: paymentPagination.pageSize,
+    };
+
+    // 添加筛选参数
+    if (paymentFilters.dateRange && paymentFilters.dateRange.length === 2) {
+      params.startDate = new Date(paymentFilters.dateRange[0]).toISOString().split('T')[0];
+      params.endDate = new Date(paymentFilters.dateRange[1]).toISOString().split('T')[0];
+    }
+    if (paymentFilters.keyword) {
+      params.keyword = paymentFilters.keyword;
+    }
+    if (paymentFilters.category) {
+      params.category = paymentFilters.category;
+    }
+
+    const data = await payAPI.getMyOrders(params);
     paymentOrders.value = data.orders;
+    paymentCategories.value = data.categories || [];
+    paymentSummary.walletAmount = data.summary?.walletAmount || 0;
+    paymentSummary.walletCount = data.summary?.walletCount || 0;
+    paymentSummary.pointsAmount = data.summary?.pointsAmount || 0;
+    paymentSummary.pointsCount = data.summary?.pointsCount || 0;
+    paymentSummary.totalCount = data.summary?.totalCount || 0;
+    paymentPagination.total = data.pagination?.total || 0;
   } catch (error) {
     console.error('加载支付记录失败:', error);
   } finally {
     loadingPayments.value = false;
   }
+};
+
+// 支付记录搜索
+const handlePaymentSearch = () => {
+  paymentPagination.page = 1;
+  loadPaymentOrders();
+};
+
+// 支付记录重置筛选
+const handlePaymentReset = () => {
+  paymentFilters.dateRange = null;
+  paymentFilters.keyword = '';
+  paymentFilters.category = null;
+  paymentPagination.page = 1;
+  loadPaymentOrders();
+};
+
+// 支付记录分页变化
+const handlePaymentPageChange = (page) => {
+  paymentPagination.page = page;
+  loadPaymentOrders();
+};
+
+// 支付记录每页条数变化
+const handlePaymentPageSizeChange = (pageSize) => {
+  paymentPagination.pageSize = pageSize;
+  paymentPagination.page = 1;
+  loadPaymentOrders();
+};
+
+// 加载付款计划
+const loadPaymentPlans = async () => {
+  loadingPaymentPlans.value = true;
+  try {
+    const data = await paymentPlanAPI.list();
+    paymentPlans.value = data.plans || [];
+  } catch (error) {
+    console.error('加载付款计划失败:', error);
+  } finally {
+    loadingPaymentPlans.value = false;
+  }
+};
+
+// 打开付款计划支付弹窗
+const openPayPlanModal = (plan, action) => {
+  currentPayPlan.value = plan;
+  payPlanAction.value = action;
+  showPayPlanModal.value = true;
+};
+
+// 打开付款计划密码弹窗
+const openPayPlanPasswordModal = () => {
+  payPlanPassword.value = '';
+  showPayPlanPasswordModal.value = true;
+};
+
+// 处理付款计划支付
+const handlePayPlan = async () => {
+  if (!currentPayPlan.value || !payPlanPassword.value) return;
+
+  payingPlan.value = true;
+  try {
+    let result;
+    if (payPlanAction.value === 'payAll') {
+      result = await paymentPlanAPI.payAll(currentPayPlan.value.id, payPlanPassword.value);
+    } else {
+      result = await paymentPlanAPI.pay(currentPayPlan.value.id, payPlanPassword.value);
+    }
+    message.success(result.message || '支付成功');
+    showPayPlanPasswordModal.value = false;
+    showPayPlanModal.value = false;
+    currentPayPlan.value = null;
+    payPlanPassword.value = '';
+    // 刷新数据
+    await Promise.all([loadWallet(), loadPaymentPlans()]);
+  } catch (error) {
+    message.error(error.error || error.message || '支付失败');
+  } finally {
+    payingPlan.value = false;
+  }
+};
+
+// 获取付款计划状态标签
+const getPlanStatusType = (status) => {
+  const map = { active: 'info', completed: 'success', overdue: 'error' };
+  return map[status] || 'default';
+};
+
+const getPlanStatusText = (status) => {
+  const map = { active: '进行中', completed: '已完成', overdue: '已逾期' };
+  return map[status] || status;
+};
+
+// 获取当期待付款项
+const getCurrentSchedule = (plan) => {
+  if (!plan.schedules) return null;
+  return plan.schedules.find(s => s.status === 'pending' || s.status === 'overdue');
+};
+
+// 计算剩余金额
+const getRemainingAmount = (plan) => {
+  return (Number(plan.totalAmount) - Number(plan.paidAmount)).toFixed(2);
 };
 
 // 处理扫码
@@ -688,10 +1190,12 @@ const switchToManualInput = async () => {
 // 复制支付凭证
 const copyReceipt = async (order) => {
   const username = authStore.user?.username || '未知用户';
+  const isPoints = order.paymentMethod === 'points';
+  const amountText = isPoints ? `${Number(order.amount).toFixed(0)} 积分` : `${Number(order.amount).toFixed(2)} 学习币`;
   const receiptText = `【支付凭证】
 用户：${username}
 项目：${order.title}
-金额：${Number(order.amount).toFixed(2)} 学习币
+金额：${amountText}
 订单号：${order.orderNo}
 支付时间：${formatDate(order.createdAt)}
 状态：已完成`;
@@ -960,6 +1464,8 @@ onMounted(async () => {
     loadExchangeHistory(),
     loadPaymentOrders(),
     loadLeaderboard(),
+    loadPaymentPlans(),
+    loadCreditScore(),
   ]);
 });
 
@@ -997,6 +1503,42 @@ onUnmounted(() => {
 .points-card :deep(.n-button:hover),
 .coins-card :deep(.n-button:hover) {
   background: rgba(255, 255, 255, 0.3);
+}
+
+/* 信用卡片样式 */
+.credit-card {
+  transition: all 0.3s ease;
+}
+
+.credit-card:hover {
+  transform: translateY(-2px);
+}
+
+.credit-card-green {
+  background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+  border-color: #10b981;
+}
+
+.credit-card-green :deep(.n-card__content) {
+  background: transparent;
+}
+
+.credit-card-blue {
+  background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+  border-color: #3b82f6;
+}
+
+.credit-card-blue :deep(.n-card__content) {
+  background: transparent;
+}
+
+.credit-card-orange {
+  background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%);
+  border-color: #f97316;
+}
+
+.credit-card-orange :deep(.n-card__content) {
+  background: transparent;
 }
 
 /* 摄像头扫码容器 */

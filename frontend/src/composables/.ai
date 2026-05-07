@@ -1,0 +1,27 @@
+# @AI:DIR composables
+permit: add
+naming: use[A-Z][a-zA-Z]+\.js
+layer: logic
+
+# 可导入
+import:
+  - "@/api/*"
+  - "@/stores/*"
+  - "@/utils/*"
+  - "vue"
+  - "vue-router"
+
+# 禁止导入
+!import:
+  - "@/components/*"
+  - "@/views/*"
+
+# 导出规范
+export: function use*() { return { state, methods } }
+
+# 待创建（从AssistMode.vue提取）
+todo:
+  - useTextbookNotes.js   # 笔记CRUD,展开折叠
+  - useAiStream.js        # AI流式对话
+  - usePdfSearch.js       # PDF内容搜索
+  - useTextbookChat.js    # 聊天消息管理

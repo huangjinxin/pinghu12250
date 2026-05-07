@@ -393,57 +393,15 @@ router.post('/exchange', authenticate, async (req, res, next) => {
     const { points } = req.body;
     const userId = req.user.id;
 
-    // 验证参数
     if (!points || points <= 0) {
       return res.status(400).json({ error: '兑换积分必须大于0' });
     }
 
     const pointsToExchange = parseInt(points);
 
-    // 获取兑换配置
-    const [rateConfig, limitConfig] = await Promise.all([
-      prisma.systemSetting.findUnique({ where: { key: 'point_exchange_rate' } }),
-      prisma.systemSetting.findUnique({ where: { key: 'daily_exchange_limit' } }),
-    ]);
-
+    const rateConfig = await prisma.systemSetting.findUnique({ where: { key: 'point_exchange_rate' } });
     const rate = rateConfig ? JSON.parse(rateConfig.value) : { points: 100, coins: 10 };
-    const dailyLimit = limitConfig ? parseInt(limitConfig.value) : 5000;
 
-    // 检查今日已兑换额度
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    const todayExchanges = await prisma.pointExchange.aggregate({
-      where: {
-        userId,
-        createdAt: { gte: today },
-      },
-      _sum: {
-        pointsSpent: true,
-      },
-    });
-
-    const todayUsed = todayExchanges._sum.pointsSpent || 0;
-    const remainingLimit = dailyLimit - todayUsed;
-
-    if (pointsToExchange > remainingLimit) {
-      return res.status(400).json({
-        error: `超出每日兑换上限，今日剩余额度：${remainingLimit} 积分`,
-        remainingLimit,
-      });
-    }
-
-    // 检查用户积分余额
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { totalPoints: true },
-    });
-
-    if (user.totalPoints < pointsToExchange) {
-      return res.status(400).json({ error: '积分余额不足' });
-    }
-
-    // 计算可获得的学习币
     const coinsToGain = Math.floor((pointsToExchange / rate.points) * rate.coins);
 
     if (coinsToGain <= 0) {
@@ -452,32 +410,57 @@ router.post('/exchange', authenticate, async (req, res, next) => {
       });
     }
 
-    // 执行兑换（使用事务）
-    const walletService = require('../services/walletService');
-    const pointService = require('../services/pointService');
-
     const result = await prisma.$transaction(async (tx) => {
-      // 1. 扣除积分
-      await pointService.deductPoints(
-        userId,
-        pointsToExchange,
-        'point_exchange',
-        null,
-        `兑换${coinsToGain}学习币`
-      );
+      const user = await tx.user.findUnique({
+        where: { id: userId },
+        select: { totalPoints: true },
+      });
 
-      // 2. 增加学习币
-      await walletService.addCoins(
-        userId,
-        coinsToGain,
-        'exchange_from_points',
-        `积分兑换获得${coinsToGain}学习币`,
-        {
-          relatedType: 'point_exchange',
-        }
-      );
+      if (!user || user.totalPoints < pointsToExchange) {
+        throw new Error('积分余额不足');
+      }
 
-      // 3. 创建兑换记录
+      await tx.pointLog.create({
+        data: {
+          userId,
+          points: -pointsToExchange,
+          description: `兑换${coinsToGain}学习币`,
+          targetType: 'point_exchange',
+        },
+      });
+
+      await tx.user.update({
+        where: { id: userId },
+        data: { totalPoints: { decrement: pointsToExchange } },
+      });
+
+      await tx.userPoints.update({
+        where: { userId },
+        data: {
+          totalPoints: { decrement: pointsToExchange },
+          todayPoints: { decrement: pointsToExchange },
+        },
+      });
+
+      let wallet = await tx.wallet.findUnique({ where: { userId } });
+      if (!wallet) {
+        wallet = await tx.wallet.create({ data: { userId, balance: 0 } });
+      }
+
+      await tx.wallet.update({
+        where: { userId },
+        data: { balance: { increment: coinsToGain } },
+      });
+
+      await tx.walletTransaction.create({
+        data: {
+          userId,
+          amount: coinsToGain,
+          type: 'exchange_from_points',
+          description: `积分兑换获得${coinsToGain}学习币`,
+        },
+      });
+
       const exchange = await tx.pointExchange.create({
         data: {
           userId,
@@ -490,24 +473,25 @@ router.post('/exchange', authenticate, async (req, res, next) => {
       return exchange;
     });
 
-    // 获取更新后的余额
     const updatedUser = await prisma.user.findUnique({
       where: { id: userId },
       select: { totalPoints: true },
     });
 
-    const wallet = await walletService.getOrCreateWallet(userId);
+    const wallet = await prisma.wallet.findUnique({ where: { userId } });
 
     res.json({
-      message: '兑换成功',
+      success: true,
+      message: `兑换成功，获得${coinsToGain}学习币`,
       pointsSpent: pointsToExchange,
       coinsGained: coinsToGain,
       newPointsBalance: updatedUser.totalPoints,
       newCoinsBalance: wallet.balance,
-      exchange: result,
     });
   } catch (error) {
-    console.error('积分兑换失败:', error);
+    if (error.message === '积分余额不足') {
+      return res.status(400).json({ error: '积分余额不足' });
+    }
     next(error);
   }
 });

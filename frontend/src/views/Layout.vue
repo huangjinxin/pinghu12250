@@ -1,57 +1,107 @@
 <template>
   <div class="min-h-screen bg-gray-50">
     <!-- PC端侧边栏 -->
-    <aside class="sidebar w-60 hidden lg:block">
+    <aside class="sidebar hidden lg:block transition-all duration-300" :class="sidebarCollapsed ? 'w-16' : 'w-60'">
       <div class="flex flex-col h-full">
         <!-- Logo -->
-        <div class="h-16 flex items-center px-6 border-b border-gray-100">
+        <div class="h-16 flex items-center border-b border-gray-100" :class="sidebarCollapsed ? 'px-3 justify-center' : 'px-6'">
           <router-link to="/" class="flex items-center space-x-2">
-            <div class="w-8 h-8 bg-gradient-to-br from-primary-500 to-primary-600 rounded-lg flex items-center justify-center">
+            <div class="w-8 h-8 bg-gradient-to-br from-primary-500 to-primary-600 rounded-lg flex items-center justify-center flex-shrink-0">
               <span class="text-white font-bold text-sm">苹</span>
             </div>
-            <span class="text-lg font-bold text-gray-800">苹湖少儿空间</span>
+            <span v-if="!sidebarCollapsed" class="text-lg font-bold text-gray-800">苹湖少儿空间</span>
           </router-link>
         </div>
 
         <!-- 导航菜单 -->
-        <nav class="flex-1 py-4 px-3 space-y-1 overflow-y-auto">
+        <nav class="flex-1 py-4 space-y-1 overflow-y-auto" :class="sidebarCollapsed ? 'px-2' : 'px-3'">
           <template v-for="item in menuItems" :key="item.key">
             <!-- 有子菜单的项 -->
             <div v-if="item.children" class="menu-group">
-              <div
-                class="menu-group-header"
-                :class="{ 'active': isMenuItemActive(item) }"
-                @click="toggleExpanded(item.key)"
-              >
-                <div class="flex items-center space-x-3 flex-1">
-                  <n-icon :size="20">
-                    <component :is="item.icon" />
-                  </n-icon>
-                  <span>{{ item.label }}</span>
-                </div>
-                <n-icon :size="16" class="expand-icon" :class="{ 'expanded': isExpanded(item.key) }">
-                  <ChevronDownOutline />
-                </n-icon>
-              </div>
-              <transition name="menu-collapse">
-                <div v-show="isExpanded(item.key)" class="menu-children">
+              <!-- 折叠模式：使用下拉菜单 -->
+              <n-popover v-if="sidebarCollapsed" trigger="hover" placement="right-start" :show-arrow="false">
+                <template #trigger>
+                  <div
+                    class="sidebar-nav-item collapsed-item"
+                    :class="{ 'active': isMenuItemActive(item) }"
+                  >
+                    <n-icon :size="20">
+                      <component :is="item.icon" />
+                    </n-icon>
+                  </div>
+                </template>
+                <div class="collapsed-submenu">
+                  <div class="text-sm font-medium text-gray-800 px-3 py-2 border-b border-gray-100">{{ item.label }}</div>
                   <router-link
                     v-for="child in item.children"
                     :key="child.key"
                     :to="child.path"
-                    class="menu-child-item"
+                    class="collapsed-submenu-item"
                     :class="{ 'active': isActiveRoute(child.path) }"
                   >
-                    <n-icon :size="18">
+                    <n-icon :size="16">
                       <component :is="child.icon" />
                     </n-icon>
                     <span>{{ child.label }}</span>
                   </router-link>
                 </div>
-              </transition>
+              </n-popover>
+              <!-- 展开模式：正常显示 -->
+              <template v-else>
+                <div
+                  class="menu-group-header"
+                  :class="{ 'active': isMenuItemActive(item) }"
+                  @click="toggleExpanded(item.key)"
+                >
+                  <div class="flex items-center space-x-3 flex-1">
+                    <n-icon :size="20">
+                      <component :is="item.icon" />
+                    </n-icon>
+                    <span>{{ item.label }}</span>
+                  </div>
+                  <n-icon :size="16" class="expand-icon" :class="{ 'expanded': isExpanded(item.key) }">
+                    <ChevronDownOutline />
+                  </n-icon>
+                </div>
+                <transition name="menu-collapse">
+                  <div v-show="isExpanded(item.key)" class="menu-children">
+                    <router-link
+                      v-for="child in item.children"
+                      :key="child.key"
+                      :to="child.path"
+                      class="menu-child-item"
+                      :class="{ 'active': isActiveRoute(child.path) }"
+                    >
+                      <n-icon :size="18">
+                        <component :is="child.icon" />
+                      </n-icon>
+                      <span>{{ child.label }}</span>
+                    </router-link>
+                  </div>
+                </transition>
+              </template>
             </div>
 
             <!-- 无子菜单的项 -->
+            <n-tooltip v-else-if="sidebarCollapsed" placement="right" :show-arrow="false">
+              <template #trigger>
+                <router-link
+                  :to="item.path"
+                  class="sidebar-nav-item collapsed-item"
+                  :class="{ 'active': isActiveRoute(item.path) }"
+                >
+                  <n-icon :size="20">
+                    <component :is="item.icon" />
+                  </n-icon>
+                  <n-badge
+                    v-if="item.badge && item.badge() > 0"
+                    dot
+                    class="collapsed-badge"
+                  />
+                </router-link>
+              </template>
+              {{ item.label }}
+            </n-tooltip>
             <router-link
               v-else
               :to="item.path"
@@ -73,9 +123,31 @@
           </template>
         </nav>
 
+        <!-- 折叠按钮 -->
+        <div class="border-t border-gray-100">
+          <button
+            @click="toggleSidebarCollapse"
+            class="w-full flex items-center justify-center py-3 text-gray-500 hover:text-primary-600 hover:bg-gray-50 transition-colors"
+          >
+            <n-icon :size="18">
+              <ChevronBackOutline v-if="!sidebarCollapsed" />
+              <ChevronForwardOutline v-else />
+            </n-icon>
+            <span v-if="!sidebarCollapsed" class="ml-2 text-sm">收起侧栏</span>
+          </button>
+        </div>
+
         <!-- 用户信息 -->
-        <div class="p-4 border-t border-gray-100">
-          <router-link to="/profile" class="flex items-center space-x-3 p-2 rounded-lg hover:bg-gray-50 transition-colors">
+        <div class="p-4 border-t border-gray-100" :class="sidebarCollapsed ? 'p-2' : 'p-4'">
+          <n-tooltip v-if="sidebarCollapsed" placement="right" :show-arrow="false">
+            <template #trigger>
+              <router-link to="/profile" class="flex items-center justify-center p-2 rounded-lg hover:bg-gray-50 transition-colors">
+                <AvatarText :username="authStore.user?.username" size="md" />
+              </router-link>
+            </template>
+            {{ authStore.user?.profile?.nickname || authStore.user?.username }}
+          </n-tooltip>
+          <router-link v-else to="/profile" class="flex items-center space-x-3 p-2 rounded-lg hover:bg-gray-50 transition-colors">
             <AvatarText :username="authStore.user?.username" size="md" />
             <div class="flex-1 min-w-0">
               <p class="text-sm font-medium text-gray-800 truncate">
@@ -192,7 +264,7 @@
     </aside>
 
     <!-- 顶部导航栏 -->
-    <header class="top-navbar">
+    <header class="top-navbar" :class="{ 'sidebar-collapsed': sidebarCollapsed }">
       <div class="h-16 flex items-center justify-between px-4 lg:px-6">
         <!-- 左侧 -->
         <div class="flex items-center space-x-4">
@@ -232,9 +304,16 @@
 
         <!-- 右侧 -->
         <div class="flex items-center space-x-3">
+          <!-- 连续天数徽章（家长不显示） -->
+          <div v-if="!isParent && currentStreak > 0" class="flex items-center gap-1 bg-orange-50 px-3 py-1.5 rounded-lg">
+            <n-icon :size="18" color="#f97316"><FlameOutline /></n-icon>
+            <span class="font-bold text-orange-500 text-sm">{{ currentStreak }}</span>
+            <span class="text-orange-400 text-xs hidden md:inline">天</span>
+          </div>
+
           <!-- 积分入口（家长不显示） -->
           <router-link v-if="!isParent" to="/wallet" class="flex items-center gap-2 bg-purple-50 px-3 py-1.5 rounded-lg hover:bg-purple-100 transition-colors">
-            <n-icon :size="18" color="#8b5cf6"><TrophyOutline /></n-icon>
+            <n-icon :size="18" color="#8b5cf6"><StarOutline /></n-icon>
             <span class="font-bold text-purple-600 text-sm hidden md:inline">{{ userPoints || 0 }}</span>
           </router-link>
 
@@ -262,7 +341,7 @@
     </header>
 
     <!-- 主内容区域 -->
-    <main class="main-content">
+    <main class="main-content" :class="{ 'sidebar-collapsed': sidebarCollapsed }">
       <div class="p-4 lg:p-6">
         <router-view v-slot="{ Component }">
           <transition name="page" mode="out-in">
@@ -299,84 +378,60 @@
       <n-icon :size="20"><ChevronUpOutline /></n-icon>
     </button>
 
-    <!-- 聊天面板 -->
-    <ChatPanel />
+    <!-- 反馈按钮 -->
+    <FeedbackButton />
   </div>
 </template>
 
 <script setup>
 import AvatarText from '@/components/AvatarText.vue'
-import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
+import { ref, computed, watch, onMounted, onUnmounted, defineAsyncComponent } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
 import { useChatStore } from '@/stores/chat';
+import { useSocketStore } from '@/stores/socket';
 import { useParentStore } from '@/stores/parent';
 import { useMessage, useDialog } from 'naive-ui';
 import api from '@/api';
-import { connectSocket, disconnectSocket, setChatStore } from '@/socket';
-import ChatPanel from '@/components/ChatPanel.vue';
-import MessageCenter from '@/components/MessageCenter.vue';
-import {
-  HomeOutline,
-  TimeOutline,
-  CodeSlashOutline,
-  CheckboxOutline,
-  CalendarOutline,
-  PersonOutline,
-  SearchOutline,
-  NotificationsOutline,
-  MenuOutline,
-  CloseOutline,
-  LogOutOutline,
-  ChevronUpOutline,
-  BookOutline,
-  CreateOutline,
-  BusinessOutline,
-  SchoolOutline,
-  PeopleOutline,
-  StatsChartOutline,
-  ListOutline,
-  DocumentTextOutline,
-  TrophyOutline,
-  GameControllerOutline,
-  LibraryOutline,
-  TimerOutline,
-  FlagOutline,
-  Pricetags,
-  Ribbon,
-  PersonAdd,
-  Cart,
-  Wallet,
-  BrushOutline,
-  SettingsOutline,
-  StarOutline,
-  ChevronDownOutline,
-  ChevronForwardOutline,
-  EaselOutline,
-  BagHandleOutline,
-  StorefrontOutline,
-  HelpCircleOutline,
-  QrCodeOutline,
-  MusicalNotesOutline,
-  FilmOutline,
-} from '@vicons/ionicons5';
+const FeedbackButton = defineAsyncComponent(() => import('@/components/FeedbackButton.vue'));
+const MessageCenter = defineAsyncComponent(() => import('@/components/MessageCenter.vue'));
+// UI框架图标（始终需要）
+import SearchOutline from '@vicons/ionicons5/es/SearchOutline'
+import MenuOutline from '@vicons/ionicons5/es/MenuOutline'
+import CloseOutline from '@vicons/ionicons5/es/CloseOutline'
+import LogOutOutline from '@vicons/ionicons5/es/LogOutOutline'
+import ChevronUpOutline from '@vicons/ionicons5/es/ChevronUpOutline'
+import ChevronDownOutline from '@vicons/ionicons5/es/ChevronDownOutline'
+import ChevronForwardOutline from '@vicons/ionicons5/es/ChevronForwardOutline'
+import ChevronBackOutline from '@vicons/ionicons5/es/ChevronBackOutline'
+import FlameOutline from '@vicons/ionicons5/es/FlameOutline'
+import StarOutline from '@vicons/ionicons5/es/StarOutline'
 
 const router = useRouter();
 const route = useRoute();
 const authStore = useAuthStore();
 const chatStore = useChatStore();
+const socketStore = useSocketStore();
 const parentStore = useParentStore();
 const message = useMessage();
 const dialog = useDialog();
 
 // 响应式状态
 const sidebarOpen = ref(false);
+const sidebarCollapsed = ref(JSON.parse(localStorage.getItem('sidebarCollapsed') || 'false'));
 const searchQuery = ref('');
 const showBackToTop = ref(false);
 const windowWidth = ref(window.innerWidth);
 const walletBalance = ref(0);
 const userPoints = ref(0);
+const currentStreak = ref(0);
 const expandedKeys = ref(JSON.parse(localStorage.getItem('menuExpandedKeys') || '[]'));
+
+// 切换侧边栏折叠
+const toggleSidebarCollapse = () => {
+  sidebarCollapsed.value = !sidebarCollapsed.value;
+  localStorage.setItem('sidebarCollapsed', JSON.stringify(sidebarCollapsed.value));
+};
 
 // 默认头像
 
@@ -411,223 +466,50 @@ const roleLabel = computed(() => {
   return labels[role] || '用户';
 });
 
-// 学生基础菜单结构（7个一级菜单）
-const baseMenuItems = [
-  {
-    key: 'home',
-    path: '/',
-    label: '首页',
-    icon: HomeOutline
-  },
+// 按角色动态加载菜单配置
+const roleMenuData = ref(null);
+const roleBottomNav = ref(null);
 
-  {
-    key: 'learning',
-    label: '我的学习',
-    icon: LibraryOutline,
-    children: [
-      { key: 'diaries', path: '/diaries', icon: BookOutline, label: '日记' },
-      { key: 'homeworks', path: '/homeworks', icon: DocumentTextOutline, label: '作业' },
-      { key: 'books', path: '/books', icon: BookOutline, label: '读书' },
-      { key: 'music', path: '/music', icon: MusicalNotesOutline, label: '音乐' },
-      { key: 'movies', path: '/movies', icon: FilmOutline, label: '影视' },
-      { key: 'learning-tracker', path: '/learning-tracker', icon: TimerOutline, label: '学习追踪' },
-    ]
-  },
-
-  {
-    key: 'works-center',
-    label: '作品中心',
-    icon: EaselOutline,
-    children: [
-      { key: 'works-square', path: '/works', icon: CodeSlashOutline, label: '作品广场' },
-      { key: 'my-works', path: '/works/my', icon: BrushOutline, label: '我的创作' },
-      { key: 'market', path: '/market', icon: Cart, label: '作品市集' },
-      { key: 'my-purchases', path: '/my-purchases', icon: BagHandleOutline, label: '我的购买' },
-      { key: 'my-shop', path: '/my-shop', icon: StorefrontOutline, label: '我的商店' },
-      { key: 'textbook-entry', path: '/textbook/workspace', icon: BookOutline, label: '教材录入' },
-    ]
-  },
-
-  {
-    key: 'games',
-    path: '/games',
-    label: '游戏大厅',
-    icon: GameControllerOutline
-  },
-
-  {
-    key: 'growth',
-    label: '成长激励',
-    icon: TrophyOutline,
-    children: [
-      { key: 'challenges', path: '/challenges', icon: FlagOutline, label: '每日挑战' },
-      { key: 'achievements', path: '/achievements', icon: Ribbon, label: '成就中心' },
-      { key: 'points', path: '/points', icon: StarOutline, label: '积分中心' },
-      { key: 'my-growth', path: '/my-growth', icon: CreateOutline, label: '心路历程' },
-    ]
-  },
-
-  {
-    key: 'social',
-    label: '社交互动',
-    icon: PeopleOutline,
-    children: [
-      { key: 'friends', path: '/friends', icon: PersonAdd, label: '好友' },
-      { key: 'timeline', path: '/timeline', icon: TimeOutline, label: '动态' },
-      { key: 'tags', path: '/tags', icon: Pricetags, label: '标签广场' },
-      { key: 'questions', path: '/questions', icon: HelpCircleOutline, label: '知识问答' },
-    ]
-  },
-
-  {
-    key: 'tools',
-    label: '工具箱',
-    icon: SettingsOutline,
-    children: [
-      { key: 'tasks', path: '/tasks', icon: CheckboxOutline, label: '任务看板' },
-      { key: 'calendar', path: '/calendar', icon: CalendarOutline, label: '日历' },
-      { key: 'statistics', path: '/statistics', icon: StatsChartOutline, label: '统计' },
-    ]
-  },
-
-  {
-    key: 'wallet',
-    path: '/wallet',
-    label: '我的钱包',
-    icon: Wallet,
-    badge: () => walletBalance.value
-  },
-
-  {
-    key: 'profile',
-    path: '/profile',
-    label: '个人中心',
-    icon: PersonOutline
-  },
-];
-
-// 管理员专属菜单（放在最前面）
-const adminMenuItems = [
-  {
-    key: 'admin',
-    label: '系统管理',
-    icon: SettingsOutline,
-    children: [
-      { key: 'admin-users', path: '/admin/users', icon: PeopleOutline, label: '用户管理' },
-      { key: 'admin-campuses', path: '/admin/campuses', icon: BusinessOutline, label: '校区管理' },
-      { key: 'admin-classes', path: '/admin/classes', icon: SchoolOutline, label: '班级管理' },
-      { key: 'admin-games', path: '/admin/games', icon: GameControllerOutline, label: '游戏管理' },
-      { key: 'admin-paycodes', path: '/admin/paycodes', icon: QrCodeOutline, label: '收款码管理' },
-      { key: 'admin-reward-rules', path: '/admin/reward-rules', icon: TrophyOutline, label: '奖罚管理' },
-      { key: 'admin-textbooks', path: '/textbook/admin', icon: BookOutline, label: '教材审核' },
-      { key: 'admin-logs', path: '/admin/logs', icon: ListOutline, label: '活动日志' },
-    ]
-  },
-];
-
-// 老师专属菜单
-const teacherMenuItems = [
-  {
-    key: 'teacher-classes',
-    path: '/teacher/classes',
-    label: '我的班级',
-    icon: SchoolOutline
-  },
-];
-
-// 家长专属菜单（只显示：我的孩子、作品广场、孩子历程）- 动态标签
-const parentMenuItems = computed(() => [
-  {
-    key: 'parent-children',
-    path: '/parent/children',
-    label: parentChildLabel.value,
-    icon: PeopleOutline
-  },
-  {
-    key: 'works-square',
-    path: '/works',
-    label: '作品广场',
-    icon: EaselOutline
-  },
-  {
-    key: 'parent-submissions',
-    path: '/parent/submissions',
-    label: parentSubmissionLabel.value,
-    icon: CreateOutline
-  },
-  {
-    key: 'parent-profile',
-    path: '/profile',
-    label: '我的',
-    icon: PersonOutline
-  },
-]);
-
-// 侧边栏菜单项 (根据角色动态生成)
-const menuItems = computed(() => {
+async function loadMenuConfig() {
   const role = authStore.user?.role;
-  let items = [];
+  const baseMod = await import('@/config/menuBase.js');
+  let baseItems = [...baseMod.baseMenuItems];
+  // 给钱包菜单加badge
+  const walletItem = baseItems.find(i => i.key === 'wallet');
+  if (walletItem) walletItem.badge = () => walletBalance.value;
 
-  // 根据角色添加专属菜单
   if (role === 'ADMIN') {
-    items = [...adminMenuItems, ...baseMenuItems];
+    const adminMod = await import('@/config/menuAdmin.js');
+    roleMenuData.value = [...adminMod.adminMenuItems, ...baseItems];
+    roleBottomNav.value = adminMod.adminBottomNav;
   } else if (role === 'TEACHER') {
-    items = [...teacherMenuItems, ...baseMenuItems];
+    const teacherMod = await import('@/config/menuTeacher.js');
+    roleMenuData.value = [...teacherMod.teacherMenuItems, ...baseItems];
+    roleBottomNav.value = teacherMod.teacherBottomNav;
   } else if (role === 'PARENT') {
-    // 家长只显示专属菜单，不显示其他功能
-    items = [...parentMenuItems.value];
-  } else {
-    items = [...baseMenuItems];
-  }
-
-  return items;
-});
-
-// 底部导航项 (移动端，根据角色动态生成)
-const bottomNavItems = computed(() => {
-  const role = authStore.user?.role;
-
-  // 管理员移动端导航
-  if (role === 'ADMIN') {
-    return [
-      { path: '/', label: '首页', icon: HomeOutline },
-      { path: '/admin/users', label: '管理', icon: SettingsOutline },
-      { path: '/works', label: '作品', icon: EaselOutline },
-      { path: '/timeline', label: '社交', icon: PeopleOutline },
-      { path: '/profile', label: '我的', icon: PersonOutline },
+    const { PeopleOutline, EaselOutline, PersonOutline, CreateOutline } = baseMod;
+    roleMenuData.value = [
+      { key: 'parent-children', path: '/parent/children', label: parentChildLabel.value, icon: PeopleOutline },
+      { key: 'works-square', path: '/works', label: '作品展廊', icon: EaselOutline },
+      { key: 'parent-submissions', path: '/parent/submissions', label: parentSubmissionLabel.value, icon: CreateOutline },
+      { key: 'parent-profile', path: '/profile', label: '我的', icon: PersonOutline },
     ];
-  }
-
-  // 老师移动端导航
-  if (role === 'TEACHER') {
-    return [
-      { path: '/', label: '首页', icon: HomeOutline },
-      { path: '/teacher/classes', label: '班级', icon: SchoolOutline },
-      { path: '/works', label: '作品', icon: EaselOutline },
-      { path: '/timeline', label: '社交', icon: PeopleOutline },
-      { path: '/profile', label: '我的', icon: PersonOutline },
-    ];
-  }
-
-  // 家长移动端导航（我的孩子 - 作品广场 - 孩子历程 - 我的）
-  if (role === 'PARENT') {
-    return [
+    roleBottomNav.value = [
       { path: '/parent/children', label: parentChildLabel.value, icon: PeopleOutline },
-      { path: '/works', label: '作品广场', icon: EaselOutline },
+      { path: '/works', label: '作品展廊', icon: EaselOutline },
       { path: '/parent/submissions', label: parentSubmissionLabel.value, icon: CreateOutline },
       { path: '/profile', label: '我的', icon: PersonOutline },
     ];
+  } else {
+    roleMenuData.value = baseItems;
+    roleBottomNav.value = baseMod.baseBottomNav;
   }
+}
 
-  // 学生/默认移动端导航
-  return [
-    { path: '/', label: '首页', icon: HomeOutline },
-    { path: '/diaries', label: '学习', icon: LibraryOutline },
-    { path: '/works', label: '作品', icon: EaselOutline },
-    { path: '/friends', label: '社交', icon: PeopleOutline },
-    { path: '/profile', label: '我的', icon: PersonOutline },
-  ];
-});
+watch(() => authStore.user?.role, loadMenuConfig, { immediate: true });
+
+const menuItems = computed(() => roleMenuData.value || []);
+const bottomNavItems = computed(() => roleBottomNav.value || []);
 
 // 判断当前路由是否激活
 const isActiveRoute = (path) => {
@@ -726,6 +608,18 @@ const loadUserPoints = async () => {
   }
 };
 
+// 加载连续天数
+const loadStreak = async () => {
+  try {
+    const response = await api.get('/diary-game/stats');
+    if (response.success) {
+      currentStreak.value = response.data?.currentStreak || 0;
+    }
+  } catch (error) {
+    console.error('加载连续天数失败:', error);
+  }
+};
+
 // 加载家长的孩子列表（用于动态显示导航标签）
 const loadParentChildren = async () => {
   if (!isParent.value) return;
@@ -754,6 +648,7 @@ onMounted(() => {
   window.addEventListener('resize', handleResize);
   loadWalletBalance(); // 加载钱包余额
   loadUserPoints(); // 加载用户积分
+  loadStreak(); // 加载连续天数
   loadParentChildren(); // 加载家长的孩子列表（用于动态导航标签）
   autoExpandActiveMenu(); // 自动展开激活的菜单
 
@@ -764,8 +659,7 @@ onMounted(() => {
 
   // 初始化聊天系统
   if (authStore.token) {
-    setChatStore(chatStore);
-    connectSocket(authStore.token);
+    socketStore.connect();
     chatStore.loadConversations();
     chatStore.loadSystemMessages();
 
@@ -787,7 +681,7 @@ onUnmounted(() => {
   }
 
   // 断开Socket连接
-  disconnectSocket();
+  socketStore.disconnect();
 });
 </script>
 
@@ -869,5 +763,34 @@ onUnmounted(() => {
 .menu-collapse-leave-from {
   opacity: 1;
   max-height: 500px;
+}
+
+/* 折叠模式样式 */
+.collapsed-item {
+  @apply justify-center px-0 py-2.5;
+}
+
+.collapsed-item.active {
+  @apply bg-primary-50;
+}
+
+.collapsed-badge {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+}
+
+/* 折叠模式子菜单 */
+.collapsed-submenu {
+  min-width: 160px;
+}
+
+.collapsed-submenu-item {
+  @apply flex items-center gap-2 px-3 py-2 text-sm text-gray-600;
+  @apply hover:bg-gray-50 hover:text-gray-900 transition-colors;
+}
+
+.collapsed-submenu-item.active {
+  @apply text-primary-600 bg-primary-50 font-medium;
 }
 </style>

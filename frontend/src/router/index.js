@@ -4,6 +4,11 @@
 
 import { createRouter, createWebHistory } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
+import { initAnalytics } from '@/composables/useAnalytics';
+import NProgress from 'nprogress';
+import 'nprogress/nprogress.css';
+
+NProgress.configure({ showSpinner: false });
 
 const routes = [
   // 公开页面（无需登录）
@@ -44,10 +49,38 @@ const routes = [
     meta: { public: true },
   },
   {
+    path: '/diary-analysis/:id/public',
+    name: 'DiaryAnalysisPublic',
+    component: () => import('@/views/DiaryAnalysisPublic.vue'),
+    meta: { public: true },
+  },
+  {
     path: '/gallery',
     name: 'PublicGallery',
     component: () => import('@/views/PublicGallery.vue'),
     meta: { public: true },
+  },
+  // 公开排行榜（无需登录）
+  {
+    path: '/leaderboard',
+    name: 'Leaderboard',
+    component: () => import('@/views/Leaderboard.vue'),
+    meta: { public: true },
+  },
+  // 关于我们页面（无需登录）
+  {
+    path: '/about',
+    name: 'About',
+    component: () => import('@/views/About.vue'),
+    meta: { public: true },
+  },
+  // 公开数据看板（无需登录）
+  {
+    path: '/dashboard',
+    name: 'PublicDashboard',
+    component: () => import('@/views/admin/DataDashboard.vue'),
+    props: { isPublic: true },
+    meta: { public: true, isPublic: true },
   },
   // 电子课本（独立页面）
   {
@@ -75,6 +108,19 @@ const routes = [
     meta: { requiresAuth: true },
   },
   {
+    path: '/textbook/focus/:noteId',
+    name: 'FocusMode',
+    component: () => import('@/views/textbook/FocusMode.vue'),
+    meta: { requiresAuth: true },
+  },
+  // 公开首页（未登录用户访问）
+  {
+    path: '/home',
+    name: 'PublicHome',
+    component: () => import('@/views/PublicHome.vue'),
+    meta: { public: true },
+  },
+  {
     path: '/login',
     name: 'Login',
     component: () => import('@/views/Login.vue'),
@@ -97,14 +143,25 @@ const routes = [
         component: () => import('@/views/Home.vue'),
       },
       {
-        path: 'timeline',
-        name: 'Timeline',
-        component: () => import('@/views/Timeline.vue'),
+        path: 'submit',
+        name: 'Submit',
+        component: () => import('@/views/SubmitTask.vue'),
       },
+      // Timeline 已合并到 Friends（动态流）
       {
         path: 'diaries',
         name: 'Diaries',
         component: () => import('@/views/Diaries.vue'),
+      },
+      {
+        path: 'photos',
+        name: 'Photos',
+        component: () => import('@/views/Photos.vue'),
+      },
+      {
+        path: 'moments',
+        name: 'MomentsSquare',
+        component: () => import('@/views/MomentsSquare.vue'),
       },
       {
         path: 'homeworks',
@@ -127,9 +184,24 @@ const routes = [
         component: () => import('@/views/BookDetail.vue'),
       },
       {
-        path: 'music',
-        name: 'Music',
-        component: () => import('@/views/Music.vue'),
+        path: 'my-notes',
+        name: 'MyNotes',
+        component: () => import('@/views/MyNotes.vue'),
+      },
+      {
+        path: 'writing',
+        name: 'Writing',
+        component: () => import('@/views/Writing.vue'),
+      },
+      {
+        path: 'pinyin',
+        name: 'PinyinTyping',
+        component: () => import('@/views/PinyinTyping.vue'),
+      },
+      {
+        path: 'typing',
+        name: 'Typing',
+        component: () => import('@/views/Typing.vue'),
       },
       {
         path: 'movies',
@@ -140,6 +212,11 @@ const routes = [
         path: 'works',
         name: 'Works',
         component: () => import('@/views/Works.vue'),
+      },
+      {
+        path: 'shopping',
+        name: 'Shopping',
+        component: () => import('@/views/Shopping.vue'),
       },
       {
         path: 'works/my',
@@ -192,6 +269,11 @@ const routes = [
         component: () => import('@/views/LearningStats.vue'),
       },
       {
+        path: 'about-me',
+        name: 'AboutMe',
+        component: () => import('@/views/AboutMe.vue'),
+      },
+      {
         path: 'timer/:projectId',
         name: 'Timer',
         component: () => import('@/views/Timer.vue'),
@@ -201,41 +283,11 @@ const routes = [
         name: 'Points',
         component: () => import('@/views/Points.vue'),
       },
-      {
-        path: 'notifications',
-        name: 'Notifications',
-        component: () => import('@/views/Notifications.vue'),
-      },
+      // Notifications 已合并到 MessageCenter
       {
         path: 'search',
         name: 'Search',
         component: () => import('@/views/Search.vue'),
-      },
-      // 游戏记录路由
-      {
-        path: 'games',
-        name: 'GameHall',
-        component: () => import('@/views/GameHall.vue'),
-      },
-      {
-        path: 'my-games',
-        name: 'MyGames',
-        component: () => import('@/views/MyGames.vue'),
-      },
-      {
-        path: 'games/:id',
-        name: 'GameDetail',
-        component: () => import('@/views/GameDetail.vue'),
-      },
-      {
-        path: 'games/review/:id',
-        name: 'LongReviewDetail',
-        component: () => import('@/views/LongReviewDetail.vue'),
-      },
-      {
-        path: 'games/classic/mario',
-        name: 'MarioGame',
-        component: () => import('@/views/MarioGame.vue'),
       },
       // 每日挑战
       {
@@ -248,6 +300,7 @@ const routes = [
         name: 'ChallengeHistory',
         component: () => import('@/views/ChallengeHistory.vue'),
       },
+      
       // 标签系统
       {
         path: 'tags',
@@ -263,7 +316,7 @@ const routes = [
       {
         path: 'achievements',
         name: 'Achievements',
-        component: () => import('@/views/Achievements.vue'),
+        component: () => import('@/views/AchievementsNew.vue'),
       },
       {
         path: 'achievements/:id',
@@ -276,21 +329,50 @@ const routes = [
         name: 'MyGrowth',
         component: () => import('@/views/MyGrowth.vue'),
       },
-      // 好友系统
+      // 老师系统
+      {
+        path: 'my-teacher',
+        name: 'MyTeacher',
+        component: () => import('@/views/teacher/MyTeacher.vue'),
+      },
+      {
+        path: 'my-students',
+        name: 'MyStudents',
+        component: () => import('@/views/teacher/MyStudents.vue'),
+      },
+      {
+        path: 'delegated-reviews',
+        name: 'DelegatedReviews',
+        component: () => import('@/views/teacher/DelegatedReviews.vue'),
+      },
+      {
+        path: 'teacher-leaderboard',
+        name: 'TeacherLeaderboard',
+        component: () => import('@/views/teacher/TeacherLeaderboard.vue'),
+      },
+      // 好友系统（已整合到学习圈）
       {
         path: 'friends',
-        name: 'Friends',
-        component: () => import('@/views/Friends.vue'),
+        redirect: '/moments',
       },
       {
         path: 'friends/leaderboard',
-        name: 'FriendsLeaderboard',
-        component: () => import('@/views/FriendsLeaderboard.vue'),
+        redirect: '/moments?tab=leaderboard',
       },
       {
         path: 'users/:userId',
         name: 'UserProfile',
         component: () => import('@/views/UserProfile.vue'),
+      },
+      {
+        path: 'settings/sessions',
+        name: 'SessionManager',
+        component: () => import('@/views/settings/SessionManager.vue'),
+      },
+      {
+        path: 'messages',
+        name: 'MessageCenter',
+        component: () => import('@/views/MessageCenter.vue'),
       },
       // 知识问答
       {
@@ -320,6 +402,11 @@ const routes = [
         component: () => import('@/views/Wallet.vue'),
       },
       {
+        path: 'wallet/credit-history',
+        name: 'CreditHistory',
+        component: () => import('@/views/CreditHistory.vue'),
+      },
+      {
         path: 'my-purchases',
         name: 'MyPurchases',
         component: () => import('@/views/MyPurchases.vue'),
@@ -331,9 +418,27 @@ const routes = [
       },
       // 管理员路由
       {
+        path: 'admin',
+        name: 'AdminHome',
+        component: () => import('@/views/admin/AdminHome.vue'),
+        meta: { requiresAdmin: true },
+      },
+      {
         path: 'admin/users',
         name: 'UserManagement',
         component: () => import('@/views/admin/UserManagement.vue'),
+      },
+      {
+        path: 'admin/user-review',
+        name: 'UserReview',
+        component: () => import('@/views/admin/UserReview.vue'),
+        meta: { requiresAdmin: true },
+      },
+      {
+        path: 'admin/invite-codes',
+        name: 'InviteCodeManagement',
+        component: () => import('@/views/admin/InviteCodeManagement.vue'),
+        meta: { requiresAdmin: true },
       },
       {
         path: 'admin/logs',
@@ -351,11 +456,6 @@ const routes = [
         component: () => import('@/views/admin/ClassManagement.vue'),
       },
       {
-        path: 'admin/games',
-        name: 'GameManagement',
-        component: () => import('@/views/admin/GameManagement.vue'),
-      },
-      {
         path: 'admin/paycodes',
         name: 'PayCodeManagement',
         component: () => import('@/views/admin/PayCodeManagement.vue'),
@@ -364,6 +464,78 @@ const routes = [
         path: 'admin/reward-rules',
         name: 'RewardManagement',
         component: () => import('@/views/admin/RewardManagement.vue'),
+      },
+      {
+        path: 'admin/analytics',
+        name: 'AdminAnalytics',
+        component: () => import('@/views/admin/Analytics.vue'),
+        meta: { requiresAdmin: true },
+      },
+      {
+        path: 'admin/dashboard',
+        name: 'DataDashboard',
+        component: () => import('@/views/admin/DataDashboard.vue'),
+        meta: { requiresAdmin: true, title: '数据看板' },
+      },
+      {
+        path: 'admin/feedback',
+        name: 'AdminFeedback',
+        component: () => import('@/views/admin/FeedbackAdmin.vue'),
+        meta: { requiresAdmin: true },
+      },
+      {
+        path: 'admin/payment-plans',
+        name: 'AdminPaymentPlans',
+        component: () => import('@/views/admin/PaymentPlanAdmin.vue'),
+        meta: { requiresAdmin: true },
+      },
+      {
+        path: 'admin/imessage-logs',
+        name: 'ImessageLogs',
+        component: () => import('@/views/admin/ImessageLogs.vue'),
+        meta: { requiresAdmin: true },
+      },
+      {
+        path: 'admin/bots',
+        name: 'BotManagement',
+        component: () => import('@/views/admin/BotManagement.vue'),
+        meta: { requiresAdmin: true },
+      },
+      {
+        path: 'admin/bot-chats',
+        name: 'BotChats',
+        component: () => import('@/views/admin/BotChats.vue'),
+        meta: { requiresAdmin: true },
+      },
+      {
+        path: 'admin/qrcode',
+        name: 'QRCodeGenerator',
+        component: () => import('@/views/admin/QRCodeGenerator.vue'),
+        meta: { requiresAdmin: true },
+      },
+      {
+        path: 'admin/interaction',
+        name: 'InteractionManagement',
+        component: () => import('@/views/admin/InteractionManagement.vue'),
+        meta: { requiresAdmin: true },
+      },
+      {
+        path: 'admin/campus-class',
+        name: 'CampusClassManagement',
+        component: () => import('@/views/admin/CampusClassManagement.vue'),
+        meta: { requiresAdmin: true },
+      },
+      {
+        path: 'admin/credit-rules',
+        name: 'CreditRuleManagement',
+        component: () => import('@/views/admin/CreditRuleManagement.vue'),
+        meta: { requiresAdmin: true },
+      },
+      // 用户付款计划
+      {
+        path: 'payment-plans',
+        name: 'PaymentPlans',
+        component: () => import('@/views/PaymentPlans.vue'),
       },
       // 教师路由
       {
@@ -397,6 +569,11 @@ const routes = [
         name: 'ParentSubmissions',
         component: () => import('@/views/parent/ParentSubmissions.vue'),
       },
+      {
+        path: 'parent/review',
+        name: 'ParentReview',
+        component: () => import('@/views/parent/ParentReview.vue'),
+      },
     ],
   },
 ];
@@ -408,15 +585,22 @@ const router = createRouter({
 
 // 路由守卫
 router.beforeEach((to, from, next) => {
+  NProgress.start();
   const authStore = useAuthStore();
 
   // 公开页面直接放行
   if (to.meta.public) {
-    next();
+    // 已登录用户访问公开首页时，重定向到后台首页
+    if (to.path === '/home' && authStore.isAuthenticated) {
+      next('/');
+    } else {
+      next();
+    }
   } else if (to.meta.requiresAuth && !authStore.isAuthenticated) {
-    next('/login');
+    // 未登录用户访问需要认证的页面时，重定向到公开首页
+    next('/home');
   } else if (to.meta.requiresGuest && authStore.isAuthenticated) {
-    // 家长用户登录后跳转到我的孩子页面
+    // 已登录用户访问登录/注册页时重定向
     if (authStore.user?.role === 'PARENT') {
       next('/parent/children');
     } else {
@@ -425,9 +609,17 @@ router.beforeEach((to, from, next) => {
   } else if (to.path === '/' && authStore.user?.role === 'PARENT') {
     // 家长访问首页时重定向到我的孩子页面
     next('/parent/children');
+  } else if (to.meta.requiresAdmin) {
+    // 管理员页面直接放行（不做访问限制）
+    next();
   } else {
     next();
   }
 });
+
+router.afterEach(() => { NProgress.done(); });
+
+// 初始化埋点系统
+initAnalytics(router);
 
 export default router;

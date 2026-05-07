@@ -112,7 +112,7 @@
 import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useMessage, useDialog } from 'naive-ui';
-import { ArrowBack } from '@vicons/ionicons5';
+import ArrowBack from '@vicons/ionicons5/es/ArrowBack'
 import { textbookAPI } from '@/api/index';
 
 const router = useRouter();

@@ -1,4 +1,3 @@
-// Prisma Schema - 儿童成长记录系统完整数据库设计
 generator client {
   provider      = "prisma-client-js"
   binaryTargets = ["native", "debian-openssl-3.0.x"]
@@ -9,205 +8,1881 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// ========== 枚举定义 ==========
+model Achievement {
+  id                  String                   @id @default(uuid())
+  code                String                   @unique
+  name                String
+  description         String
+  icon                String
+  rarity              AchievementRarity        @default(COMMON)
+  category            AchievementCategory      @default(CREATION)
+  conditionType       AchievementConditionType @default(COUNT)
+  conditionValue      Int
+  rewardPoints        Int                      @default(0)
+  rewardCoins         Int                      @default(0)
+  isHidden            Boolean                  @default(false)
+  sortOrder           Int                      @default(0)
+  createdAt           DateTime                 @default(now())
+  updatedAt           DateTime @updatedAt
+  achievementProgress AchievementProgress[]
+  userAchievements     UserAchievement[]
 
-enum Role {
-  STUDENT // 学生
-  PARENT // 家长
-  TEACHER // 老师
-  ADMIN // 管理员
+  @@index([category])
+  @@index([code])
+  @@index([rarity])
+  @@index([sortOrder])
 }
 
-enum UserStatus {
-  PENDING // 待审核
-  ACTIVE // 已激活
-  DISABLED // 已禁用
+model AchievementProgress {
+  id            String      @id @default(uuid())
+  userId        String
+  achievementId String
+  currentValue  Int         @default(0)
+  targetValue   Int
+  updatedAt     DateTime @updatedAt
+  achievement   Achievement @relation(fields: [achievementId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, achievementId])
+  @@index([achievementId])
+  @@index([userId])
 }
 
-enum GamePlayStatus {
-  WANT_TO_PLAY // 想玩
-  PLAYING // 在玩
-  COMPLETED // 已通关
-  DROPPED // 已放弃
+model ActiveTimer {
+  id              String          @id @default(uuid())
+  userId          String
+  projectId       String
+  startTime       DateTime        @default(now())
+  mode            TimerMode       @default(FREE)
+  pomodoroCount   Int             @default(0)
+  createdAt       DateTime        @default(now())
+  LearningProject LearningProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@index([userId])
 }
 
-enum TaskStatus {
-  PENDING // 待完成
-  IN_PROGRESS // 进行中
-  COMPLETED // 已完成
-  OVERDUE // 已逾期
+model ActivityLog {
+  id          String   @id @default(uuid())
+  userId      String
+  action      String
+  targetType  String?
+  targetId    String?
+  description String?
+  ipAddress   String?
+  createdAt   DateTime @default(now())
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([action])
+  @@index([createdAt])
+  @@index([userId])
 }
 
-enum ReadingStatus {
-  WANT_TO_READ // 想读
-  READING // 在读
-  COMPLETED // 已读完
-  DROPPED // 已放弃
+model AiAnalysisLog {
+  id               String            @id @default(uuid())
+  userId           String
+  textbookId       String
+  sessionId        String
+  apiConfigId      String?
+  promptId         String?
+  inputPages       String
+  inputText        String
+  fullPrompt       String
+  outputText       String?
+  tokensUsed       Int?
+  responseTime     Int?
+  status           String            @default("pending")
+  errorMessage     String?
+  createdAt        DateTime          @default(now())
+  AiApiConfig      AiApiConfig?      @relation(fields: [apiConfigId], references: [id])
+  AiPromptTemplate AiPromptTemplate? @relation(fields: [promptId], references: [id])
+
+  @@index([apiConfigId])
+  @@index([createdAt])
+  @@index([sessionId])
+  @@index([status])
+  @@index([textbookId])
+  @@index([userId])
 }
 
-enum ListeningStatus {
-  WANT_TO_LISTEN // 想听
-  LISTENING // 在听
-  COMPLETED // 已听完
-  DROPPED // 已放弃
+model AiApiConfig {
+  id                  String             @id @default(uuid())
+  name                String
+  baseUrl             String
+  apiKey              String?
+  model               String             @default("default")
+  temperature         Float              @default(0.7)
+  maxTokens           Int                @default(2000)
+  isEnabled           Boolean            @default(true)
+  isDefault           Boolean            @default(false)
+  createdBy           String
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime @updatedAt
+  configType          String             @default("llm")
+  embeddingDimension  Int?
+  enablePsychologyRAG Boolean            @default(false)
+  llmModel            String?
+  embeddingModel      String?
+  AiAnalysisLog       AiAnalysisLog[]
+  AiAutomationTask    AiAutomationTask[]
+
+  @@index([configType])
+  @@index([createdBy])
+  @@index([isEnabled, isDefault])
 }
 
-enum WatchingStatus {
-  WANT_TO_WATCH // 想看
-  WATCHING // 在看
-  COMPLETED // 已看完
-  DROPPED // 已放弃
+model AiAutomationTask {
+  id                String           @id @default(uuid())
+  taskType          String
+  sourceType        String
+  sourceId          String
+  triggerMode       String           @default("auto")
+  status            String           @default("pending")
+  retryCount        Int              @default(0)
+  errorMessage      String?
+  payload           Json?
+  resultSummary     Json?
+  processedAt       DateTime?
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime @updatedAt
+  aiConfigId        String?
+  submissionId      String?
+  calligraphyWorkId String?
+  AiApiConfig       AiApiConfig?     @relation(fields: [aiConfigId], references: [id])
+  CalligraphyWork   CalligraphyWork? @relation(fields: [calligraphyWorkId], references: [id])
+  RuleSubmission    RuleSubmission?  @relation(fields: [submissionId], references: [id])
+
+  @@index([calligraphyWorkId])
+  @@index([sourceType, sourceId])
+  @@index([status, createdAt])
+  @@index([submissionId])
+  @@index([taskType, status])
 }
 
-// ========== 用户系统 ==========
+model AiPrompt {
+  id        String   @id @default(uuid())
+  key       String   @unique
+  name      String
+  content   String
+  updatedAt DateTime @updatedAt
+  updatedBy String?
+}
 
-model User {
-  id              String     @id @default(uuid())
-  email           String     @unique
-  username        String     @unique
-  password        String
-  paymentPassword String?    // 支付密码（加密存储），默认为 123456
-  role            Role       @default(STUDENT)
-  status          UserStatus @default(PENDING)
+model AiPromptTemplate {
+  id            String          @id @default(uuid())
+  name          String
+  subject       String?
+  promptText    String
+  description   String?
+  isDefault     Boolean         @default(false)
+  isEnabled     Boolean         @default(true)
+  createdBy     String
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime @updatedAt
+  AiAnalysisLog AiAnalysisLog[]
+
+  @@index([createdBy])
+  @@index([isEnabled])
+  @@index([subject, isDefault])
+}
+
+model Answer {
+  id         String       @id @default(uuid())
+  questionId String
+  userId     String
+  content    String
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime @updatedAt
+  isBest     Boolean      @default(false)
+  likesCount Int          @default(0)
+  question   Question     @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  user       User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  AnswerLike AnswerLike[]
+
+  @@index([createdAt])
+  @@index([questionId])
+  @@index([userId])
+}
+
+model AnswerLike {
+  id        String   @id @default(uuid())
+  answerId  String
+  userId    String
+  createdAt DateTime @default(now())
+  Answer    Answer   @relation(fields: [answerId], references: [id], onDelete: Cascade)
+
+  @@unique([answerId, userId])
+  @@index([answerId])
+  @@index([userId])
+}
+
+model BehaviorLog {
+  id           String         @id @default(uuid())
+  userId       String
+  behaviorType BehaviorType
+  action       String
+  duration     Int?
+  description  String?
+  sourceId     String?
+  createdAt    DateTime       @default(now())
+  user         User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  CreditImpact CreditImpact[]
+
+  @@index([action])
+  @@index([behaviorType])
+  @@index([userId])
+}
+
+model Book {
+  id            String          @id @default(uuid())
+  title         String
+  author        String?
+  coverUrl      String?
+  isbn          String?         @unique
+  description   String?
+  publisher     String?
+  publishDate   DateTime?
+  totalPages    Int?
+  category      String?
+  sourceType    String?
+  sourceUrl     String?
+  createdBy     String
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime @updatedAt
+  User          User            @relation(fields: [createdBy], references: [id], onDelete: Cascade)
+  ReadingLog    ReadingLog[]
+  UserBookshelf UserBookshelf[]
+
+  @@index([author])
+  @@index([category])
+  @@index([createdBy])
+  @@index([title])
+}
+
+model Bot {
+  id              String            @id @default(uuid())
+  name            String
   avatar          String?
-  createdAt       DateTime   @default(now())
-  updatedAt       DateTime   @updatedAt
+  description     String?
+  type            String
+  modules         Json              @default("[]")
+  keywords        Json              @default("[]")
+  welcome         String?
+  isActive        Boolean           @default(true)
+  sortOrder       Int               @default(0)
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime @updatedAt
+  BotConversation BotConversation[]
+  BotMessage      BotMessage[]
 
-  // 关联
-  schoolId String?
-  school   School? @relation(fields: [schoolId], references: [id])
-  classId  String?
-  class    Class?  @relation(fields: [classId], references: [id])
+  @@index([isActive])
+  @@index([type])
+}
 
-  // 个人信息
-  profile Profile?
+model BotConversation {
+  id            String       @id @default(uuid())
+  userId        String
+  botId         String
+  lastMessageAt DateTime     @default(now())
+  unreadCount   Int          @default(0)
+  createdAt     DateTime     @default(now())
+  Bot           Bot          @relation(fields: [botId], references: [id], onDelete: Cascade)
+  user          User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages    BotMessage[]
 
-  // 教师信息（如果是老师）
-  teacher Teacher?
+  @@unique([userId, botId])
+  @@index([lastMessageAt])
+  @@index([userId])
+}
 
-  // 学生信息（如果是学生）
-  student Student?
+model BotMessage {
+  id              String          @id @default(uuid())
+  conversationId  String
+  botId           String
+  userId          String
+  senderType      String
+  msgType         String          @default("text")
+  content         String?
+  cardData        Json?
+  createdAt       DateTime        @default(now())
+  Bot             Bot             @relation(fields: [botId], references: [id], onDelete: Cascade)
+  conversation BotConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  // 家长关系
-  parentRelations StudentParent[] @relation("ParentUser")
-  childRelations  StudentParent[] @relation("ChildUser")
+  @@index([conversationId, createdAt])
+  @@index([userId])
+}
 
-  // 内容创作
-  diaries     Diary[]
-  homework    Homework[]
-  notes       Note[]
-  readingLogs ReadingLog[] @relation("ReadingLog")
-  htmlWorks    HTMLWork[]
-  poetryWorks  PoetryWork[]
-  dynamics     Dynamic[]
+model CalendarEvent {
+  id          String    @id @default(uuid())
+  userId      String
+  title       String
+  description String?
+  startDate   DateTime
+  endDate     DateTime?
+  color       String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime @updatedAt
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  // 互动
-  likes    Like[]
-  comments Comment[]
+  @@index([startDate])
+  @@index([userId])
+}
 
-  // 任务
-  createdTasks    Task[]
-  taskSubmissions TaskSubmission[]
-  calendarEvents  CalendarEvent[]
+model CalligraphyLike {
+  id              String          @id @default(uuid())
+  userId          String
+  workId          String
+  createdAt       DateTime        @default(now())
+  CalligraphyWork CalligraphyWork @relation(fields: [workId], references: [id], onDelete: Cascade)
 
-  // 游戏系统
-  userGameRecords UserGameRecord[]
-  gamesCreated    Game[]               @relation("GameCreator")
-  shortReviews    GameShortReview[]
-  longReviews     GameLongReview[]
-  reviewComments  GameReviewComment[]
-  reviewLikes     GameLongReviewLike[]
+  @@unique([userId, workId])
+  @@index([workId])
+}
 
-  // 书籍系统
-  bookshelves     UserBookshelf[]
-  booksCreated    Book[]           @relation("BookCreator")
-  readingLogLikes ReadingLogLike[]
+model CalligraphyWork {
+  id               String             @id @default(uuid())
+  authorId         String
+  title            String
+  content          Json
+  preview          String
+  fontId           String?
+  charCount        Int
+  createdAt        DateTime           @default(now())
+  status           CalligraphyStatus  @default(PENDING)
+  reviewedAt       DateTime?
+  reviewedBy       String?
+  reviewNote       String?
+  evaluationScore  Int?
+  evaluationData   Json?
+  evaluatedAt      DateTime?
+  evaluatedBy      String?
+  previewUrl       String?
+  previewThumbUrl  String?
+  AiAutomationTask AiAutomationTask[]
+  CalligraphyLike  CalligraphyLike[]
+  author             User               @relation(fields: [authorId], references: [id], onDelete: Cascade)
 
-  // 音乐系统
-  musicLibrary    UserMusicLibrary[]
-  musicsCreated   Music[]            @relation("MusicCreator")
-  musicLogs       MusicLog[]         @relation("MusicLog")
-  musicLogLikes   MusicLogLike[]
-
-  // 影视系统
-  movieLibrary    UserMovieLibrary[]
-  moviesCreated   Movie[]            @relation("MovieCreator")
-  movieLogs       MovieLog[]         @relation("MovieLog")
-  movieLogLikes   MovieLogLike[]
-
-  // 积分系统
-  totalPoints     Int         @default(0)
-  pointLogs       PointLog[]
-  userPoints      UserPoints?
-  lastLoginDate   DateTime?
-  loginStreakDays Int         @default(0) // 连续登录天数
-
-  // 学习追踪系统
-  learningProjects     LearningProject[]
-  learningSessions     LearningSession[]
-  learningSessionLikes LearningSessionLike[]
-  activeTimers         ActiveTimer[]
-
-  // 活动日志
-  activityLogs ActivityLog[]
-
-  // 好友关注系统
-  followersCount Int          @default(0) // 粉丝数
-  followingCount Int          @default(0) // 关注数
-  friendsCount   Int          @default(0) // 好友数
-  followers      UserFollow[] @relation("UserFollowers") // 我的粉丝
-  following      UserFollow[] @relation("UserFollowing") // 我关注的人
-  friendships1   Friendship[] @relation("User1Friendships") // 好友关系1
-  friendships2   Friendship[] @relation("User2Friendships") // 好友关系2
-
-  // 实时聊天系统
-  sentMessages     Message[] @relation("MessageFrom") // 发送的消息
-  receivedMessages Message[] @relation("MessageTo") // 接收的消息
-
-  // 学习货币系统
-  transactions     Transaction[] // 交易记录
-  transactionsFrom Transaction[]     @relation("TransactionFrom") // 发起的交易
-  transactionsTo   Transaction[]     @relation("TransactionTo") // 收到的交易
-  paidContents     PaidContent[] // 发布的付费内容
-  contentPurchases ContentPurchase[] // 购买的内容
-  questions        Question[] // 提出的问题
-  answers          Answer[] // 回答的问题
-
-  // 奖罚管理系统
-  ruleTemplatesCreated RuleTemplate[] // 创建的奖罚模板
-  ruleSubmissions      RuleSubmission[] // 提交的奖罚记录
-  reviewedSubmissions  RuleSubmission[] @relation("ReviewedSubmissions") // 审核的提交记录
-  templateFavorites    TemplateFavorite[] // 收藏的规则模板
-
-  // 每日积分限制
-  dailyPointsLimits    DailyPointsLimit[] // 每日积分限制记录
-
-  // 钱包
-  wallet               Wallet?
-
-  // 支付订单
-  payOrders            PayOrder[]
-
-  @@index([email])
-  @@index([username])
-  @@index([schoolId])
-  @@index([classId])
+  @@index([authorId])
+  @@index([createdAt])
   @@index([status])
 }
 
-model Profile {
-  id            String   @id @default(uuid())
-  userId        String   @unique
-  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  nickname      String?
-  bio           String?
-  grade         String?
-  interests     String[]
-  joinedDays    Int      @default(0)
-  profilePublic Boolean  @default(true)
-  showStats     Boolean  @default(true)
-  createdAt     DateTime @default(now())
+model Category {
+  id           String         @id @default(uuid())
+  name         String
+  slug         String         @unique
+  description  String?
+  icon         String?
+  points       Int            @default(5)
+  sortOrder    Int            @default(0)
+  isActive     Boolean        @default(true)
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime @updatedAt
+  works CreativeWork[]
+
+  @@index([isActive])
+  @@index([slug])
+  @@index([sortOrder])
+}
+
+model ChallengeTemplate {
+  id                                                                 String                 @id @default(uuid())
+  title                                                              String
+  description                                                        String
+  type                                                               ChallengeType
+  difficulty                                                         ChallengeDifficulty
+  conditionType                                                      ChallengeConditionType
+  conditionValue                                                     Int
+  rewardPoints                                                       Int
+  rewardCoins                                                        Int
+  isActive                                                           Boolean                @default(true)
+  weight                                                             Int                    @default(1)
+  createdAt                                                          DateTime               @default(now())
+  updatedAt                                                          DateTime @updatedAt
+  DailyChallenge_Easy   DailyChallenge[] @relation("DailyChallenge_easyChallenge")
+  DailyChallenge_Hard   DailyChallenge[] @relation("DailyChallenge_hardChallenge")
+  DailyChallenge_Medium DailyChallenge[] @relation("DailyChallenge_mediumChallenge")
+
+  @@index([difficulty])
+  @@index([isActive])
+  @@index([type])
+}
+
+model Class {
+  id           String         @id @default(uuid())
+  name         String
+  grade        String?
+  schoolId     String
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime @updatedAt
+  school       School         @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  Student      Student[]
+  TeacherClass TeacherClass[]
+  User         User[]
+
+  @@unique([schoolId, grade, name])
+  @@index([schoolId])
+}
+
+model Comment {
+  id            String    @id @default(uuid())
+  authorId      String
+  content       String
+  dynamicId     String?
+  workId        String?
+  parentId      String?
+  createdAt     DateTime  @default(now())
   updatedAt     DateTime @updatedAt
+  diaryId       String?
+  user          User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  Diary         Diary?    @relation(fields: [diaryId], references: [id], onDelete: Cascade)
+  Dynamic       Dynamic?  @relation(fields: [dynamicId], references: [id], onDelete: Cascade)
+  Comment       Comment?  @relation("CommentToComment", fields: [parentId], references: [id], onDelete: Cascade)
+  other_Comment Comment[] @relation("CommentToComment")
+  HTMLWork      HTMLWork? @relation(fields: [workId], references: [id], onDelete: Cascade)
+
+  @@index([authorId])
+  @@index([diaryId])
+  @@index([dynamicId])
+  @@index([workId])
+}
+
+model ContentPurchase {
+  id            String      @id @default(uuid())
+  userId        String
+  paidContentId String
+  price         Int
+  createdAt     DateTime    @default(now())
+  content   PaidContent @relation(fields: [paidContentId], references: [id], onDelete: Cascade)
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, paidContentId])
+  @@index([createdAt])
+  @@index([userId])
+}
+
+model ContentTag {
+  id          String      @id @default(uuid())
+  tagId       String
+  contentType ContentType
+  contentId   String
+  userId      String
+  createdAt   DateTime    @default(now())
+  GlobalTag   GlobalTag   @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@unique([tagId, contentType, contentId])
+  @@index([contentType, contentId])
+  @@index([createdAt])
+  @@index([tagId])
+  @@index([userId])
+}
+
+model Conversation {
+  id              String     @id @default(uuid())
+  friendshipId    String     @unique
+  lastMessageId   String?
+  lastMessageTime DateTime?
+  user1Unread     Int        @default(0)
+  user2Unread     Int        @default(0)
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime @updatedAt
+  Friendship      Friendship @relation(fields: [friendshipId], references: [id], onDelete: Cascade)
+  Message         Message[]
+
+  @@index([lastMessageTime])
+}
+
+model CreativeWork {
+  id               String             @id @default(uuid())
+  authorId         String
+  categoryId       String
+  title            String
+  type             String?
+  htmlCode         String
+  plainText        String?
+  status           CreativeWorkStatus @default(PENDING)
+  reviewReason     String?
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime @updatedAt
+  author             User               @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  Category         Category           @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  CreativeWorkLike CreativeWorkLike[]
+
+  @@index([authorId])
+  @@index([categoryId])
+  @@index([createdAt])
+  @@index([status])
+}
+
+model CreativeWorkLike {
+  id           String       @id @default(uuid())
+  userId       String
+  workId       String
+  isLike       Boolean      @default(true)
+  createdAt    DateTime     @default(now())
+  CreativeWork CreativeWork @relation(fields: [workId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, workId])
+  @@index([userId])
+  @@index([workId])
+}
+
+model CreditImpact {
+  id          String          @id @default(uuid())
+  userId      String
+  behaviorId  String
+  dimension   CreditDimension
+  rawPoints   Float
+  finalPoints Float
+  createdAt   DateTime        @default(now())
+  BehaviorLog BehaviorLog     @relation(fields: [behaviorId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model CreditRule {
+  id           String          @id @default(uuid())
+  behaviorType BehaviorType
+  action       String
+  dimension    CreditDimension
+  points       Float
+  conditions   Json?
+  isEnabled    Boolean         @default(true)
+  description  String?
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime @updatedAt
+  weight       Float           @default(1.0)
+}
+
+model DailyActiveStats {
+  id          String   @id @default(uuid())
+  date        DateTime @unique @db.Date
+  dau         Int
+  newUsers    Int      @default(0)
+  totalEvents Int      @default(0)
+  pageViews   Int      @default(0)
+  topPages    Json?
+  topActions  Json?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model DailyChallenge {
+  id                                                                    String                @id @default(uuid())
+  challengeDate                                                         String                @unique
+  easyChallengeId                                                       String
+  mediumChallengeId                                                     String
+  hardChallengeId                                                       String
+  createdAt                                                             DateTime              @default(now())
+  easyChallenge                                                       ChallengeTemplate     @relation("DailyChallenge_easyChallenge", fields: [easyChallengeId], references: [id])
+  hardChallenge                                                       ChallengeTemplate     @relation("DailyChallenge_hardChallenge", fields: [hardChallengeId], references: [id])
+  mediumChallenge                                                     ChallengeTemplate     @relation("DailyChallenge_mediumChallenge", fields: [mediumChallengeId], references: [id])
+  UserChallengeRecord                                                   UserChallengeRecord[]
+
+  @@index([challengeDate])
+}
+
+model DailyCompletionReward {
+  id           String   @id @default(uuid())
+  userId       String
+  date         String
+  streakDays   Int
+  basePoints   Int
+  streakPoints Int
+  totalPoints  Int
+  createdAt    DateTime @default(now())
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, date])
+  @@index([date])
+  @@index([userId])
+}
+
+model DailyPointsLimit {
+  id           String   @id @default(uuid())
+  userId       String
+  date         DateTime @db.Date
+  earnedPoints Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, date])
+  @@index([date])
+  @@index([userId])
+}
+
+model DailyReviewTask {
+  id             String   @id @default(uuid())
+  userId         String
+  date           String
+  taskType       String
+  status         String   @default("pending")
+  targetUserIds  String[]
+  completedCount Int      @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, date, taskType])
+  @@index([date])
+  @@index([userId])
+}
+
+model Diary {
+  id                      String                    @id @default(uuid())
+  authorId                String
+  title                   String
+  content                 String
+  mood                    String?
+  weather                 String?
+  dynamicId               String?                   @unique
+  createdAt               DateTime                  @default(now())
+  updatedAt               DateTime @updatedAt
+  isPublic                Boolean                   @default(true)
+  checksum                String?
+  deletedAt               DateTime?
+  deviceId                String?
+  duplicateStats          Json?
+  isBackfill              Boolean                   @default(false)
+  isMadeUp                Boolean                   @default(false)
+  localId                 String?                   @unique
+  logicalDate             DateTime?
+  submittedAt             DateTime?
+  syncedAt                DateTime?
+  version                 Int                       @default(1)
+  wordCount               Int?
+  wordLevel               Int                       @default(0)
+  wordStats               Json?
+  status                  String?                   @default("PENDING") @db.VarChar(20)
+  Comment                 Comment[]
+  author                    User                      @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  Dynamic                 Dynamic?                  @relation(fields: [dynamicId], references: [id])
+  DiaryComment            DiaryComment[]
+  tags                    content_tags_deprecated[]
+
+  @@index([authorId])
+  @@index([authorId, logicalDate])
+  @@index([authorId, syncedAt])
+  @@index([createdAt])
+  @@index([isPublic])
+  @@index([version])
+}
+
+model DiaryAchievement {
+  id                   String                 @id @default(uuid())
+  code                 String                 @unique
+  name                 String
+  description          String
+  emoji                String
+  category             String
+  conditionType        String
+  conditionValue       String
+  rewardPoints         Int                    @default(0)
+  sortOrder            Int                    @default(0)
+  isActive             Boolean                @default(true)
+  createdAt            DateTime               @default(now())
+  UserDiaryAchievement UserDiaryAchievement[]
+
+  @@index([category])
+  @@index([code])
+  @@index([isActive])
+}
+
+model DiaryAnalysis {
+  id                 String   @id @default(uuid())
+  userId             String
+  isBatch            Boolean  @default(false)
+  period             String?
+  diaryId            String?
+  diaryIds           String[]
+  diaryCount         Int      @default(1)
+  diarySnapshot      Json
+  analysis           String
+  modelName          String?
+  tokensUsed         Int?
+  responseTime       Int?
+  totalScore         Int?
+  grade              String?
+  scoreDetails       Json?
+  highlights         String[]
+  improvements       String[]
+  nextGoal           String?
+  authorProfile      Json?
+  charactersProfile  Json?
+  socialStyle        String?
+  funSummary         String?
+  psychologySummary  Json?
+  previousAnalysisId String?
+  createdAt          DateTime @default(now())
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([createdAt])
+  @@index([diaryId])
+  @@index([isBatch])
+  @@index([userId])
+}
+
+model DiaryComment {
+  id        String   @id @default(uuid())
+  diaryId   String
+  nickname  String   @default("匿名用户")
+  content   String
+  createdAt DateTime @default(now())
+  Diary     Diary    @relation(fields: [diaryId], references: [id], onDelete: Cascade)
+
+  @@index([createdAt])
+  @@index([diaryId])
+}
+
+model DiaryDefaultPrompt {
+  id           String   @id @default(uuid())
+  singlePrompt String
+  batchPrompt  String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model DiaryEmbedding {
+  id          String                 @id @default(uuid())
+  userId      String
+  diaryId     String
+  weekId      String
+  chunkIndex  Int
+  content     String
+  contentHash String
+  embedding   Unsupported("vector")?
+  createdAt   DateTime               @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([diaryId, chunkIndex])
+  @@index([diaryId])
+  @@index([userId])
+  @@index([userId, weekId])
+  @@index([weekId])
+}
+
+model DiaryMakeupCard {
+  id             String    @id @default(uuid())
+  userId         String
+  purchasedAt    DateTime  @default(now())
+  purchaseWeek   String
+  pointsCost     Int       @default(250)
+  usedAt         DateTime?
+  usedForDate    DateTime?
+  usedForDiaryId String?
+  status         String    @default("unused")
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([purchaseWeek])
+  @@index([status])
+  @@index([userId])
+}
+
+model DiaryStats {
+  id              String    @id @default(uuid())
+  userId          String    @unique
+  currentStreak   Int       @default(0)
+  maxStreak       Int       @default(0)
+  lastDiaryDate   DateTime?
+  rank            String    @default("bronze")
+  rankUpdatedAt   DateTime?
+  totalDiaries    Int       @default(0)
+  totalWords      Int       @default(0)
+  totalAnalyses   Int       @default(0)
+  avgScore        Float?
+  weekStartDate   DateTime?
+  weeklyDiaries   Int       @default(0)
+  weeklyWords     Int       @default(0)
+  weeklyBestScore Int?
+  weeklyBestGrade String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime @updatedAt
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([currentStreak])
+  @@index([rank])
+  @@index([userId])
+}
+
+model DiaryTemplate {
+  id          String   @id @default(uuid())
+  authorId    String
+  name        String
+  icon        String   @default("📝")
+  description String?
+  title       String   @default("")
+  content     String
+  isSystem    Boolean  @default(false)
+  useCount    Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  author        User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@index([authorId])
+  @@index([createdAt])
+  @@index([useCount])
+}
+
+model Dynamic {
+  id          String      @id @default(uuid())
+  authorId    String
+  content     String
+  images      String[]
+  isPublic    Boolean     @default(true)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime @updatedAt
+  dynamicType String?
+  location    String?
+  mood        String?
+  moodScore   Int?
+  photoType   String?
+  Comment     Comment[]
+  Diary       Diary?
+  user        User        @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  HTMLWork    HTMLWork?
+  Homework    Homework?
+  Like        Like[]
+  MovieLog    MovieLog?
+  MusicLog    MusicLog?
+  ReadingLog  ReadingLog?
+
+  @@index([authorId])
+  @@index([createdAt])
+  @@index([dynamicType])
+  @@index([isPublic])
+}
+
+model EmbeddingTask {
+  id          String    @id @default(uuid())
+  diaryId     String
+  userId      String
+  status      String    @default("pending")
+  retryCount  Int       @default(0)
+  errorMsg    String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime @updatedAt
+  processedAt DateTime?
+
+  @@index([diaryId])
+  @@index([status, createdAt])
+  @@index([status])
+}
+
+model Feedback {
+  id         String    @id @default(uuid())
+  userId     String
+  type       String
+  content    String
+  page       String?
+  status     String    @default("pending")
+  priority   Int       @default(0)
+  reply      String?
+  adminNote  String?
+  repliedBy  String?
+  repliedAt  DateTime?
+  resolvedAt DateTime?
+  createdAt  DateTime  @default(now())
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([createdAt])
+  @@index([priority])
+  @@index([status])
+  @@index([userId])
+}
+
+model FriendRequest {
+  id                                  String              @id @default(uuid())
+  fromUserId                          String
+  toUserId                            String
+  status                              FriendRequestStatus @default(PENDING)
+  message                             String?
+  createdAt                           DateTime            @default(now())
+  updatedAt                           DateTime @updatedAt
+  expiredAt                           DateTime
+  fromUser User                @relation("FriendRequest_fromUserIdToUser", fields: [fromUserId], references: [id], onDelete: Cascade)
+  toUser   User                @relation("FriendRequest_toUserIdToUser", fields: [toUserId], references: [id], onDelete: Cascade)
+  Friendship                          Friendship?
+
+  @@unique([fromUserId, toUserId])
+  @@index([expiredAt])
+  @@index([fromUserId])
+  @@index([toUserId, status])
+}
+
+model Friendship {
+  id                            String         @id @default(uuid())
+  userId1                       String
+  userId2                       String
+  createdAt                     DateTime       @default(now())
+  sourceRequestId               String?        @unique
+  Conversation                  Conversation?
+  FriendRequest                 FriendRequest? @relation(fields: [sourceRequestId], references: [id])
+  user1 User           @relation("Friendship_userId1ToUser", fields: [userId1], references: [id], onDelete: Cascade)
+  user2 User           @relation("Friendship_userId2ToUser", fields: [userId2], references: [id], onDelete: Cascade)
+
+  @@unique([userId1, userId2])
+  @@index([createdAt])
+  @@index([userId1])
+  @@index([userId2])
+}
+
+model Game {
+  id              String            @id @default(uuid())
+  name            String
+  coverUrl        String?
+  gameType        String
+  platform        String
+  description     String?
+  avgScore        Float?            @default(0)
+  recordCount     Int               @default(0)
+  isBlocked       Boolean           @default(false)
+  createdBy       String?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime @updatedAt
+  User            User?             @relation(fields: [createdBy], references: [id])
+  GameLongReview  GameLongReview[]
+  GameShortReview GameShortReview[]
+  UserGameRecord  UserGameRecord[]
+
+  @@index([avgScore])
+  @@index([gameType])
+  @@index([isBlocked])
+  @@index([name])
+  @@index([recordCount])
+}
+
+model GameLongReview {
+  id                 String               @id @default(uuid())
+  userId             String
+  gameId             String
+  title              String
+  content            String
+  score              Int
+  playTime           Int
+  isPublic           Boolean              @default(true)
+  likesCount         Int                  @default(0)
+  commentsCount      Int                  @default(0)
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime @updatedAt
+  game               Game                 @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  user               User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  GameLongReviewLike GameLongReviewLike[]
+  GameReviewComment  GameReviewComment[]
+
+  @@index([createdAt])
+  @@index([gameId])
+  @@index([isPublic])
+  @@index([likesCount])
+  @@index([score])
+  @@index([userId])
+}
+
+model GameLongReviewLike {
+  id             String         @id @default(uuid())
+  reviewId       String
+  userId         String
+  createdAt      DateTime       @default(now())
+  review GameLongReview @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([reviewId, userId])
+  @@index([reviewId])
+  @@index([userId])
+}
+
+model GameReviewComment {
+  id             String         @id @default(uuid())
+  reviewId       String
+  userId         String
+  content        String
+  createdAt      DateTime       @default(now())
+  GameLongReview GameLongReview @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([createdAt])
+  @@index([reviewId])
+  @@index([userId])
+}
+
+model GameShortReview {
+  id        String   @id @default(uuid())
+  userId    String
+  gameId    String
+  content   String   @db.VarChar(100)
+  score     Int
+  playTime  Int
+  createdAt DateTime @default(now())
+  game      Game     @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([createdAt])
+  @@index([gameId])
+  @@index([score])
+  @@index([userId])
+}
+
+model GlobalTag {
+  id              String            @id @default(uuid())
+  name            String            @unique
+  category        TagCategory       @default(OTHER)
+  color           String            @default("#6B7280")
+  useCount        Int               @default(0)
+  createdBy       String?
+  isOfficial      Boolean           @default(false)
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime @updatedAt
+  ContentTag      ContentTag[]
+  UserFollowedTag UserFollowedTag[]
+
+  @@index([category])
+  @@index([isOfficial])
+  @@index([name])
+  @@index([useCount])
+}
+
+model HTMLWork {
+  id             String     @id @default(uuid())
+  authorId       String
+  title          String
+  description    String?
+  htmlCode       String
+  cssCode        String
+  jsCode         String
+  thumbnail      String?
+  forkedFromId   String?
+  dynamicId      String?    @unique
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime @updatedAt
+  category       String?
+  isPublic       Boolean    @default(true)
+  Comment        Comment[]
+  author           User       @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  Dynamic        Dynamic?   @relation(fields: [dynamicId], references: [id])
+  HTMLWork       HTMLWork?  @relation("HTMLWorkToHTMLWork", fields: [forkedFromId], references: [id])
+  other_HTMLWork HTMLWork[] @relation("HTMLWorkToHTMLWork")
+  Like           Like[]
+
+  @@index([authorId])
+  @@index([category])
+  @@index([createdAt])
+  @@index([isPublic])
+}
+
+model Homework {
+  id                      String                    @id @default(uuid())
+  authorId                String
+  title                   String
+  subject                 String
+  content                 String
+  images                  String[]
+  difficulty              Int?                      @default(3)
+  timeSpent               Int?
+  dynamicId               String?                   @unique
+  createdAt               DateTime                  @default(now())
+  updatedAt               DateTime @updatedAt
+  isPublic                Boolean                   @default(true)
+  author                    User                      @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  Dynamic                 Dynamic?                  @relation(fields: [dynamicId], references: [id])
+  content_tags_deprecated content_tags_deprecated[]
+
+  @@index([authorId])
+  @@index([createdAt])
+  @@index([isPublic])
+}
+
+model ImessageChatEvaluation {
+  id           Int      @id @default(autoincrement())
+  chatId       String
+  sender       String
+  senderName   String?
+  analysis     String
+  messageCount Int
+  modelName    String?
+  tokensUsed   Int?
+  responseTime Int?
+  createdBy    String
+  createdAt    DateTime @default(now())
+
+  @@index([chatId])
+  @@index([createdAt])
+  @@index([sender])
+}
+
+model ImessageChatLog {
+  id         Int      @id @default(autoincrement())
+  chatId     String
+  sender     String
+  senderName String?
+  role       String
+  content    String
+  isGroup    Boolean  @default(false)
+  modelName  String?
+  source     String   @default("imessage")
+  createdAt  DateTime @default(now())
+
+  @@index([chatId])
+  @@index([createdAt])
+  @@index([isGroup])
+  @@index([sender])
+  @@index([source])
+}
+
+model ImessageSenderMapping {
+  id        Int      @id @default(autoincrement())
+  sender    String   @unique
+  userId    String
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+}
+
+model InviteCode {
+  id                                 Int      @id @default(autoincrement())
+  code                               String   @unique
+  createdBy                          String
+  maxUses                            Int      @default(1)
+  usedCount                          Int      @default(0)
+  expiresAt                          DateTime
+  role                               Role?
+  classId                            String?
+  createdAt                          DateTime @default(now())
+  inviteType                         String   @default("ADMIN")
+  creator      User     @relation("InviteCode_createdByToUser", fields: [createdBy], references: [id])
+  users User[]   @relation("User_inviteCodeIdToInviteCode")
+
+  @@index([code])
+  @@index([createdBy])
+  @@index([expiresAt])
+  @@index([inviteType])
+}
+
+model LearningProject {
+  id              String            @id @default(uuid())
+  userId          String
+  name            String
+  category        String
+  color           String            @default("#3B82F6")
+  totalDuration   Int               @default(0)
+  sessionCount    Int               @default(0)
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime @updatedAt
+  ActiveTimer     ActiveTimer[]
+  user            User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  LearningSession LearningSession[]
+
+  @@index([createdAt])
+  @@index([userId])
+}
+
+model LearningSession {
+  id                  String                @id @default(uuid())
+  userId              String
+  projectId           String
+  startTime           DateTime
+  endTime             DateTime
+  duration            Int
+  mode                TimerMode             @default(FREE)
+  content             String
+  progress            String?
+  tags                Json                  @default("[]")
+  isPublic            Boolean               @default(true)
+  likesCount          Int                   @default(0)
+  createdAt           DateTime              @default(now())
+  LearningProject     LearningProject       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user                User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  LearningSessionLike LearningSessionLike[]
+
+  @@index([createdAt])
+  @@index([projectId])
+  @@index([userId])
+}
+
+model LearningSessionLike {
+  id              String          @id @default(uuid())
+  sessionId       String
+  userId          String
+  createdAt       DateTime        @default(now())
+  session LearningSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([sessionId, userId])
+  @@index([sessionId])
+  @@index([userId])
+}
+
+model Like {
+  id        String    @id @default(uuid())
+  userId    String
+  dynamicId String?
+  workId    String?
+  createdAt DateTime  @default(now())
+  Dynamic   Dynamic?  @relation(fields: [dynamicId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  HTMLWork  HTMLWork? @relation(fields: [workId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, dynamicId])
+  @@unique([userId, workId])
+  @@index([dynamicId])
+  @@index([userId])
+  @@index([workId])
+}
+
+model LoginActivity {
+  id         String   @id @default(uuid())
+  userId     String
+  loginType  String   @default("password")
+  ipAddress  String?
+  userAgent  String?
+  deviceType String?
+  deviceName String?
+  browser    String?
+  os         String?
+  country    String?
+  city       String?
+  isSuccess  Boolean  @default(true)
+  failReason String?
+  createdAt  DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([createdAt])
+  @@index([userId, createdAt])
+  @@index([userId])
+}
+
+model Message {
+  id                            String        @id @default(uuid())
+  fromUserId                    String?
+  toUserId                      String
+  messageType                   MessageType   @default(CHAT)
+  content                       String
+  metadata                      Json?
+  isRead                        Boolean       @default(false)
+  createdAt                     DateTime      @default(now())
+  deletedAt                     DateTime?
+  conversationId                String?
+  Conversation                  Conversation? @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  fromUser User?         @relation("Message_fromUserIdToUser", fields: [fromUserId], references: [id], onDelete: Cascade)
+  toUser   User          @relation("Message_toUserIdToUser", fields: [toUserId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId, createdAt])
+  @@index([fromUserId, toUserId, createdAt])
+  @@index([messageType])
+  @@index([toUserId, createdAt])
+  @@index([toUserId, isRead])
+}
+
+model Movie {
+  id               String             @id @default(uuid())
+  title            String
+  director         String?
+  actors           String?
+  posterUrl        String?
+  genre            String?
+  releaseDate      DateTime?
+  duration         Int?
+  imdbUrl          String?
+  doubanUrl        String?
+  description      String?
+  createdBy        String
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime @updatedAt
+  User             User               @relation(fields: [createdBy], references: [id], onDelete: Cascade)
+  MovieLog         MovieLog[]
+  UserMovieLibrary UserMovieLibrary[]
+
+  @@index([createdBy])
+  @@index([director])
+  @@index([genre])
+  @@index([title])
+}
+
+model MovieLog {
+  id                      String                    @id @default(uuid())
+  userId                  String
+  movieId                 String
+  content                 String
+  likesCount              Int                       @default(0)
+  dislikesCount           Int                       @default(0)
+  isPublic                Boolean                   @default(true)
+  dynamicId               String?                   @unique
+  createdAt               DateTime                  @default(now())
+  updatedAt               DateTime @updatedAt
+  Dynamic                 Dynamic?                  @relation(fields: [dynamicId], references: [id])
+  movie                   Movie                     @relation(fields: [movieId], references: [id], onDelete: Cascade)
+  user                    User                      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  MovieLogLike            MovieLogLike[]
+  content_tags_deprecated content_tags_deprecated[]
+
+  @@index([createdAt])
+  @@index([isPublic])
+  @@index([movieId])
+  @@index([userId])
+}
+
+model MovieLogLike {
+  id         String   @id @default(uuid())
+  movieLogId String
+  userId     String
+  isLike     Boolean
+  createdAt  DateTime @default(now())
+  movieLog   MovieLog @relation(fields: [movieLogId], references: [id], onDelete: Cascade)
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([movieLogId, userId])
+  @@index([movieLogId])
+  @@index([userId])
+}
+
+model Music {
+  id               String             @id @default(uuid())
+  title            String
+  artist           String?
+  album            String?
+  coverUrl         String?
+  genre            String?
+  releaseDate      DateTime?
+  duration         Int?
+  spotifyUrl       String?
+  description      String?
+  createdBy        String
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime @updatedAt
+  User             User               @relation(fields: [createdBy], references: [id], onDelete: Cascade)
+  MusicLog         MusicLog[]
+  UserMusicLibrary UserMusicLibrary[]
+
+  @@index([artist])
+  @@index([createdBy])
+  @@index([genre])
+  @@index([title])
+}
+
+model MusicLog {
+  id                      String                    @id @default(uuid())
+  userId                  String
+  musicId                 String
+  content                 String
+  likesCount              Int                       @default(0)
+  dislikesCount           Int                       @default(0)
+  isPublic                Boolean                   @default(true)
+  dynamicId               String?                   @unique
+  createdAt               DateTime                  @default(now())
+  updatedAt               DateTime @updatedAt
+  Dynamic                 Dynamic?                  @relation(fields: [dynamicId], references: [id])
+  music                   Music                     @relation(fields: [musicId], references: [id], onDelete: Cascade)
+  user                    User                      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  MusicLogLike            MusicLogLike[]
+  content_tags_deprecated content_tags_deprecated[]
+
+  @@index([createdAt])
+  @@index([isPublic])
+  @@index([musicId])
+  @@index([userId])
+}
+
+model MusicLogLike {
+  id         String   @id @default(uuid())
+  musicLogId String
+  userId     String
+  isLike     Boolean
+  createdAt  DateTime @default(now())
+  musicLog   MusicLog @relation(fields: [musicLogId], references: [id], onDelete: Cascade)
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([musicLogId, userId])
+  @@index([musicLogId])
+  @@index([userId])
+}
+
+model Note {
+  id                      String                    @id @default(uuid())
+  authorId                String
+  title                   String
+  subject                 String
+  content                 String
+  createdAt               DateTime                  @default(now())
+  updatedAt               DateTime @updatedAt
+  isPublic                Boolean                   @default(true)
+  author                    User                      @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  content_tags_deprecated content_tags_deprecated[]
+
+  @@index([authorId])
+  @@index([createdAt])
+  @@index([isPublic])
+}
+
+model OfflineActivity {
+  id          String   @id @default(uuid())
+  userId      String
+  title       String
+  category    String
+  duration    Int
+  description String?
+  images      String[]
+  createdAt   DateTime @default(now())
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model PaidContent {
+  id              String            @id @default(uuid())
+  contentType     String
+  contentId       String
+  userId          String
+  price           Int
+  sales           Int               @default(0)
+  revenue         Int               @default(0)
+  createdAt       DateTime          @default(now())
+  ContentPurchase ContentPurchase[]
+  user            User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([contentType, contentId])
+  @@index([price])
+  @@index([userId])
+}
+
+model PayCode {
+  id                 String              @id @default(uuid())
+  code               String              @unique
+  title              String
+  amount             Decimal             @db.Decimal(10, 2)
+  description        String?
+  isActive           Boolean             @default(true)
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime @updatedAt
+  createdById        String
+  allowInstallment   Boolean             @default(false)
+  category           String?
+  installmentOptions String?
+  pointPrice         Int?
+  restriction PayCodeRestriction? @relation("PayCodeToRestriction")
+  orders           PayOrder[]
+  paymentPlans     PaymentPlan[]
+
+  @@index([category])
+  @@index([code])
+  @@index([createdAt])
+  @@index([isActive])
+}
+
+model PayCodeRestriction {
+  id        String    @id @default(uuid())
+  payCodeId String    @unique
+  dateStart DateTime?
+  dateEnd   DateTime?
+  isActive  Boolean   @default(true)
+  payCode   PayCode   @relation("PayCodeToRestriction", fields: [payCodeId], references: [id], onDelete: Cascade)
+}
+
+model PayOrder {
+  id            String   @id @default(uuid())
+  orderNo       String   @unique
+  userId        String
+  payCodeId     String
+  amount        Decimal  @db.Decimal(10, 2)
+  title         String
+  status        String   @default("completed")
+  createdAt     DateTime @default(now())
+  paymentMethod String   @default("wallet")
+  payCode       PayCode  @relation(fields: [payCodeId], references: [id])
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([createdAt])
+  @@index([orderNo])
+  @@index([payCodeId])
+  @@index([userId])
+}
+
+model PaymentPlan {
+  id                String            @id @default(uuid())
+  userId            String
+  payCodeId         String
+  totalAmount       Decimal           @db.Decimal(10, 2)
+  paidAmount        Decimal           @default(0) @db.Decimal(10, 2)
+  downPaymentRate   Int               @default(30)
+  downPaymentAmount Decimal           @default(0) @db.Decimal(10, 2)
+  downPaymentPaid   Boolean           @default(false)
+  installments      Int
+  paidInstallments  Int               @default(0)
+  status            String            @default("active")
+  nextDueDate       DateTime
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime @updatedAt
+  payCode           PayCode           @relation(fields: [payCodeId], references: [id])
+  user              User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  schedules         PaymentSchedule[]
+
+  @@index([nextDueDate])
+  @@index([status])
+  @@index([userId])
+}
+
+model PaymentSchedule {
+  id            String      @id @default(uuid())
+  planId        String
+  installmentNo Int
+  amount        Decimal     @db.Decimal(10, 2)
+  dueDate       DateTime
+  paidAt        DateTime?
+  status        String      @default("pending")
+  plan          PaymentPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+
+  @@index([dueDate])
+  @@index([planId])
+  @@index([status])
+}
+
+model PeerReview {
+  id                               String          @id @default(uuid())
+  fromUserId                       String
+  toUserId                         String
+  content                          String
+  createdAt                        DateTime        @default(now())
+  updatedAt                        DateTime @updatedAt
+  category                         String?
+  scores                           Json?
+  tags                             String[]
+  fromUser User            @relation("PeerReview_fromUserIdToUser", fields: [fromUserId], references: [id], onDelete: Cascade)
+  toUser   User            @relation("PeerReview_toUserIdToUser", fields: [toUserId], references: [id], onDelete: Cascade)
+  ReviewSession                    ReviewSession[]
+
+  @@index([createdAt])
+  @@index([toUserId])
+}
+
+model PinyinPractice {
+  id          String   @id @default(uuid())
+  authorId    String
+  title       String
+  charCount   Int
+  content     Json
+  totalKeys   Int
+  correctKeys Int
+  accuracy    Float
+  duration    Int
+  createdAt   DateTime @default(now())
+  user        User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@index([authorId, createdAt])
+  @@index([authorId])
+  @@index([createdAt])
+}
+
+model PoetryLike {
+  id         String     @id @default(uuid())
+  userId     String
+  workId     String
+  isLike     Boolean    @default(true)
+  createdAt  DateTime   @default(now())
+  PoetryWork PoetryWork @relation(fields: [workId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, workId])
+  @@index([userId])
+  @@index([workId])
+}
+
+model PoetryWork {
+  id           String           @id @default(uuid())
+  authorId     String
+  title        String
+  htmlCode     String
+  coverImage   String?
+  status       PoetryWorkStatus @default(PENDING)
+  reviewReason String?
+  submissionId String?
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime @updatedAt
+  PoetryLike   PoetryLike[]
+  author         User             @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@index([authorId])
+  @@index([createdAt])
+  @@index([status])
+}
+
+model PointExchange {
+  id           String   @id @default(uuid())
+  userId       String
+  pointsSpent  Int
+  coinsGained  Int
+  exchangeRate String
+  createdAt    DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([userId])
+}
+
+model PointLog {
+  id          String     @id @default(cuid())
+  userId      String
+  ruleId      String?
+  points      Int
+  description String?
+  targetType  String?
+  targetId    String?
+  createdAt   DateTime   @default(now())
+  rule        PointRule? @relation(fields: [ruleId], references: [id])
+  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([createdAt])
+  @@index([ruleId])
+  @@index([targetType, targetId])
+  @@index([userId])
+}
+
+model PointRule {
+  id             String     @id @default(cuid())
+  category       String
+  action         String
+  name           String
+  description    String
+  conditionType  String     @default("none")
+  conditionValue Int?
+  points         Int
+  dailyLimit     Int        @default(0)
+  isEnabled      Boolean    @default(true)
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime @updatedAt
+  logs           PointLog[]
+
+  @@index([action])
+  @@index([category])
+  @@index([isEnabled])
+}
+
+model Profile {
+  id              String   @id @default(uuid())
+  userId          String   @unique
+  nickname        String?
+  bio             String?
+  grade           String?
+  interests       String[]
+  joinedDays      Int      @default(0)
+  profilePublic   Boolean  @default(true)
+  showStats       Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  hideFromParents Boolean  @default(false)
+  User            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Question {
+  id            String         @id @default(uuid())
+  userId        String
+  title         String
+  content       String
+  bestAnswerId  String?
+  status        QuestionStatus @default(OPEN)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime @updatedAt
+  answersCount  Int            @default(0)
+  rewardPoints  Int            @default(0)
+  viewsCount    Int            @default(0)
+  deletedAt     DateTime?
+  likesCount    Int            @default(0)
+  appendContent String?
+  closedReason  String?
+  Answer        Answer[]
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  QuestionView  QuestionView[]
+
+  @@index([createdAt])
+  @@index([deletedAt])
+  @@index([rewardPoints])
+  @@index([status])
+  @@index([userId])
+}
+
+model QuestionView {
+  id         String   @id @default(uuid())
+  userId     String
+  questionId String
+  createdAt  DateTime @default(now())
+  Question   Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, questionId])
+  @@index([createdAt])
+  @@index([questionId])
+  @@index([userId])
+}
+
+model ReadingLog {
+  id                      String                    @id @default(uuid())
+  userId                  String
+  bookId                  String
+  chapterInfo             String?
+  readPages               Int                       @default(0)
+  content                 String
+  likesCount              Int                       @default(0)
+  dislikesCount           Int                       @default(0)
+  isPublic                Boolean                   @default(true)
+  dynamicId               String?                   @unique
+  createdAt               DateTime                  @default(now())
+  updatedAt               DateTime @updatedAt
+  Book                    Book                      @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  Dynamic                 Dynamic?                  @relation(fields: [dynamicId], references: [id])
+  user                    User                      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ReadingLogLike          ReadingLogLike[]
+  content_tags_deprecated content_tags_deprecated[]
+
+  @@index([bookId])
+  @@index([createdAt])
+  @@index([isPublic])
+  @@index([userId])
+}
+
+model ReadingLogLike {
+  id           String     @id @default(uuid())
+  readingLogId String
+  userId       String
+  isLike       Boolean
+  createdAt    DateTime   @default(now())
+  readingLog   ReadingLog @relation(fields: [readingLogId], references: [id], onDelete: Cascade)
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([readingLogId, userId])
+  @@index([readingLogId])
+  @@index([userId])
+}
+
+model ReadingNote {
+  id                String             @id @default(uuid())
+  userId            String
+  textbookId        String
+  sessionId         String
+  sourceType        String
+  query             String
+  content           Json
+  snippet           String
+  page              Int
+  chapterId         String?
+  paragraphId       String?
+  textRange         Json?
+  isFavorite        Boolean            @default(false)
+  favoriteAt        DateTime?
+  createdAt         DateTime           @default(now())
+  WritingEvaluation WritingEvaluation?
+
+  @@index([createdAt])
+  @@index([sessionId])
+  @@index([textbookId, chapterId])
+  @@index([userId, isFavorite])
+  @@index([userId, textbookId])
+}
+
+model ReviewSession {
+  id                                  String      @id @default(uuid())
+  fromUserId                          String
+  toUserId                            String
+  reviewId                            String?
+  action                              String
+  createdAt                           DateTime    @default(now())
+  fromUser User        @relation("ReviewSession_fromUserIdToUser", fields: [fromUserId], references: [id], onDelete: Cascade)
+  PeerReview                          PeerReview? @relation(fields: [reviewId], references: [id])
+  toUser   User        @relation("ReviewSession_toUserIdToUser", fields: [toUserId], references: [id], onDelete: Cascade)
+
+  @@index([createdAt])
+  @@index([fromUserId])
+  @@index([toUserId])
+}
+
+model RuleStandard {
+  id           String         @id @default(uuid())
+  name         String         @unique
+  description  String?
+  isEnabled    Boolean        @default(true)
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  RuleTemplate RuleTemplate[]
+
+  @@index([isEnabled])
+}
+
+model RuleSubmission {
+  id                                   String             @id @default(uuid())
+  userId                               String
+  templateId                           String
+  content                              String
+  images                               String[]
+  link                                 String?
+  status                               String             @default("PENDING")
+  reviewNote                           String?
+  reviewedBy                           String?
+  reviewedAt                           DateTime?
+  pointsAwarded                        Int?
+  createdAt                            DateTime           @default(now())
+  updatedAt                            DateTime           @updatedAt
+  audios                               String[]           @default([])
+  quantity                             Int                @default(1)
+  AiAutomationTask                     AiAutomationTask[]
+  reviewer User?              @relation("RuleSubmission_reviewedByToUser", fields: [reviewedBy], references: [id])
+  template                         RuleTemplate       @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  user     User               @relation("RuleSubmission_userIdToUser", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([createdAt])
+  @@index([reviewedBy])
+  @@index([status])
+  @@index([templateId])
+  @@index([userId])
+}
+
+model RuleTemplate {
+  id               String             @id @default(uuid())
+  name             String
+  typeId           String
+  standardId       String
+  requireImage     Boolean            @default(false)
+  requireText      Boolean            @default(true)
+  requireLink      Boolean            @default(false)
+  textMaxLength    Int                @default(500)
+  points           Int
+  status           String             @default("ENABLED")
+  createdBy        String
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+  allowQuantity    Boolean            @default(false)
+  audioUrl         String?
+  description      String?
+  requireAudio     Boolean            @default(false)
+  action           String?
+  dailyLimit       Int?               @default(0)
+  submissions      RuleSubmission[]
+  author             User               @relation(fields: [createdBy], references: [id], onDelete: Cascade)
+  RuleStandard     RuleStandard       @relation(fields: [standardId], references: [id], onDelete: Cascade)
+  type         RuleType           @relation(fields: [typeId], references: [id], onDelete: Cascade)
+  TemplateFavorite TemplateFavorite[]
+
+  @@index([createdBy])
+  @@index([standardId])
+  @@index([status])
+  @@index([typeId])
+}
+
+model RuleType {
+  id           String         @id @default(uuid())
+  name         String         @unique
+  description  String?
+  isEnabled    Boolean        @default(true)
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  templates RuleTemplate[]
+
+  @@index([isEnabled])
+}
+
+model ScanLog {
+  id        String   @id @default(uuid())
+  userId    String
+  scanType  String
+  target    String
+  params    Json?
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([createdAt])
+  @@index([userId])
 }
 
 model School {
@@ -215,172 +1890,855 @@ model School {
   name      String    @unique
   address   String?
   phone     String?
-  classes   Class[]
-  users     User[]
-  teachers  Teacher[]
   createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-}
-
-model Class {
-  id        String         @id @default(uuid())
-  name      String
-  grade     String?
-  schoolId  String
-  school    School         @relation(fields: [schoolId], references: [id], onDelete: Cascade)
-  users     User[]
-  students  Student[]
-  teachers  TeacherClass[]
-  createdAt DateTime       @default(now())
-  updatedAt DateTime       @updatedAt
-
-  @@unique([schoolId, name])
-  @@index([schoolId])
-}
-
-model Teacher {
-  id        String         @id @default(uuid())
-  userId    String         @unique
-  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  schoolId  String
-  school    School         @relation(fields: [schoolId], references: [id])
-  subject   String?
-  classes   TeacherClass[]
-  createdAt DateTime       @default(now())
-  updatedAt DateTime       @updatedAt
-
-  @@index([userId])
-  @@index([schoolId])
+  updatedAt DateTime @updatedAt
+  Class     Class[]
+  Teacher   Teacher[]
+  User      User[]
 }
 
 model Student {
-  id              String          @id @default(uuid())
-  userId          String          @unique
-  user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
-  classId         String?
-  class           Class?          @relation(fields: [classId], references: [id])
-  studentNumber   String?
-  parentRelations StudentParent[] @relation("StudentUser")
-  createdAt       DateTime        @default(now())
-  updatedAt       DateTime        @updatedAt
+  id            String          @id @default(uuid())
+  userId        String          @unique
+  classId       String?
+  studentNumber String?
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime @updatedAt
+  class         Class?          @relation(fields: [classId], references: [id])
+  user          User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  StudentParent StudentParent[]
 
-  @@index([userId])
   @@index([classId])
+  @@index([userId])
+}
+
+model StudentParent {
+  id                                String   @id @default(uuid())
+  studentId                         String
+  parentId                          String
+  childId                           String
+  createdAt                         DateTime @default(now())
+  child  User     @relation("StudentParent_childIdToUser", fields: [childId], references: [id], onDelete: Cascade)
+  parent User     @relation("StudentParent_parentIdToUser", fields: [parentId], references: [id], onDelete: Cascade)
+  Student                           Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, parentId])
+  @@index([parentId])
+  @@index([studentId])
+}
+
+model SyncConflict {
+  id            String    @id @default(uuid())
+  userId        String
+  entityType    String
+  entityId      String
+  localVersion  Int
+  serverVersion Int
+  localData     Json
+  serverData    Json
+  resolution    String?
+  resolvedAt    DateTime?
+  createdAt     DateTime  @default(now())
+
+  @@index([createdAt])
+  @@index([entityType, entityId])
+  @@index([userId, resolution])
+}
+
+model SyncDevice {
+  id         String   @id @default(uuid())
+  userId     String
+  deviceId   String   @unique
+  deviceName String
+  deviceType String
+  lastSyncAt DateTime @default(now())
+  pushToken  String?
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([lastSyncAt])
+  @@index([userId])
+}
+
+model SystemPrompt {
+  id          String   @id @default(uuid())
+  promptText  String
+  description String?
+  createdBy   String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([createdBy])
+}
+
+model SystemSetting {
+  id          String   @id @default(uuid())
+  key         String   @unique
+  value       String
+  type        String   @default("string")
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([key])
+}
+
+model Task {
+  id             String           @id @default(uuid())
+  creatorId      String
+  title          String
+  description    String
+  dueDate        DateTime?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime @updatedAt
+  User           User             @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  TaskSubmission TaskSubmission[]
+
+  @@index([creatorId])
+  @@index([dueDate])
+}
+
+model TaskSubmission {
+  id          String     @id @default(uuid())
+  taskId      String
+  studentId   String
+  status      TaskStatus @default(PENDING)
+  content     String?
+  attachments String[]
+  note        String?
+  completedAt DateTime?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime @updatedAt
+  User        User       @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  Task        Task       @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@unique([taskId, studentId])
+  @@index([status])
+  @@index([studentId])
+}
+
+model Teacher {
+  id           String         @id @default(uuid())
+  userId       String         @unique
+  schoolId     String
+  subject      String?
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime @updatedAt
+  school       School         @relation(fields: [schoolId], references: [id])
+  user         User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  TeacherClass TeacherClass[]
+
+  @@index([schoolId])
+  @@index([userId])
 }
 
 model TeacherClass {
   id        String   @id @default(uuid())
   teacherId String
-  teacher   Teacher  @relation(fields: [teacherId], references: [id], onDelete: Cascade)
   classId   String
-  class     Class    @relation(fields: [classId], references: [id], onDelete: Cascade)
-  role      String? // 班主任、配班老师等
+  role      String?
   createdAt DateTime @default(now())
+  class     Class    @relation(fields: [classId], references: [id], onDelete: Cascade)
+  teacher   Teacher  @relation(fields: [teacherId], references: [id], onDelete: Cascade)
 
   @@unique([teacherId, classId])
-  @@index([teacherId])
   @@index([classId])
+  @@index([teacherId])
 }
 
-model StudentParent {
-  id        String   @id @default(uuid())
-  studentId String
-  student   Student  @relation("StudentUser", fields: [studentId], references: [id], onDelete: Cascade)
-  parentId  String
-  parent    User     @relation("ParentUser", fields: [parentId], references: [id], onDelete: Cascade)
-  childId   String
-  child     User     @relation("ChildUser", fields: [childId], references: [id], onDelete: Cascade)
-  createdAt DateTime @default(now())
+model TemplateFavorite {
+  id           String       @id @default(uuid())
+  userId       String
+  templateId   String
+  createdAt    DateTime     @default(now())
+  template RuleTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@unique([studentId, parentId])
-  @@index([studentId])
-  @@index([parentId])
+  @@unique([userId, templateId])
+  @@index([templateId])
+  @@index([userId])
 }
 
-// ========== 学习记录 ==========
+model Textbook {
+  id               String             @id @default(uuid())
+  subject          String
+  grade            Int
+  semester         String
+  version          String             @default("人教版")
+  title            String
+  totalPages       Int?
+  pdfUrl           String?
+  coverImage       String?
+  contentType      String             @default("pdf")
+  epubUrl          String?
+  epubMetadata     Json?
+  status           String             @default("draft")
+  isHidden         Boolean            @default(false)
+  createdBy        String
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime @updatedAt
+  TextbookFavorite TextbookFavorite[]
+  TextbookPrompt   TextbookPrompt[]
+  TextbookUnit     TextbookUnit[]
 
-model Diary {
-  id        String          @id @default(uuid())
-  authorId  String
-  author    User            @relation(fields: [authorId], references: [id], onDelete: Cascade)
-  title     String
-  content   String          @db.Text
-  mood      String?
-  weather   String?
-  isPublic  Boolean         @default(true) // 是否公开到个人主页
-  tags      OldContentTag[] // 旧的标签关联，迁移后可删除
-  dynamicId String?         @unique
-  dynamic   Dynamic?        @relation(fields: [dynamicId], references: [id])
-  comments      Comment[]       // 日记评论（旧）
-  diaryComments DiaryComment[]  // 匿名评论
-  createdAt     DateTime        @default(now())
-  updatedAt     DateTime        @updatedAt
+  @@unique([subject, grade, semester, version])
+  @@index([createdBy])
+  @@index([grade])
+  @@index([isHidden])
+  @@index([status])
+  @@index([subject])
+}
 
+model TextbookChatMessage {
+  id         String   @id @default(uuid())
+  userId     String
+  textbookId String
+  role       String
+  content    String
+  page       Int?
+  sourceType String?
+  metadata   Json?
+  createdAt  DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([userId, textbookId])
+}
+
+model TextbookFavorite {
+  id         String   @id @default(uuid())
+  userId     String
+  textbookId String
+  createdAt  DateTime @default(now())
+  textbook   Textbook @relation(fields: [textbookId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, textbookId])
+  @@index([textbookId])
+  @@index([userId])
+}
+
+model TextbookLesson {
+  id           String               @id @default(uuid())
+  unitId       String
+  lessonNumber Int
+  title        String
+  pageStart    Int?
+  pageEnd      Int?
+  htmlContent  String?
+  status       TextbookLessonStatus @default(EMPTY)
+  inputBy      String?
+  reviewedBy   String?
+  reviewNote   String?
+  reviewedAt   DateTime?
+  sortOrder    Int                  @default(0)
+  createdAt    DateTime             @default(now())
+  updatedAt    DateTime @updatedAt
+  unit TextbookUnit         @relation(fields: [unitId], references: [id], onDelete: Cascade)
+
+  @@unique([unitId, lessonNumber])
+  @@index([inputBy])
+  @@index([sortOrder])
+  @@index([status])
+  @@index([unitId])
+}
+
+model TextbookPrompt {
+  id          String   @id @default(uuid())
+  textbookId  String
+  name        String
+  promptText  String
+  description String?
+  isActive    Boolean  @default(false)
+  sortOrder   Int      @default(0)
+  createdBy   String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  textbook    Textbook @relation(fields: [textbookId], references: [id], onDelete: Cascade)
+
+  @@index([createdBy])
+  @@index([isActive])
+  @@index([sortOrder])
+  @@index([textbookId])
+}
+
+model TextbookUnit {
+  id             String           @id @default(uuid())
+  textbookId     String
+  unitNumber     Int
+  title          String
+  theme          String?
+  pageStart      Int?
+  pageEnd        Int?
+  sortOrder      Int              @default(0)
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime @updatedAt
+  lessons TextbookLesson[]
+  textbook       Textbook         @relation(fields: [textbookId], references: [id], onDelete: Cascade)
+
+  @@unique([textbookId, unitNumber])
+  @@index([sortOrder])
+  @@index([textbookId])
+}
+
+model Transaction {
+  id                                String          @id @default(uuid())
+  userId                            String
+  type                              TransactionType
+  amount                            Int
+  balance                           Int
+  fromUserId                        String?
+  toUserId                          String?
+  relatedType                       String?
+  relatedId                         String?
+  description                       String
+  metadata                          Json?
+  createdAt                         DateTime        @default(now())
+  fromUser User?           @relation("Transaction_fromUserIdToUser", fields: [fromUserId], references: [id])
+  toUser   User?           @relation("Transaction_toUserIdToUser", fields: [toUserId], references: [id])
+  user     User            @relation("Transaction_userIdToUser", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([relatedType, relatedId])
+  @@index([type])
+  @@index([userId, createdAt])
+}
+
+model TypingPractice {
+  id             String   @id @default(uuid())
+  authorId       String
+  mode           String   @default("interstellar")
+  title          String
+  score          Int      @default(0)
+  totalKeys      Int      @default(0)
+  correctKeys    Int      @default(0)
+  accuracy       Float    @default(0)
+  duration       Int      @default(0)
+  wordsDestroyed Int      @default(0)
+  maxCombo       Int      @default(0)
+  wpm            Int      @default(0)
+  isValid        Boolean  @default(false)
+  extraData      Json?
+  createdAt      DateTime @default(now())
+  user           User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@index([authorId, createdAt])
   @@index([authorId])
   @@index([createdAt])
-  @@index([isPublic])
+  @@index([isValid])
+  @@index([mode])
 }
 
-// 日记匿名评论
-model DiaryComment {
+model User {
+  id                                             String                  @id @default(uuid())
+  email                                          String                  @unique
+  username                                       String                  @unique
+  password                                       String
+  role                                           Role                    @default(STUDENT)
+  status                                         UserStatus              @default(ACTIVE)
+  avatar                                         String?
+  createdAt                                      DateTime                @default(now())
+  updatedAt                                      DateTime @updatedAt
+  schoolId                                       String?
+  classId                                        String?
+  totalPoints                                    Int                     @default(0)
+  lastLoginDate                                  DateTime?
+  passwordChangedAt                              DateTime?
+  loginStreakDays                                Int                     @default(0)
+  followersCount                                 Int                     @default(0)
+  followingCount                                 Int                     @default(0)
+  friendsCount                                   Int                     @default(0)
+  approvedAt                                     DateTime?
+  approvedBy                                     String?
+  autoAcceptFriend                               Boolean                 @default(false)
+  birthDate                                      DateTime?
+  deviceToken                                    String?
+  friendRequestMessage                           String?
+  inviteCodeId                                   Int?
+  needsReview                                    Boolean                 @default(true)
+  paymentPassword                                String?
+  realName                                       String?
+  registeredAt                                   DateTime                @default(now())
+  studentNumber                                  String?
+  twoFactorBackupCodes                           String[]
+  twoFactorEnabled                               Boolean                 @default(false)
+  twoFactorEnabledAt                             DateTime?
+  twoFactorSecret                                String?
+  schoolClassUpdatedAt                           DateTime?
+  ActiveTimer                                    ActiveTimer[]
+  ActivityLog                                    ActivityLog[]
+  Answer                                         Answer[]
+  BehaviorLog                                    BehaviorLog[]
+  Book                                           Book[]
+  BotConversation                                BotConversation[]
+  BotMessage                                     BotMessage[]
+  CalendarEvent                                  CalendarEvent[]
+  CalligraphyWork                                CalligraphyWork[]
+  Comment                                        Comment[]
+  ContentPurchase                                ContentPurchase[]
+  CreativeWork                                   CreativeWork[]
+  DailyCompletionReward                          DailyCompletionReward[]
+  DailyPointsLimit                               DailyPointsLimit[]
+  DailyReviewTask                                DailyReviewTask[]
+  Diary                                          Diary[]
+  DiaryAnalysis                                  DiaryAnalysis[]
+  DiaryMakeupCard                                DiaryMakeupCard[]
+  DiaryStats                                     DiaryStats?
+  DiaryTemplate                                  DiaryTemplate[]
+  Dynamic                                        Dynamic[]
+  Feedback                                       Feedback[]
+  FriendRequest_FriendRequest_fromUserIdToUser   FriendRequest[]         @relation("FriendRequest_fromUserIdToUser")
+  FriendRequest_FriendRequest_toUserIdToUser     FriendRequest[]         @relation("FriendRequest_toUserIdToUser")
+  Friendship_Friendship_userId1ToUser            Friendship[]            @relation("Friendship_userId1ToUser")
+  Friendship_Friendship_userId2ToUser            Friendship[]            @relation("Friendship_userId2ToUser")
+  Game                                           Game[]
+  GameLongReview                                 GameLongReview[]
+  GameLongReviewLike                             GameLongReviewLike[]
+  GameReviewComment                              GameReviewComment[]
+  GameShortReview                                GameShortReview[]
+  HTMLWork                                       HTMLWork[]
+  Homework                                       Homework[]
+  ImessageSenderMapping                          ImessageSenderMapping[]
+  createdInviteCodes          InviteCode[]            @relation("InviteCode_createdByToUser")
+  LearningProject                                LearningProject[]
+  LearningSession                                LearningSession[]
+  LearningSessionLike                            LearningSessionLike[]
+  Like                                           Like[]
+  LoginActivity                                  LoginActivity[]
+  Message_Message_fromUserIdToUser               Message[]               @relation("Message_fromUserIdToUser")
+  Message_Message_toUserIdToUser                 Message[]               @relation("Message_toUserIdToUser")
+  Movie                                          Movie[]
+  MovieLog                                       MovieLog[]
+  MovieLogLike                                   MovieLogLike[]
+  Music                                          Music[]
+  MusicLog                                       MusicLog[]
+  MusicLogLike                                   MusicLogLike[]
+  Note                                           Note[]
+  OfflineActivity                                OfflineActivity[]
+  PaidContent                                    PaidContent[]
+  PayOrder                                       PayOrder[]
+  PaymentPlan                                    PaymentPlan[]
+  PeerReview_PeerReview_fromUserIdToUser         PeerReview[]            @relation("PeerReview_fromUserIdToUser")
+  PeerReview_PeerReview_toUserIdToUser           PeerReview[]            @relation("PeerReview_toUserIdToUser")
+  PinyinPractice                                 PinyinPractice[]
+  PoetryWork                                     PoetryWork[]
+  PointLog                                       PointLog[]
+  profile                                        Profile?
+  Question                                       Question[]
+  ReadingLog                                     ReadingLog[]
+  ReadingLogLike                                 ReadingLogLike[]
+  ReviewSession_ReviewSession_fromUserIdToUser   ReviewSession[]         @relation("ReviewSession_fromUserIdToUser")
+  ReviewSession_ReviewSession_toUserIdToUser     ReviewSession[]         @relation("ReviewSession_toUserIdToUser")
+  RuleSubmission_RuleSubmission_reviewedByToUser RuleSubmission[]        @relation("RuleSubmission_reviewedByToUser")
+  RuleSubmission_RuleSubmission_userIdToUser     RuleSubmission[]        @relation("RuleSubmission_userIdToUser")
+  RuleTemplate                                   RuleTemplate[]
+  ScanLog                                        ScanLog[]
+  Student                                        Student?
+  StudentParent_StudentParent_childIdToUser      StudentParent[]         @relation("StudentParent_childIdToUser")
+  StudentParent_StudentParent_parentIdToUser     StudentParent[]         @relation("StudentParent_parentIdToUser")
+  SyncDevice                                     SyncDevice[]
+  Task                                           Task[]
+  TaskSubmission                                 TaskSubmission[]
+  Teacher                                        Teacher?
+  TemplateFavorite                               TemplateFavorite[]
+  Transaction_Transaction_fromUserIdToUser       Transaction[]           @relation("Transaction_fromUserIdToUser")
+  Transaction_Transaction_toUserIdToUser         Transaction[]           @relation("Transaction_toUserIdToUser")
+  Transaction_Transaction_userIdToUser           Transaction[]           @relation("Transaction_userIdToUser")
+  TypingPractice                                 TypingPractice[]
+  approvedByUser                                           User?                   @relation("UserToUser", fields: [approvedBy], references: [id])
+  approvedUsers                                     User[]                  @relation("UserToUser")
+  class                                          Class?                  @relation(fields: [classId], references: [id])
+  inviteCode       InviteCode?             @relation("User_inviteCodeIdToInviteCode", fields: [inviteCodeId], references: [id])
+  school                                         School?                 @relation(fields: [schoolId], references: [id])
+  UserBookshelf                                  UserBookshelf[]
+  UserCreditHistory                              UserCreditHistory[]
+  UserCreditProfile                              UserCreditProfile?
+  UserDiaryAchievement                           UserDiaryAchievement[]
+  UserDiaryPrompt                                UserDiaryPrompt?
+  UserEvent                                      UserEvent[]
+  UserFollow_UserFollow_followerIdToUser         UserFollow[]            @relation("UserFollow_followerIdToUser")
+  UserFollow_UserFollow_followingIdToUser        UserFollow[]            @relation("UserFollow_followingIdToUser")
+  UserFont                                       UserFont[]
+  UserGameRecord                                 UserGameRecord[]
+  UserMovieLibrary                               UserMovieLibrary[]
+  UserMusicLibrary                               UserMusicLibrary[]
+  UserPoints                                     UserPoints?
+  Wallet                                         Wallet?
+
+  @@index([classId])
+  @@index([email])
+  @@index([schoolId])
+  @@index([status])
+  @@index([username])
+}
+
+model UserAchievement {
+  id            String      @id @default(uuid())
+  userId        String
+  achievementId String
+  unlockedAt    DateTime    @default(now())
+  isShowcased   Boolean     @default(false)
+  achievement   Achievement @relation(fields: [achievementId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, achievementId])
+  @@index([achievementId])
+  @@index([isShowcased])
+  @@index([unlockedAt])
+  @@index([userId])
+}
+
+model UserBookshelf {
+  id             String        @id @default(uuid())
+  userId         String
+  bookId         String
+  status         ReadingStatus @default(WANT_TO_READ)
+  totalReadPages Int           @default(0)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime @updatedAt
+  book           Book          @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  user           User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, bookId])
+  @@index([bookId])
+  @@index([status])
+  @@index([userId])
+}
+
+model UserChallengeRecord {
+  id               String              @id @default(uuid())
+  userId           String
+  dailyChallengeId String
+  challengeId      String
+  difficulty       ChallengeDifficulty
+  status           UserChallengeStatus @default(IN_PROGRESS)
+  progress         Int                 @default(0)
+  target           Int
+  rewardClaimed    Boolean             @default(false)
+  completedAt      DateTime?
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime @updatedAt
+  dailyChallenge   DailyChallenge      @relation(fields: [dailyChallengeId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, dailyChallengeId, difficulty])
+  @@index([dailyChallengeId])
+  @@index([rewardClaimed])
+  @@index([status])
+  @@index([userId])
+}
+
+model UserCreditHistory {
+  id                String   @id @default(uuid())
+  userId            String
+  year              Int
+  week              Int
+  moralityScore     Float    @default(0)
+  intelligenceScore Float    @default(0)
+  physiqueScore     Float    @default(0)
+  aestheticsScore   Float    @default(0)
+  laborScore        Float    @default(0)
+  societyScore      Float    @default(0)
+  totalScore        Float    @default(0)
+  createdAt         DateTime @default(now())
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, year, week])
+  @@index([userId])
+}
+
+model UserCreditProfile {
+  id                String   @id @default(uuid())
+  userId            String   @unique
+  moralityScore     Float    @default(0)
+  intelligenceScore Float    @default(0)
+  physiqueScore     Float    @default(0)
+  aestheticsScore   Float    @default(0)
+  laborScore        Float    @default(0)
+  societyScore      Float    @default(0)
+  totalScore        Float    @default(0)
+  updatedAt         DateTime @updatedAt
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model UserDiaryAchievement {
+  id               String           @id @default(uuid())
+  userId           String
+  achievementId    String
+  unlockedAt       DateTime         @default(now())
+  triggerDiaryId   String?
+  achievement DiaryAchievement @relation(fields: [achievementId], references: [id], onDelete: Cascade)
+  user             User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, achievementId])
+  @@index([achievementId])
+  @@index([unlockedAt])
+  @@index([userId])
+}
+
+model UserDiaryPrompt {
+  id           String   @id @default(uuid())
+  userId       String   @unique
+  singlePrompt String?
+  batchPrompt  String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model UserEvent {
   id        String   @id @default(uuid())
-  diaryId   String
-  diary     Diary    @relation(fields: [diaryId], references: [id], onDelete: Cascade)
-  nickname  String   @default("匿名用户")
-  content   String   @db.Text
+  userId    String?
+  sessionId String
+  eventType String
+  eventName String
+  page      String?
+  metadata  Json?
   createdAt DateTime @default(now())
+  user      User?    @relation(fields: [userId], references: [id])
 
-  @@index([diaryId])
   @@index([createdAt])
+  @@index([eventName])
+  @@index([eventType])
+  @@index([userId])
 }
 
-model Homework {
-  id         String          @id @default(uuid())
-  authorId   String
-  author     User            @relation(fields: [authorId], references: [id], onDelete: Cascade)
-  title      String
-  subject    String
-  content    String          @db.Text
-  images     String[]
-  difficulty Int?            @default(3)
-  timeSpent  Int?
-  isPublic   Boolean         @default(true) // 是否公开到个人主页
-  tags       OldContentTag[] // 旧的标签关联，迁移后可删除
-  dynamicId  String?         @unique
-  dynamic    Dynamic?        @relation(fields: [dynamicId], references: [id])
-  createdAt  DateTime        @default(now())
-  updatedAt  DateTime        @updatedAt
+model UserFollow {
+  id                                String   @id @default(uuid())
+  followerId                        String
+  followingId                       String
+  createdAt                         DateTime @default(now())
+  follower  User     @relation("UserFollow_followerIdToUser", fields: [followerId], references: [id], onDelete: Cascade)
+  following User     @relation("UserFollow_followingIdToUser", fields: [followingId], references: [id], onDelete: Cascade)
 
-  @@index([authorId])
+  @@unique([followerId, followingId])
   @@index([createdAt])
-  @@index([isPublic])
+  @@index([followerId])
+  @@index([followingId])
 }
 
-model Note {
+model UserFollowedTag {
+  id        String    @id @default(uuid())
+  userId    String
+  tagId     String
+  createdAt DateTime  @default(now())
+  tag GlobalTag @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, tagId])
+  @@index([tagId])
+  @@index([userId])
+}
+
+model UserFont {
+  id        String   @id @default(uuid())
+  userId    String
+  name      String
+  fileName  String
+  filePath  String
+  fileSize  Int
+  isDefault Boolean  @default(false)
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([userId, isDefault])
+}
+
+model UserGameRecord {
+  id            String         @id @default(uuid())
+  userId        String
+  gameId        String
+  status        GamePlayStatus @default(WANT_TO_PLAY)
+  totalPlayTime Int            @default(0)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime @updatedAt
+  game          Game           @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, gameId])
+  @@index([gameId])
+  @@index([status])
+  @@index([userId])
+}
+
+model UserMovieLibrary {
+  id         String         @id @default(uuid())
+  userId     String
+  movieId    String
+  status     WatchingStatus @default(WANT_TO_WATCH)
+  watchCount Int            @default(0)
+  createdAt  DateTime       @default(now())
+  updatedAt  DateTime @updatedAt
+  movie      Movie          @relation(fields: [movieId], references: [id], onDelete: Cascade)
+  user       User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, movieId])
+  @@index([movieId])
+  @@index([status])
+  @@index([userId])
+}
+
+model UserMusicLibrary {
   id        String          @id @default(uuid())
-  authorId  String
-  author    User            @relation(fields: [authorId], references: [id], onDelete: Cascade)
-  title     String
-  subject   String
-  content   String          @db.Text
-  isPublic  Boolean         @default(true) // 是否公开到个人主页
-  tags      OldContentTag[] // 旧的标签关联，迁移后可删除
+  userId    String
+  musicId   String
+  status    ListeningStatus @default(WANT_TO_LISTEN)
+  playCount Int             @default(0)
   createdAt DateTime        @default(now())
-  updatedAt DateTime        @updatedAt
+  updatedAt DateTime @updatedAt
+  music     Music           @relation(fields: [musicId], references: [id], onDelete: Cascade)
+  user      User            @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@index([authorId])
-  @@index([createdAt])
-  @@index([isPublic])
+  @@unique([userId, musicId])
+  @@index([musicId])
+  @@index([status])
+  @@index([userId])
 }
 
-// ========== 全局标签系统 ==========
+model UserPoints {
+  id          String   @id @default(uuid())
+  userId      String   @unique
+  totalPoints Int      @default(0)
+  todayPoints Int      @default(0)
+  updatedAt   DateTime @updatedAt
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-enum TagCategory {
-  SUBJECT // 学科
-  SKILL // 技能
-  PROGRAMMING // 编程
-  INTEREST // 兴趣
-  OTHER // 其他
+  @@index([userId])
+}
+
+model Wallet {
+  id                String              @id @default(uuid())
+  userId            String              @unique
+  balance           Decimal             @default(0) @db.Decimal(10, 2)
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime @updatedAt
+  user              User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions WalletTransaction[]
+
+  @@index([userId])
+}
+
+model WalletTransaction {
+  id          String   @id @default(uuid())
+  walletId    String
+  amount      Decimal  @db.Decimal(10, 2)
+  type        String
+  description String?
+  relatedType String?
+  relatedId   String?
+  createdAt   DateTime @default(now())
+  wallet      Wallet   @relation(fields: [walletId], references: [id], onDelete: Cascade)
+
+  @@index([createdAt])
+  @@index([type])
+  @@index([walletId])
+}
+
+model WritingEvaluation {
+  id            String      @id @default(uuid())
+  noteId        String      @unique
+  userId        String
+  overallScore  Int
+  scoreLevel    String
+  dimensions    Json
+  suggestions   Json
+  encouragement String?
+  modelId       String
+  promptVersion String      @default("v1.0")
+  inputSnapshot Json?
+  rawResponse   String?
+  createdAt     DateTime    @default(now())
+  note   ReadingNote @relation(fields: [noteId], references: [id], onDelete: Cascade)
+
+  @@index([createdAt])
+  @@index([noteId])
+  @@index([userId])
+}
+
+model content_tags_deprecated {
+  id              String          @id @default(uuid())
+  tagId           String
+  diaryId         String?
+  homeworkId      String?
+  noteId          String?
+  readingLogId    String?
+  createdAt       DateTime        @default(now())
+  movieLogId      String?
+  musicLogId      String?
+  Diary           Diary?          @relation(fields: [diaryId], references: [id], onDelete: Cascade)
+  Homework        Homework?       @relation(fields: [homeworkId], references: [id], onDelete: Cascade)
+  MovieLog        MovieLog?       @relation(fields: [movieLogId], references: [id], onDelete: Cascade)
+  MusicLog        MusicLog?       @relation(fields: [musicLogId], references: [id], onDelete: Cascade)
+  Note            Note?           @relation(fields: [noteId], references: [id], onDelete: Cascade)
+  ReadingLog      ReadingLog?     @relation(fields: [readingLogId], references: [id], onDelete: Cascade)
+  tags_deprecated tags_deprecated @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@index([tagId])
+}
+
+model tags_deprecated {
+  id                      String                    @id @default(uuid())
+  name                    String                    @unique
+  color                   String?
+  createdAt               DateTime                  @default(now())
+  content_tags_deprecated content_tags_deprecated[]
+}
+
+enum AchievementCategory {
+  CREATION
+  LEARNING
+  PERSISTENCE
+  SOCIAL
+  SPECIAL
+}
+
+enum AchievementConditionType {
+  COUNT
+  STREAK
+  TOTAL
+  THRESHOLD
+}
+
+enum AchievementRarity {
+  COMMON
+  RARE
+  EPIC
+  LEGENDARY
+}
+
+enum BehaviorType {
+  LEARNING
+  SOCIAL
+  OFFLINE
+  SYSTEM
+  APPROVED_SUBMISSION
+}
+
+enum CalligraphyStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  ARCHIVED
+}
+
+enum ChallengeConditionType {
+  WORD_COUNT
+  DURATION
+  COUNT
+  ACTION
+}
+
+enum ChallengeDifficulty {
+  EASY
+  MEDIUM
+  HARD
+}
+
+enum ChallengeType {
+  DIARY
+  STUDY
+  WORK
+  READING
+  SOCIAL
 }
 
 enum ContentType {
@@ -394,1641 +2752,208 @@ enum ContentType {
   NOTE
 }
 
-// 全局标签表
-model GlobalTag {
-  id         String      @id @default(uuid())
-  name       String      @unique // 标签名称，全局唯一
-  category   TagCategory @default(OTHER) // 标签分类
-  color      String      @default("#6B7280") // 6位hex颜色码
-  useCount   Int         @default(0) // 使用次数
-  createdBy  String? // 创建者用户ID
-  isOfficial Boolean     @default(false) // 是否官方标签
-  createdAt  DateTime    @default(now())
-  updatedAt  DateTime    @updatedAt
-
-  // 关联
-  contentTags     ContentTag[]
-  followedByUsers UserFollowedTag[]
-
-  @@index([name])
-  @@index([category])
-  @@index([useCount])
-  @@index([isOfficial])
+enum CreativeWorkStatus {
+  PENDING
+  APPROVED
+  REJECTED
 }
 
-// 统一内容标签关联表
-model ContentTag {
-  id          String      @id @default(uuid())
-  tagId       String
-  tag         GlobalTag   @relation(fields: [tagId], references: [id], onDelete: Cascade)
-  contentType ContentType // 内容类型
-  contentId   String // 内容ID
-  userId      String // 谁打的标签
-  createdAt   DateTime    @default(now())
-
-  @@unique([tagId, contentType, contentId])
-  @@index([tagId])
-  @@index([contentType, contentId])
-  @@index([userId])
-  @@index([createdAt])
+enum CreditDimension {
+  MORALITY
+  INTELLIGENCE
+  PHYSIQUE
+  AESTHETICS
+  LABOR
+  SOCIETY
 }
 
-// 用户关注标签表
-model UserFollowedTag {
-  id        String    @id @default(uuid())
-  userId    String
-  tagId     String
-  tag       GlobalTag @relation(fields: [tagId], references: [id], onDelete: Cascade)
-  createdAt DateTime  @default(now())
-
-  @@unique([userId, tagId])
-  @@index([userId])
-  @@index([tagId])
+enum FriendRequestStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  EXPIRED
 }
 
-// 保留旧的Tag和ContentTag定义（标记为废弃，用于数据迁移）
-// 迁移完成后可以删除
-model Tag {
-  id        String          @id @default(uuid())
-  name      String          @unique
-  color     String?
-  contents  OldContentTag[]
-  createdAt DateTime        @default(now())
-
-  @@map("tags_deprecated")
+enum GamePlayStatus {
+  WANT_TO_PLAY
+  PLAYING
+  COMPLETED
+  DROPPED
 }
 
-model OldContentTag {
-  id           String      @id @default(uuid())
-  tagId        String
-  tag          Tag         @relation(fields: [tagId], references: [id], onDelete: Cascade)
-  diaryId      String?
-  diary        Diary?      @relation(fields: [diaryId], references: [id], onDelete: Cascade)
-  homeworkId   String?
-  homework     Homework?   @relation(fields: [homeworkId], references: [id], onDelete: Cascade)
-  noteId       String?
-  note         Note?       @relation(fields: [noteId], references: [id], onDelete: Cascade)
-  readingLogId String?
-  readingLog   ReadingLog? @relation(fields: [readingLogId], references: [id], onDelete: Cascade)
-  musicLogId   String?
-  musicLog     MusicLog?   @relation(fields: [musicLogId], references: [id], onDelete: Cascade)
-  movieLogId   String?
-  movieLog     MovieLog?   @relation(fields: [movieLogId], references: [id], onDelete: Cascade)
-  createdAt    DateTime    @default(now())
-
-  @@index([tagId])
-  @@map("content_tags_deprecated")
+enum ListeningStatus {
+  WANT_TO_LISTEN
+  LISTENING
+  COMPLETED
+  DROPPED
 }
 
-// ========== 书籍阅读系统 ==========
-
-model Book {
-  id            String          @id @default(uuid())
-  title         String
-  author        String?
-  coverUrl      String?
-  isbn          String?         @unique
-  description   String?         @db.Text
-  publisher     String?
-  publishDate   DateTime?
-  totalPages    Int?
-  category      String?
-  sourceType    String? // ebook电子书/paper纸质书
-  sourceUrl     String? // 来源链接
-  createdBy     String // 谁添加的
-  createdByUser User            @relation("BookCreator", fields: [createdBy], references: [id], onDelete: Cascade)
-  bookshelves   UserBookshelf[]
-  readingLogs   ReadingLog[]
-  createdAt     DateTime        @default(now())
-  updatedAt     DateTime        @updatedAt
-
-  @@index([title])
-  @@index([author])
-  @@index([category])
-  @@index([createdBy])
+enum MessageType {
+  CHAT
+  SYSTEM_ACHIEVEMENT
+  SYSTEM_TASK
+  SYSTEM_PURCHASE
+  SYSTEM_FOLLOW
+  SYSTEM_FRIEND
+  SYSTEM_REWARD
+  SYSTEM_TEACHER_REWARD
+  SYSTEM_QUESTION
 }
 
-model UserBookshelf {
-  id             String        @id @default(uuid())
-  userId         String
-  user           User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  bookId         String
-  book           Book          @relation(fields: [bookId], references: [id], onDelete: Cascade)
-  status         ReadingStatus @default(WANT_TO_READ)
-  totalReadPages Int           @default(0) // 累计阅读页数（系统自动累加）
-  createdAt      DateTime      @default(now())
-  updatedAt      DateTime      @updatedAt
-
-  @@unique([userId, bookId])
-  @@index([userId])
-  @@index([bookId])
-  @@index([status])
+enum PoetryWorkStatus {
+  PENDING
+  APPROVED
+  REJECTED
 }
 
-model ReadingLog {
-  id            String           @id @default(uuid())
-  userId        String
-  user          User             @relation("ReadingLog", fields: [userId], references: [id], onDelete: Cascade)
-  bookId        String
-  book          Book             @relation(fields: [bookId], references: [id], onDelete: Cascade)
-  chapterInfo   String? // 章节信息（如：第3章/第50-80页）
-  readPages     Int              @default(0) // 本次阅读页数
-  content       String           @db.Text // 短评感想（必填）
-  likesCount    Int              @default(0) // 点赞数
-  dislikesCount Int              @default(0) // 点踩数
-  isPublic      Boolean          @default(true) // 强制true
-  likes         ReadingLogLike[]
-  tags          OldContentTag[] // 旧的标签关联，迁移后可删除
-  dynamicId     String?          @unique
-  dynamic       Dynamic?         @relation(fields: [dynamicId], references: [id])
-  createdAt     DateTime         @default(now())
-  updatedAt     DateTime         @updatedAt
-
-  @@index([userId])
-  @@index([bookId])
-  @@index([createdAt])
-  @@index([isPublic])
+enum QuestionStatus {
+  OPEN
+  ANSWERED
+  CLOSED
 }
 
-model ReadingLogLike {
-  id           String     @id @default(uuid())
-  readingLogId String
-  readingLog   ReadingLog @relation(fields: [readingLogId], references: [id], onDelete: Cascade)
-  userId       String
-  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  isLike       Boolean // true=点赞，false=点踩
-  createdAt    DateTime   @default(now())
-
-  @@unique([readingLogId, userId])
-  @@index([readingLogId])
-  @@index([userId])
+enum ReadingStatus {
+  WANT_TO_READ
+  READING
+  COMPLETED
+  DROPPED
 }
 
-// ========== 音乐系统 ==========
-
-model Music {
-  id            String             @id @default(uuid())
-  title         String
-  artist        String?
-  album         String?
-  coverUrl      String?
-  genre         String?
-  releaseDate   DateTime?
-  duration      Int? // 时长（秒）
-  spotifyUrl    String?
-  description   String?            @db.Text
-  createdBy     String
-  createdByUser User               @relation("MusicCreator", fields: [createdBy], references: [id], onDelete: Cascade)
-  musicLibrary  UserMusicLibrary[]
-  musicLogs     MusicLog[]
-  createdAt     DateTime           @default(now())
-  updatedAt     DateTime           @updatedAt
-
-  @@index([title])
-  @@index([artist])
-  @@index([genre])
-  @@index([createdBy])
+enum Role {
+  STUDENT
+  PARENT
+  TEACHER
+  ADMIN
 }
 
-model UserMusicLibrary {
-  id        String          @id @default(uuid())
-  userId    String
-  user      User            @relation(fields: [userId], references: [id], onDelete: Cascade)
-  musicId   String
-  music     Music           @relation(fields: [musicId], references: [id], onDelete: Cascade)
-  status    ListeningStatus @default(WANT_TO_LISTEN)
-  playCount Int             @default(0) // 播放次数
-  createdAt DateTime        @default(now())
-  updatedAt DateTime        @updatedAt
-
-  @@unique([userId, musicId])
-  @@index([userId])
-  @@index([musicId])
-  @@index([status])
+enum TagCategory {
+  SUBJECT
+  SKILL
+  PROGRAMMING
+  INTEREST
+  OTHER
 }
 
-model MusicLog {
-  id            String          @id @default(uuid())
-  userId        String
-  user          User            @relation("MusicLog", fields: [userId], references: [id], onDelete: Cascade)
-  musicId       String
-  music         Music           @relation(fields: [musicId], references: [id], onDelete: Cascade)
-  content       String          @db.Text // 听后感想（必填）
-  likesCount    Int             @default(0) // 点赞数
-  dislikesCount Int             @default(0) // 点踩数
-  isPublic      Boolean         @default(true)
-  likes         MusicLogLike[]
-  tags          OldContentTag[] // 旧的标签关联，迁移后可删除
-  dynamicId     String?         @unique
-  dynamic       Dynamic?        @relation(fields: [dynamicId], references: [id])
-  createdAt     DateTime        @default(now())
-  updatedAt     DateTime        @updatedAt
-
-  @@index([userId])
-  @@index([musicId])
-  @@index([createdAt])
-  @@index([isPublic])
+enum TaskStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  OVERDUE
 }
 
-model MusicLogLike {
-  id         String   @id @default(uuid())
-  musicLogId String
-  musicLog   MusicLog @relation(fields: [musicLogId], references: [id], onDelete: Cascade)
-  userId     String
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  isLike     Boolean // true=点赞，false=点踩
-  createdAt  DateTime @default(now())
-
-  @@unique([musicLogId, userId])
-  @@index([musicLogId])
-  @@index([userId])
+enum TextbookLessonStatus {
+  EMPTY
+  DRAFT
+  SUBMITTED
+  APPROVED
+  REJECTED
+  PUBLISHED
 }
-
-// ========== 影视系统 ==========
-
-model Movie {
-  id            String             @id @default(uuid())
-  title         String
-  director      String?
-  actors        String? // 主要演员
-  posterUrl     String?
-  genre         String?
-  releaseDate   DateTime?
-  duration      Int? // 时长（分钟）
-  imdbUrl       String?
-  doubanUrl     String?
-  description   String?            @db.Text
-  createdBy     String
-  createdByUser User               @relation("MovieCreator", fields: [createdBy], references: [id], onDelete: Cascade)
-  movieLibrary  UserMovieLibrary[]
-  movieLogs     MovieLog[]
-  createdAt     DateTime           @default(now())
-  updatedAt     DateTime           @updatedAt
-
-  @@index([title])
-  @@index([director])
-  @@index([genre])
-  @@index([createdBy])
-}
-
-model UserMovieLibrary {
-  id         String         @id @default(uuid())
-  userId     String
-  user       User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  movieId    String
-  movie      Movie          @relation(fields: [movieId], references: [id], onDelete: Cascade)
-  status     WatchingStatus @default(WANT_TO_WATCH)
-  watchCount Int            @default(0) // 观看次数
-  createdAt  DateTime       @default(now())
-  updatedAt  DateTime       @updatedAt
-
-  @@unique([userId, movieId])
-  @@index([userId])
-  @@index([movieId])
-  @@index([status])
-}
-
-model MovieLog {
-  id            String          @id @default(uuid())
-  userId        String
-  user          User            @relation("MovieLog", fields: [userId], references: [id], onDelete: Cascade)
-  movieId       String
-  movie         Movie           @relation(fields: [movieId], references: [id], onDelete: Cascade)
-  content       String          @db.Text // 观后感想（必填）
-  likesCount    Int             @default(0) // 点赞数
-  dislikesCount Int             @default(0) // 点踩数
-  isPublic      Boolean         @default(true)
-  likes         MovieLogLike[]
-  tags          OldContentTag[] // 旧的标签关联，迁移后可删除
-  dynamicId     String?         @unique
-  dynamic       Dynamic?        @relation(fields: [dynamicId], references: [id])
-  createdAt     DateTime        @default(now())
-  updatedAt     DateTime        @updatedAt
-
-  @@index([userId])
-  @@index([movieId])
-  @@index([createdAt])
-  @@index([isPublic])
-}
-
-model MovieLogLike {
-  id         String   @id @default(uuid())
-  movieLogId String
-  movieLog   MovieLog @relation(fields: [movieLogId], references: [id], onDelete: Cascade)
-  userId     String
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  isLike     Boolean // true=点赞，false=点踩
-  createdAt  DateTime @default(now())
-
-  @@unique([movieLogId, userId])
-  @@index([movieLogId])
-  @@index([userId])
-}
-
-// ========== HTML作品 ==========
-
-model HTMLWork {
-  id           String     @id @default(uuid())
-  authorId     String
-  author       User       @relation(fields: [authorId], references: [id], onDelete: Cascade)
-  title        String
-  description  String?
-  htmlCode     String     @db.Text
-  cssCode      String     @db.Text
-  jsCode       String     @db.Text
-  thumbnail    String?
-  category     String?    // 作品类型/分类，用户自定义
-  isPublic     Boolean    @default(true) // 是否公开到个人主页
-  forkedFromId String?
-  forkedFrom   HTMLWork?  @relation("WorkForks", fields: [forkedFromId], references: [id], onDelete: SetNull)
-  forks        HTMLWork[] @relation("WorkForks")
-  likes        Like[]
-  comments     Comment[]
-  dynamicId    String?    @unique
-  dynamic      Dynamic?   @relation(fields: [dynamicId], references: [id])
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
-
-  @@index([authorId])
-  @@index([createdAt])
-  @@index([category])
-  @@index([isPublic])
-}
-
-// ========== 游戏评测系统 ==========
-
-model Game {
-  id            String            @id @default(uuid())
-  name          String
-  coverUrl      String?
-  gameType      String
-  platform      String
-  description   String?           @db.Text
-  avgScore      Float?            @default(0)
-  recordCount   Int               @default(0)
-  isBlocked     Boolean           @default(false)
-  createdBy     String? // 谁添加的（可选，兼容旧数据）
-  createdByUser User?             @relation("GameCreator", fields: [createdBy], references: [id], onDelete: SetNull)
-  userRecords   UserGameRecord[]
-  shortReviews  GameShortReview[]
-  longReviews   GameLongReview[]
-  createdAt     DateTime          @default(now())
-  updatedAt     DateTime          @updatedAt
-
-  @@index([name])
-  @@index([gameType])
-  @@index([isBlocked])
-  @@index([avgScore])
-  @@index([recordCount])
-}
-
-model UserGameRecord {
-  id            String         @id @default(uuid())
-  userId        String
-  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  gameId        String
-  game          Game           @relation(fields: [gameId], references: [id], onDelete: Cascade)
-  status        GamePlayStatus @default(WANT_TO_PLAY)
-  totalPlayTime Int            @default(0)
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
-
-  @@unique([userId, gameId])
-  @@index([userId])
-  @@index([gameId])
-  @@index([status])
-}
-
-model GameShortReview {
-  id        String   @id @default(uuid())
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  gameId    String
-  game      Game     @relation(fields: [gameId], references: [id], onDelete: Cascade)
-  content   String   @db.VarChar(100)
-  score     Int
-  playTime  Int
-  createdAt DateTime @default(now())
-
-  @@index([userId])
-  @@index([gameId])
-  @@index([score])
-  @@index([createdAt])
-}
-
-model GameLongReview {
-  id            String               @id @default(uuid())
-  userId        String
-  user          User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
-  gameId        String
-  game          Game                 @relation(fields: [gameId], references: [id], onDelete: Cascade)
-  title         String
-  content       String               @db.Text
-  score         Int
-  playTime      Int
-  isPublic      Boolean              @default(true)
-  likesCount    Int                  @default(0)
-  commentsCount Int                  @default(0)
-  likes         GameLongReviewLike[]
-  comments      GameReviewComment[]
-  createdAt     DateTime             @default(now())
-  updatedAt     DateTime             @updatedAt
-
-  @@index([userId])
-  @@index([gameId])
-  @@index([score])
-  @@index([isPublic])
-  @@index([likesCount])
-  @@index([createdAt])
-}
-
-model GameReviewComment {
-  id        String         @id @default(uuid())
-  reviewId  String
-  review    GameLongReview @relation(fields: [reviewId], references: [id], onDelete: Cascade)
-  userId    String
-  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  content   String         @db.Text
-  createdAt DateTime       @default(now())
-
-  @@index([reviewId])
-  @@index([userId])
-  @@index([createdAt])
-}
-
-model GameLongReviewLike {
-  id        String         @id @default(uuid())
-  reviewId  String
-  review    GameLongReview @relation(fields: [reviewId], references: [id], onDelete: Cascade)
-  userId    String
-  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  createdAt DateTime       @default(now())
-
-  @@unique([reviewId, userId])
-  @@index([reviewId])
-  @@index([userId])
-}
-
-// ========== 时间轴与互动 ==========
-
-model Dynamic {
-  id         String      @id @default(uuid())
-  authorId   String
-  author     User        @relation(fields: [authorId], references: [id], onDelete: Cascade)
-  content    String      @db.Text
-  images     String[]
-  isPublic   Boolean     @default(true)
-  diary      Diary?
-  homework   Homework?
-  htmlWork   HTMLWork?
-  readingLog ReadingLog?
-  musicLog   MusicLog?
-  movieLog   MovieLog?
-  likes      Like[]
-  comments   Comment[]
-  createdAt  DateTime    @default(now())
-  updatedAt  DateTime    @updatedAt
-
-  @@index([authorId])
-  @@index([createdAt])
-  @@index([isPublic])
-}
-
-model Like {
-  id        String    @id @default(uuid())
-  userId    String
-  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  dynamicId String?
-  dynamic   Dynamic?  @relation(fields: [dynamicId], references: [id], onDelete: Cascade)
-  workId    String?
-  work      HTMLWork? @relation(fields: [workId], references: [id], onDelete: Cascade)
-  createdAt DateTime  @default(now())
-
-  @@unique([userId, dynamicId])
-  @@unique([userId, workId])
-  @@index([userId])
-  @@index([dynamicId])
-  @@index([workId])
-}
-
-model Comment {
-  id        String    @id @default(uuid())
-  authorId  String
-  author    User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
-  content   String    @db.Text
-  dynamicId String?
-  dynamic   Dynamic?  @relation(fields: [dynamicId], references: [id], onDelete: Cascade)
-  workId    String?
-  work      HTMLWork? @relation(fields: [workId], references: [id], onDelete: Cascade)
-  diaryId   String?
-  diary     Diary?    @relation(fields: [diaryId], references: [id], onDelete: Cascade)
-  parentId  String?
-  parent    Comment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
-  replies   Comment[] @relation("CommentReplies")
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-
-  @@index([authorId])
-  @@index([dynamicId])
-  @@index([workId])
-  @@index([diaryId])
-}
-
-// ========== 任务系统 ==========
-
-model Task {
-  id          String           @id @default(uuid())
-  creatorId   String
-  creator     User             @relation(fields: [creatorId], references: [id], onDelete: Cascade)
-  title       String
-  description String           @db.Text
-  dueDate     DateTime?
-  submissions TaskSubmission[]
-  createdAt   DateTime         @default(now())
-  updatedAt   DateTime         @updatedAt
-
-  @@index([creatorId])
-  @@index([dueDate])
-}
-
-model TaskSubmission {
-  id          String     @id @default(uuid())
-  taskId      String
-  task        Task       @relation(fields: [taskId], references: [id], onDelete: Cascade)
-  studentId   String
-  student     User       @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  status      TaskStatus @default(PENDING)
-  content     String?    @db.Text
-  attachments String[]
-  note        String?
-  completedAt DateTime?
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
-
-  @@unique([taskId, studentId])
-  @@index([studentId])
-  @@index([status])
-}
-
-// ========== 日历 ==========
-
-model CalendarEvent {
-  id          String    @id @default(uuid())
-  userId      String
-  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  title       String
-  description String?   @db.Text
-  startDate   DateTime
-  endDate     DateTime?
-  color       String?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-
-  @@index([userId])
-  @@index([startDate])
-}
-
-// ========== 积分系统 ==========
-
-model PointRule {
-  id             String     @id // 规则ID (如 D001, R001)
-  category       String // 行为类型 (diary/reading/homework/work/game/social/login)
-  action         String // 触发动作 (create/like/dislike/delete/finish/fork/login/streak)
-  name           String // 规则名称（中文）
-  description    String // 规则描述
-  conditionType  String     @default("none") // 条件类型 (none/word_count/count/status)
-  conditionValue Int? // 条件值
-  points         Int // 积分值（正数加分，负数扣分）
-  dailyLimit     Int        @default(0) // 每日上限（0表示无限制）
-  isEnabled      Boolean    @default(true) // 是否启用
-  logs           PointLog[]
-  createdAt      DateTime   @default(now())
-  updatedAt      DateTime   @updatedAt
-
-  @@index([category])
-  @@index([action])
-  @@index([isEnabled])
-}
-
-model PointLog {
-  id          String     @id @default(uuid())
-  userId      String
-  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  ruleId      String?
-  rule        PointRule? @relation(fields: [ruleId], references: [id], onDelete: SetNull)
-  points      Int // 获得的积分（正/负）
-  description String? // 描述
-  targetType  String? // 关联对象类型 (diary/reading_log/work等)
-  targetId    String? // 关联对象ID
-  createdAt   DateTime   @default(now())
-
-  @@index([userId])
-  @@index([ruleId])
-  @@index([targetType, targetId])
-  @@index([createdAt])
-}
-
-model UserPoints {
-  id          String   @id @default(uuid())
-  userId      String   @unique
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  totalPoints Int      @default(0)
-  todayPoints Int      @default(0)
-  updatedAt   DateTime @updatedAt
-
-  @@index([userId])
-}
-
-// 每日积分限制记录（不含奖罚模块）
-model DailyPointsLimit {
-  id            String   @id @default(uuid())
-  userId        String
-  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  date          DateTime @db.Date // 日期（年-月-日）
-  earnedPoints  Int      @default(0) // 当日已获得积分（不含奖罚模块）
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-
-  @@unique([userId, date])
-  @@index([userId])
-  @@index([date])
-}
-
-// ========== 活动日志 ==========
-
-model ActivityLog {
-  id          String   @id @default(uuid())
-  userId      String
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  action      String
-  targetType  String?
-  targetId    String?
-  description String?
-  ipAddress   String?
-  createdAt   DateTime @default(now())
-
-  @@index([userId])
-  @@index([action])
-  @@index([createdAt])
-}
-
-// ========== 学习时间追踪系统 ==========
 
 enum TimerMode {
-  FREE // 自由计时
-  POMODORO // 番茄钟
+  FREE
+  POMODORO
 }
 
-model LearningProject {
-  id            String   @id @default(uuid())
-  userId        String
-  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  name          String
-  category      String
-  color         String   @default("#3B82F6")
-  totalDuration Int      @default(0) // 总时长（分钟）
-  sessionCount  Int      @default(0) // 学习次数
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-
-  sessions     LearningSession[]
-  activeTimers ActiveTimer[]
-
-  @@index([userId])
-  @@index([createdAt])
-}
-
-model LearningSession {
-  id         String          @id @default(uuid())
-  userId     String
-  user       User            @relation(fields: [userId], references: [id], onDelete: Cascade)
-  projectId  String
-  project    LearningProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  startTime  DateTime
-  endTime    DateTime
-  duration   Int // 时长（分钟）
-  mode       TimerMode       @default(FREE)
-  content    String // 学习感受，20-500字
-  progress   String? // 学习进度
-  tags       Json            @default("[]") // 标签数组
-  isPublic   Boolean         @default(true)
-  likesCount Int             @default(0)
-  createdAt  DateTime        @default(now())
-
-  likes LearningSessionLike[]
-
-  @@index([userId])
-  @@index([projectId])
-  @@index([createdAt])
-}
-
-model LearningSessionLike {
-  id        String          @id @default(uuid())
-  sessionId String
-  session   LearningSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-  userId    String
-  user      User            @relation(fields: [userId], references: [id], onDelete: Cascade)
-  createdAt DateTime        @default(now())
-
-  @@unique([sessionId, userId])
-  @@index([sessionId])
-  @@index([userId])
-}
-
-model ActiveTimer {
-  id            String          @id @default(uuid())
-  userId        String
-  user          User            @relation(fields: [userId], references: [id], onDelete: Cascade)
-  projectId     String
-  project       LearningProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  startTime     DateTime        @default(now())
-  mode          TimerMode       @default(FREE)
-  pomodoroCount Int             @default(0) // 番茄钟轮次
-  createdAt     DateTime        @default(now())
-
-  @@index([userId])
-  @@index([projectId])
-}
-
-// ========== 成就徽章系统 ==========
-
-enum AchievementRarity {
-  COMMON // 普通
-  RARE // 稀有
-  EPIC // 史诗
-  LEGENDARY // 传说
-}
-
-enum AchievementCategory {
-  CREATION // 创作
-  LEARNING // 学习
-  PERSISTENCE // 坚持
-  SOCIAL // 社交
-  SPECIAL // 特殊
-}
-
-enum AchievementConditionType {
-  COUNT // 累计次数
-  STREAK // 连续天数
-  TOTAL // 总量
-  THRESHOLD // 阈值
-}
-
-// 成就定义表
-model Achievement {
-  id             String                   @id @default(uuid())
-  code           String                   @unique // 成就代码，如 FIRST_WORK
-  name           String // 成就名称
-  description    String // 成就描述
-  icon           String // 图标（emoji或URL）
-  rarity         AchievementRarity        @default(COMMON) // 稀有度
-  category       AchievementCategory      @default(CREATION) // 分类
-  conditionType  AchievementConditionType @default(COUNT) // 条件类型
-  conditionValue Int // 目标值
-  rewardPoints   Int                      @default(0) // 奖励积分
-  rewardCoins    Int                      @default(0) // 奖励金币
-  isHidden       Boolean                  @default(false) // 隐藏成就
-  sortOrder      Int                      @default(0) // 排序
-  createdAt      DateTime                 @default(now())
-  updatedAt      DateTime                 @updatedAt
-
-  // 关联
-  userAchievements UserAchievement[]
-  progress         AchievementProgress[]
-
-  @@index([code])
-  @@index([category])
-  @@index([rarity])
-  @@index([sortOrder])
-}
-
-// 用户成就表
-model UserAchievement {
-  id            String      @id @default(uuid())
-  userId        String
-  achievementId String
-  achievement   Achievement @relation(fields: [achievementId], references: [id], onDelete: Cascade)
-  unlockedAt    DateTime    @default(now())
-  isShowcased   Boolean     @default(false) // 是否展示
-
-  @@unique([userId, achievementId])
-  @@index([userId])
-  @@index([achievementId])
-  @@index([unlockedAt])
-  @@index([isShowcased])
-}
-
-// 成就进度表
-model AchievementProgress {
-  id            String      @id @default(uuid())
-  userId        String
-  achievementId String
-  achievement   Achievement @relation(fields: [achievementId], references: [id], onDelete: Cascade)
-  currentValue  Int         @default(0) // 当前进度
-  targetValue   Int // 目标值
-  updatedAt     DateTime    @updatedAt
-
-  @@unique([userId, achievementId])
-  @@index([userId])
-  @@index([achievementId])
-}
-
-// ========== 虚拟货币系统 ==========
-
-model Wallet {
-  id        String   @id @default(uuid())
-  userId    String   @unique
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  balance   Decimal  @default(0) @db.Decimal(10, 2) // 金币余额（支持小数点后2位）
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  transactions WalletTransaction[]
-
-  @@index([userId])
-}
-
-model WalletTransaction {
-  id          String   @id @default(uuid())
-  walletId    String
-  wallet      Wallet   @relation(fields: [walletId], references: [id], onDelete: Cascade)
-  amount      Decimal  @db.Decimal(10, 2) // 金额变动（正数为收入，负数为支出，支持小数）
-  type        String // 交易类型 (challenge_reward/purchase/admin_adjust等)
-  description String? // 描述
-  relatedType String? // 关联对象类型
-  relatedId   String? // 关联对象ID
-  createdAt   DateTime @default(now())
-
-  @@index([walletId])
-  @@index([createdAt])
-  @@index([type])
-}
-
-// ========== 扫码支付系统 ==========
-
-// 收款码（管理员创建）
-model PayCode {
-  id          String     @id @default(uuid())
-  code        String     @unique // 唯一收款码
-  title       String // 商品/服务名称
-  amount      Decimal    @db.Decimal(10, 2) // 金额（学习币，支持0.01）
-  description String? // 描述
-  category    String? // 分类
-  isActive    Boolean    @default(true) // 是否启用
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
-  createdById String // 创建人（管理员）ID
-
-  // 关联的订单
-  orders      PayOrder[]
-
-  @@index([code])
-  @@index([createdAt])
-  @@index([isActive])
-  @@index([category])
-}
-
-// 支付订单
-model PayOrder {
-  id         String   @id @default(uuid())
-  orderNo    String   @unique // 订单号
-  userId     String // 支付用户
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  payCodeId  String // 收款码ID
-  payCode    PayCode  @relation(fields: [payCodeId], references: [id])
-  amount     Decimal  @db.Decimal(10, 2) // 支付金额（支持小数）
-  title      String // 商品名称（冗余，便于查询）
-  status     String   @default("completed") // 订单状态（completed/failed）
-  createdAt  DateTime @default(now())
-
-  @@index([userId])
-  @@index([orderNo])
-  @@index([payCodeId])
-  @@index([createdAt])
-}
-
-// ========== 每日挑战系统 ==========
-
-enum ChallengeDifficulty {
-  EASY
-  MEDIUM
-  HARD
-}
-
-enum ChallengeType {
-  DIARY // 日记相关
-  STUDY // 学习相关
-  WORK // 作品相关
-  READING // 阅读相关
-  SOCIAL // 社交相关
-}
-
-enum ChallengeConditionType {
-  WORD_COUNT // 字数
-  DURATION // 时长（分钟）
-  COUNT // 次数
-  ACTION // 单次行为
+enum TransactionType {
+  EARN_TASK
+  EARN_ACHIEVEMENT
+  EARN_REWARD
+  EARN_SALE
+  SPEND_PURCHASE
+  SPEND_REWARD
+  SPEND_QUESTION
+  EARN_ANSWER
+  EARN_TEACHER
 }
 
 enum UserChallengeStatus {
-  IN_PROGRESS // 进行中
-  COMPLETED // 已完成
-  FAILED // 已失败（过期未完成）
+  IN_PROGRESS
+  COMPLETED
+  FAILED
 }
 
-// 挑战模板表
-model ChallengeTemplate {
-  id             String                 @id @default(uuid())
-  title          String // 挑战标题
-  description    String // 挑战描述
-  type           ChallengeType // 挑战类型
-  difficulty     ChallengeDifficulty // 难度
-  conditionType  ChallengeConditionType // 条件类型
-  conditionValue Int // 条件值
-  rewardPoints   Int // 奖励积分
-  rewardCoins    Int // 奖励金币
-  isActive       Boolean                @default(true) // 是否启用
-  weight         Int                    @default(1) // 权重（用于随机选择）
-  createdAt      DateTime               @default(now())
-  updatedAt      DateTime               @updatedAt
-
-  dailyChallengesEasy   DailyChallenge[] @relation("EasyChallenge")
-  dailyChallengesMedium DailyChallenge[] @relation("MediumChallenge")
-  dailyChallengesHard   DailyChallenge[] @relation("HardChallenge")
-
-  @@index([type])
-  @@index([difficulty])
-  @@index([isActive])
+enum UserStatus {
+  PENDING
+  ACTIVE
+  DISABLED
 }
 
-// 每日挑战表
-model DailyChallenge {
-  id                String            @id @default(uuid())
-  challengeDate     String            @unique // YYYY-MM-DD格式
-  easyChallengeId   String
-  easyChallenge     ChallengeTemplate @relation("EasyChallenge", fields: [easyChallengeId], references: [id])
-  mediumChallengeId String
-  mediumChallenge   ChallengeTemplate @relation("MediumChallenge", fields: [mediumChallengeId], references: [id])
-  hardChallengeId   String
-  hardChallenge     ChallengeTemplate @relation("HardChallenge", fields: [hardChallengeId], references: [id])
-  createdAt         DateTime          @default(now())
-
-  userRecords UserChallengeRecord[]
-
-  @@index([challengeDate])
+enum WatchingStatus {
+  WANT_TO_WATCH
+  WATCHING
+  COMPLETED
+  DROPPED
 }
 
-// 用户挑战记录表
-model UserChallengeRecord {
-  id               String              @id @default(uuid())
-  userId           String
-  dailyChallengeId String
-  dailyChallenge   DailyChallenge      @relation(fields: [dailyChallengeId], references: [id], onDelete: Cascade)
-  challengeId      String // 挑战模板ID
-  difficulty       ChallengeDifficulty // 难度
-  status           UserChallengeStatus @default(IN_PROGRESS) // 状态
-  progress         Int                 @default(0) // 当前进度
-  target           Int // 目标值
-  rewardClaimed    Boolean             @default(false) // 是否已领取奖励
-  completedAt      DateTime? // 完成时间
-  createdAt        DateTime            @default(now())
-  updatedAt        DateTime            @updatedAt
-
-  @@unique([userId, dailyChallengeId, difficulty])
-  @@index([userId])
-  @@index([dailyChallengeId])
-  @@index([status])
-  @@index([rewardClaimed])
-}
-
-// ========== 好友关注系统 ==========
-
-// 关注关系表（单向关注）
-model UserFollow {
-  id          String   @id @default(uuid())
-  followerId  String // 关注者ID（谁关注了）
-  follower    User     @relation("UserFollowing", fields: [followerId], references: [id], onDelete: Cascade)
-  followingId String // 被关注者ID（被谁关注）
-  following   User     @relation("UserFollowers", fields: [followingId], references: [id], onDelete: Cascade)
-  createdAt   DateTime @default(now())
-
-  @@unique([followerId, followingId])
-  @@index([followerId])
-  @@index([followingId])
-  @@index([createdAt])
-}
-
-// 好友关系表（互相关注）
-model Friendship {
-  id        String   @id @default(uuid())
-  userId1   String // 较小的用户ID
-  user1     User     @relation("User1Friendships", fields: [userId1], references: [id], onDelete: Cascade)
-  userId2   String // 较大的用户ID
-  user2     User     @relation("User2Friendships", fields: [userId2], references: [id], onDelete: Cascade)
-  createdAt DateTime @default(now())
-
-  @@unique([userId1, userId2])
-  @@index([userId1])
-  @@index([userId2])
-  @@index([createdAt])
-}
-
-// ========== 实时聊天系统 ==========
-
-enum MessageType {
-  CHAT // 好友聊天
-  SYSTEM_ACHIEVEMENT // 系统消息：成就解锁
-  SYSTEM_TASK // 系统消息：任务相关
-  SYSTEM_PURCHASE // 系统消息：作品购买
-  SYSTEM_FOLLOW // 系统消息：关注通知
-  SYSTEM_FRIEND // 系统消息：好友通知
-  SYSTEM_REWARD // 系统消息：打赏通知
-  SYSTEM_TEACHER_REWARD // 系统消息：老师奖励
-  SYSTEM_QUESTION // 系统消息：问答通知
-}
-
-// 统一消息表
-model Message {
-  id          String      @id @default(uuid())
-  fromUserId  String? // 发送者ID（null表示系统消息）
-  fromUser    User?       @relation("MessageFrom", fields: [fromUserId], references: [id], onDelete: Cascade)
-  toUserId    String // 接收者ID
-  toUser      User        @relation("MessageTo", fields: [toUserId], references: [id], onDelete: Cascade)
-  messageType MessageType @default(CHAT) // 消息类型
-  content     String      @db.Text // 消息内容
-  metadata    Json? // 额外信息（如链接、ID等）
-  isRead      Boolean     @default(false) // 是否已读
-  createdAt   DateTime    @default(now())
-  deletedAt   DateTime? // 软删除时间
-
-  @@index([toUserId, isRead])
-  @@index([fromUserId, toUserId, createdAt])
-  @@index([toUserId, createdAt])
-  @@index([messageType])
-}
-
-// ========== 学习货币系统 ==========
-
-// 交易类型枚举
-enum TransactionType {
-  EARN_TASK // 任务获得
-  EARN_ACHIEVEMENT // 成就获得
-  EARN_REWARD // 打赏收入
-  EARN_SALE // 作品销售收入
-  SPEND_PURCHASE // 购买支出
-  SPEND_REWARD // 打赏支出
-  SPEND_QUESTION // 悬赏提问支出
-  EARN_ANSWER // 回答获得
-  EARN_TEACHER // 老师奖励
-}
-
-// 交易记录表
-model Transaction {
-  id          String          @id @default(uuid())
-  userId      String // 用户ID
-  user        User            @relation(fields: [userId], references: [id], onDelete: Cascade)
-  type        TransactionType // 交易类型
-  amount      Int // 金额（正数=收入，负数=支出）
-  balance     Int // 交易后余额
-  fromUserId  String? // 来源用户ID（打赏、奖励等）
-  fromUser    User?           @relation("TransactionFrom", fields: [fromUserId], references: [id], onDelete: SetNull)
-  toUserId    String? // 目标用户ID（打赏等）
-  toUser      User?           @relation("TransactionTo", fields: [toUserId], references: [id], onDelete: SetNull)
-  relatedType String? // 关联类型：work/diary/homework/question
-  relatedId   String? // 关联ID
-  description String          @db.Text // 描述
-  metadata    Json? // 额外信息
-  createdAt   DateTime        @default(now())
-
-  @@index([userId, createdAt])
-  @@index([type])
-  @@index([relatedType, relatedId])
-}
-
-// 付费内容表
-model PaidContent {
-  id          String   @id @default(uuid())
-  contentType String // 内容类型：diary/homework/note
-  contentId   String // 内容ID
-  userId      String // 作者ID
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  price       Int // 价格（金币）
-  sales       Int      @default(0) // 销量
-  revenue     Int      @default(0) // 总收入
-  createdAt   DateTime @default(now())
-
-  purchases ContentPurchase[]
-
-  @@unique([contentType, contentId])
-  @@index([userId])
-  @@index([price])
-}
-
-// 内容购买记录表
-model ContentPurchase {
-  id            String      @id @default(uuid())
-  userId        String // 购买者ID
-  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  paidContentId String // 付费内容ID
-  paidContent   PaidContent @relation(fields: [paidContentId], references: [id], onDelete: Cascade)
-  price         Int // 购买价格
-  createdAt     DateTime    @default(now())
-
-  @@unique([userId, paidContentId])
-  @@index([userId])
-  @@index([createdAt])
-}
-
-// 问题状态枚举
-enum QuestionStatus {
-  OPEN // 开放中
-  ANSWERED // 已回答
-  CLOSED // 已关闭
-}
-
-// 问题表
-model Question {
-  id            String         @id @default(uuid())
-  userId        String // 提问者ID
-  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  title         String // 问题标题
-  content       String         @db.Text // 问题内容
-  rewardPoints  Int            @default(0) // 悬赏积分
-  bestAnswerId  String? // 最佳答案ID
-  status        QuestionStatus @default(OPEN) // 问题状态
-  viewsCount    Int            @default(0) // 浏览次数
-  answersCount  Int            @default(0) // 回答数量
-  appendContent String?        @db.Text // 补充内容
-  closedReason  String? // 关闭原因：manual手动关闭/accepted采纳答案
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
-  deletedAt     DateTime? // 软删除时间
-
-  answers       Answer[]
-  views         QuestionView[]
-  likesCount    Int            @default(0) // 问题点赞数
-
-  @@index([userId])
-  @@index([status])
-  @@index([createdAt])
-  @@index([rewardPoints])
-  @@index([deletedAt])
-}
-
-// 回答表
-model Answer {
-  id         String       @id @default(uuid())
-  questionId String // 问题ID
-  question   Question     @relation(fields: [questionId], references: [id], onDelete: Cascade)
-  userId     String // 回答者ID
-  user       User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  content    String       @db.Text // 回答内容
-  isBest     Boolean      @default(false) // 是否最佳答案
-  likesCount Int          @default(0) // 点赞数
-  createdAt  DateTime     @default(now())
-  updatedAt  DateTime     @updatedAt
-
-  likes      AnswerLike[]
-
-  @@index([questionId])
-  @@index([userId])
-  @@index([createdAt])
-}
-
-// 问题浏览记录表
-model QuestionView {
+model TeacherBinding {
   id         String   @id @default(uuid())
-  userId     String // 浏览者ID
-  questionId String // 问题ID
-  question   Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  studentId  String   @db.VarChar(100)
+  teacherId  String   @db.VarChar(100)
   createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  status     String   @default("ACTIVE") @db.VarChar(20)
+  boundAt    DateTime @default(now())
 
-  @@unique([userId, questionId])
-  @@index([userId])
-  @@index([questionId])
-  @@index([createdAt])
+  @@index([studentId])
+  @@index([teacherId])
+  @@index([status])
 }
 
-// 回答点赞表
-model AnswerLike {
-  id        String   @id @default(uuid())
-  answerId  String // 回答ID
-  answer    Answer   @relation(fields: [answerId], references: [id], onDelete: Cascade)
-  userId    String // 点赞者ID
-  createdAt DateTime @default(now())
+model DelegatedReview {
+  id             String    @id @default(uuid())
+  submissionId   String    @db.VarChar(100)
+  teacherId      String    @db.VarChar(100)
+  status         String    @default("PENDING") @db.VarChar(20)
+  reviewComment  String?   @db.Text
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  reviewedAt     DateTime?
 
-  @@unique([answerId, userId])
-  @@index([answerId])
-  @@index([userId])
+  @@index([submissionId])
+  @@index([teacherId])
+  @@index([status])
 }
 
-// ========== 系统配置表 ==========
+model TeacherStats {
+  id               String   @id @default(uuid())
+  teacherId        String   @unique @db.VarChar(100)
+  score            Int      @default(0)
+  level            Int      @default(1)
+  totalReviews     Int      @default(0)
+  correctReviews   Int      @default(0)
+  wrongReviews     Int      @default(0)
+  consecutiveWrong Int      @default(0)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 
-model SystemSetting {
-  id          String   @id @default(uuid())
-  key         String   @unique // 配置键（如 point_exchange_rate, daily_exchange_limit）
-  value       String // 配置值（JSON 字符串）
-  type        String   @default("string") // 值类型（string/number/json）
-  description String? // 描述
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  @@index([key])
+  @@index([score(sort: Desc)])
 }
 
+model ReviewQualityLog {
+  id             String   @id @default(uuid())
+  teacherId      String   @db.VarChar(100)
+  submissionId   String   @db.VarChar(100)
+  teacherAction  String   @db.VarChar(20)
+  adminAction    String   @db.VarChar(20)
+  isConsistent   Boolean
+  pointsDelta    Int
+  createdAt      DateTime @default(now())
 
-// ========== 积分兑换系统 ==========
+  @@index([teacherId])
+  @@index([submissionId])
+}
 
-model PointExchange {
+model UserSession {
   id           String   @id @default(uuid())
-  userId       String
-  pointsSpent  Int // 消耗的积分
-  coinsGained  Int // 获得的学习币
-  exchangeRate String // 兑换比例快照（如 "100:10"）
-  createdAt    DateTime @default(now())
-
-  @@index([userId])
-  @@index([createdAt])
-}
-
-// ========== 奖罚管理系统 ==========
-
-// 技术类型字典表
-model RuleType {
-  id          String         @id @default(uuid())
-  name        String         @unique // 类型名称
-  description String? // 描述
-  isEnabled   Boolean        @default(true)
-  createdAt   DateTime       @default(now())
-  updatedAt   DateTime       @updatedAt
-  
-  templates   RuleTemplate[]
-  
-  @@index([isEnabled])
-}
-
-// 展示标准字典表
-model RuleStandard {
-  id          String         @id @default(uuid())
-  name        String         @unique // 标准名称
-  description String? // 描述
-  isEnabled   Boolean        @default(true)
-  createdAt   DateTime       @default(now())
-  updatedAt   DateTime       @updatedAt
-  
-  templates   RuleTemplate[]
-  
-  @@index([isEnabled])
-}
-
-// 奖罚规则模板表
-model RuleTemplate {
-  id               String          @id @default(uuid())
-  name             String // 规则名称
-  description      String?         @db.Text // 规则描述（填写说明、要求等）
-  typeId           String // 技术类型ID
-  type             RuleType        @relation(fields: [typeId], references: [id], onDelete: Cascade)
-  standardId       String // 展示标准ID
-  standard         RuleStandard    @relation(fields: [standardId], references: [id], onDelete: Cascade)
-  requireImage     Boolean         @default(false) // 是否需要图片
-  requireText      Boolean         @default(true) // 是否需要文本说明
-  requireLink      Boolean         @default(false) // 是否需要链接
-  requireAudio     Boolean         @default(false) // 是否需要音频
-  textMaxLength    Int             @default(500) // 文本最大字数
-  audioUrl         String? // 规则说明音频URL（可选）
-  points           Int // 积分（可正可负）
-  allowQuantity    Boolean         @default(false) // 是否允许用户选择数量
-  status           String          @default("ENABLED") // ENABLED / DISABLED
-  createdBy        String // 创建人ID
-  creator          User            @relation(fields: [createdBy], references: [id], onDelete: Cascade)
-  createdAt        DateTime        @default(now())
-  updatedAt        DateTime        @updatedAt
-
-  submissions      RuleSubmission[]
-  favorites        TemplateFavorite[]
-
-  @@index([typeId])
-  @@index([standardId])
-  @@index([status])
-  @@index([createdBy])
-}
-
-// 用户提交记录表
-model RuleSubmission {
-  id           String       @id @default(uuid())
-  userId       String // 提交用户ID
-  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  templateId   String // 模板ID
-  template     RuleTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
-  content      String       @db.Text // 文本说明
-  images       String[] // 图片URL数组
-  audios       String[]     @default([]) // 音频URL数组
-  link         String? // 链接
-  quantity     Int          @default(1) // 数量（用于计算积分）
-  status       String       @default("PENDING") // PENDING / APPROVED / REJECTED
-  reviewNote   String? // 审核备注
-  reviewedBy   String? // 审核人ID
-  reviewer     User?        @relation("ReviewedSubmissions", fields: [reviewedBy], references: [id], onDelete: SetNull)
-  reviewedAt   DateTime? // 审核时间
-  pointsAwarded Int?       // 实际获得的积分
-  createdAt    DateTime     @default(now())
-  updatedAt    DateTime     @updatedAt
-
-  @@index([userId])
-  @@index([templateId])
-  @@index([status])
-  @@index([reviewedBy])
-  @@index([createdAt])
-}
-
-// 用户收藏的规则模板
-model TemplateFavorite {
-  id         String       @id @default(uuid())
-  userId     String
-  user       User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  templateId String
-  template   RuleTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
-  createdAt  DateTime     @default(now())
-
-  @@unique([userId, templateId])
-  @@index([userId])
-  @@index([templateId])
-}
-
-// ========== 电子课本系统 ==========
-
-// 学科枚举
-// 注意: subject 和 semester 已改为 String 类型，支持自定义值
-// 常用 subject: CHINESE(语文), MATH(数学), ENGLISH(英语), SCIENCE(科学) 等
-// 常用 semester: UP(上册), DOWN(下册), FULL(全一册) 等
-
-// 课文状态枚举
-enum TextbookLessonStatus {
-  EMPTY       // 空（未录入）
-  DRAFT       // 草稿
-  SUBMITTED   // 已提交审核
-  APPROVED    // 已通过
-  REJECTED    // 已拒绝
-  PUBLISHED   // 已发布
-}
-
-// 教材表
-model Textbook {
-  id          String   @id @default(uuid())
-  subject     String   // 学科（CHINESE/MATH/ENGLISH/SCIENCE等）
-  grade       Int      // 年级（1-9）
-  semester    String   // 学期（UP/DOWN/FULL等）
-  version     String            @default("人教版") // 版本
-  title       String            // 教材名称（如：语文三年级上册）
-  totalPages  Int?              // 总页数
-  pdfUrl      String?           // PDF文件路径
-  coverImage  String?           // 封面缩略图路径（上传PDF时自动生成）
-  status      String            @default("draft") // draft/published
-  isHidden    Boolean           @default(false) // 是否隐藏
-  createdBy   String            // 创建人ID
-  createdAt   DateTime          @default(now())
-  updatedAt   DateTime          @updatedAt
-
-  units       TextbookUnit[]
-  prompts     TextbookPrompt[]  // 教材自定义提示词
-
-  @@unique([subject, grade, semester, version])
-  @@index([subject])
-  @@index([grade])
-  @@index([status])
-  @@index([isHidden])
-  @@index([createdBy])
-}
-
-// 单元表
-model TextbookUnit {
-  id          String    @id @default(uuid())
-  textbookId  String
-  textbook    Textbook  @relation(fields: [textbookId], references: [id], onDelete: Cascade)
-  unitNumber  Int       // 单元序号
-  title       String    // 单元标题（如：第一单元）
-  theme       String?   // 单元主题（可选）
-  pageStart   Int?      // 起始页码
-  pageEnd     Int?      // 结束页码
-  sortOrder   Int       @default(0)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-
-  lessons     TextbookLesson[]
-
-  @@unique([textbookId, unitNumber])
-  @@index([textbookId])
-  @@index([sortOrder])
-}
-
-// 课文表
-model TextbookLesson {
-  id           String               @id @default(uuid())
-  unitId       String
-  unit         TextbookUnit         @relation(fields: [unitId], references: [id], onDelete: Cascade)
-  lessonNumber Int                  // 课文序号
-  title        String               // 课文标题
-  pageStart    Int?                 // 起始页码
-  pageEnd      Int?                 // 结束页码
-  htmlContent  String?              @db.Text // HTML内容
-  status       TextbookLessonStatus @default(EMPTY)
-  inputBy      String?              // 录入人ID
-  reviewedBy   String?              // 审核人ID
-  reviewNote   String?              // 审核备注
-  reviewedAt   DateTime?            // 审核时间
-  sortOrder    Int                  @default(0)
-  createdAt    DateTime             @default(now())
-  updatedAt    DateTime             @updatedAt
-
-  @@unique([unitId, lessonNumber])
-  @@index([unitId])
-  @@index([status])
-  @@index([inputBy])
-  @@index([sortOrder])
-}
-
-// ========== 唐诗宋词作品系统 ==========
-
-// 审核状态枚举
-enum PoetryWorkStatus {
-  PENDING   // 待审核
-  APPROVED  // 已通过
-  REJECTED  // 已拒绝
-}
-
-// 唐诗宋词作品表
-model PoetryWork {
-  id           String            @id @default(uuid())
-  authorId     String
-  author       User              @relation(fields: [authorId], references: [id], onDelete: Cascade)
-  title        String            // 作品标题
-  htmlCode     String            @db.Text // 完整HTML代码
-  status       PoetryWorkStatus  @default(PENDING) // 审核状态
-  reviewReason String?           // 审核原因
-  submissionId String?           // 关联的审核提交记录ID
-  createdAt    DateTime          @default(now())
-  updatedAt    DateTime          @updatedAt
-
-  likes        PoetryLike[]
-
-  @@index([authorId])
-  @@index([status])
-  @@index([createdAt])
-}
-
-// 唐诗宋词点赞表
-model PoetryLike {
-  id        String     @id @default(uuid())
-  userId    String
-  workId    String
-  work      PoetryWork @relation(fields: [workId], references: [id], onDelete: Cascade)
-  isLike    Boolean    @default(true) // true=点赞，false=点踩
-  createdAt DateTime   @default(now())
-
-  @@unique([userId, workId])
-  @@index([userId])
-  @@index([workId])
-}
-
-// ========== 阅读笔记系统 ==========
-
-// 阅读笔记表（用户主动保存的搜索/查字结果）
-model ReadingNote {
-  id          String   @id @default(uuid())
-  userId      String
-  textbookId  String   // 教材ID
-  sessionId   String   // 阅读会话ID（前端生成）
-  sourceType  String   // 来源类型：dict / search / explain
-  query       String   // 用户查询内容
-  content     Json     // 原始卡片数据
-  snippet     String   // 文本摘要（用于列表展示）
-  page        Int      // 关联页码
-  createdAt   DateTime @default(now())
-
-  @@index([userId, textbookId])
-  @@index([sessionId])
-  @@index([createdAt])
-}
-
-// ========== AI 辅助系统 ==========
-
-// AI API 配置表
-model AiApiConfig {
-  id           String   @id @default(uuid())
-  name         String                          // API 名称，如 "本地 LM Studio"
-  baseUrl      String                          // 服务器地址，如 "http://localhost:1234/v1"
-  apiKey       String?                         // API Key（可选）
-  model        String   @default("default")    // 模型名称
-  temperature  Float    @default(0.7)          // 温度参数
-  maxTokens    Int      @default(2000)         // 最大 token 数
-  isEnabled    Boolean  @default(true)         // 是否启用
-  isDefault    Boolean  @default(false)        // 是否默认
-  createdBy    String                          // 创建人 ID
+  userId       String   @db.VarChar(100)
+  tokenHash    String   @unique
+  device       String?
+  ip           String?
+  isRevoked    Boolean  @default(false)
+  expiresAt    DateTime
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  // 关联
-  analysisLogs AiAnalysisLog[]
-
-  @@index([createdBy])
-  @@index([isEnabled, isDefault])
-}
-
-// AI 分析提示词模板
-model AiPromptTemplate {
-  id           String   @id @default(uuid())
-  name         String                          // 模板名称
-  subject      String?                         // 适用学科（可选，null 表示通用）
-  promptText   String   @db.Text               // 提示词内容
-  description  String?                         // 模板描述
-  isDefault    Boolean  @default(false)        // 是否默认模板
-  isEnabled    Boolean  @default(true)         // 是否启用
-  createdBy    String                          // 创建人 ID
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-
-  // 关联
-  analysisLogs AiAnalysisLog[]
-
-  @@index([subject, isDefault])
-  @@index([isEnabled])
-  @@index([createdBy])
-}
-
-// AI 分析调用日志（用于追溯）
-model AiAnalysisLog {
-  id             String            @id @default(uuid())
-  userId         String                          // 触发用户 ID
-  textbookId     String                          // 教材 ID
-  sessionId      String                          // 阅读会话 ID
-  apiConfigId    String?                         // 使用的 API 配置 ID
-  apiConfig      AiApiConfig?      @relation(fields: [apiConfigId], references: [id], onDelete: SetNull)
-  promptId       String?                         // 使用的提示词模板 ID
-  prompt         AiPromptTemplate? @relation(fields: [promptId], references: [id], onDelete: SetNull)
-  inputPages     String                          // 输入页码范围，如 "3-5"
-  inputText      String            @db.Text      // 输入的 PDF 文本内容
-  fullPrompt     String            @db.Text      // 完整的请求 prompt
-  outputText     String?           @db.Text      // AI 输出内容
-  tokensUsed     Int?                            // 消耗的 token 数
-  responseTime   Int?                            // 响应时间（毫秒）
-  status         String            @default("pending")    // pending/success/error
-  errorMessage   String?                         // 错误信息
-  createdAt      DateTime          @default(now())
-
   @@index([userId])
-  @@index([textbookId])
-  @@index([sessionId])
-  @@index([apiConfigId])
-  @@index([createdAt])
-  @@index([status])
-}
-
-// 教材阅读聊天记录（永久存储，与用户和教材绑定）
-model TextbookChatMessage {
-  id           String   @id @default(uuid())
-  userId       String
-  textbookId   String
-  role         String                          // user / assistant / system
-  content      String   @db.Text               // 消息内容
-  page         Int?                            // 关联页码
-  sourceType   String?                         // 来源类型：user_input / ai_analysis / quote
-  metadata     Json?                           // 额外信息（引用来源等）
-  createdAt    DateTime @default(now())
-
-  @@index([userId, textbookId])
-  @@index([createdAt])
-}
-
-// ========== AI 提示词层级系统 ==========
-
-// 系统级提示词（全局唯一）
-model SystemPrompt {
-  id           String   @id @default(uuid())
-  promptText   String   @db.Text               // 系统提示词内容
-  description  String?                         // 描述
-  createdBy    String                          // 创建人 ID
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-
-  @@index([createdBy])
-}
-
-// 教材自定义提示词（每本教材可有多条）
-model TextbookPrompt {
-  id           String   @id @default(uuid())
-  textbookId   String                          // 教材 ID
-  textbook     Textbook @relation(fields: [textbookId], references: [id], onDelete: Cascade)
-  name         String                          // 提示词名称
-  promptText   String   @db.Text               // 提示词内容
-  description  String?                         // 描述
-  isActive     Boolean  @default(false)        // 是否当前使用
-  sortOrder    Int      @default(0)            // 排序
-  createdBy    String                          // 创建人 ID
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-
-  @@index([textbookId])
-  @@index([isActive])
-  @@index([createdBy])
-  @@index([sortOrder])
 }

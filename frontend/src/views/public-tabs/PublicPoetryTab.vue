@@ -1,10 +1,22 @@
 <template>
   <div class="public-poetry-tab">
+    <!-- 类型筛选 -->
+    <div class="filter-row" style="margin-bottom: 12px; display: flex; gap: 8px; align-items: center;">
+      <n-select
+        v-model:value="selectedType"
+        placeholder="全部类型"
+        :options="typeOptions"
+        clearable
+        style="width: 120px"
+        @update:value="loadWorks"
+      />
+    </div>
+
     <div v-if="loading" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
       <n-skeleton v-for="i in 6" :key="i" height="220px" :sharp="false" />
     </div>
 
-    <n-empty v-else-if="!works.length" description="暂无唐诗宋词作品" />
+    <n-empty v-else-if="!works.length" description="暂无诗词文章作品" />
 
     <!-- 诗词作品列表 -->
     <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -44,13 +56,23 @@ import axios from 'axios';
 const router = useRouter();
 const loading = ref(false);
 const works = ref([]);
+const selectedType = ref(null);
+
+const typeOptions = [
+  { label: '诗', value: '诗' },
+  { label: '词', value: '词' },
+  { label: '古文', value: '古文' },
+  { label: '现代文', value: '现代文' },
+  { label: '其他', value: '其他' },
+];
 
 const loadWorks = async () => {
   loading.value = true;
   try {
-    // 使用公开API获取已审核的诗词作品
-    const response = await axios.get('/api/poetry-works/public');
-    works.value = response.data.works || [];
+    const params = { category: 'poetry' };
+    if (selectedType.value) params.type = selectedType.value;
+    const response = await axios.get('/api/creative-works/public', { params });
+    works.value = response.data?.data?.works || [];
   } catch (error) {
     console.error('加载诗词作品失败:', error);
   } finally {

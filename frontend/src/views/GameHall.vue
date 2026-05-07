@@ -3,7 +3,7 @@
     <!-- 顶部标题栏 -->
     <div class="flex justify-between items-center">
       <div>
-        <h1 class="text-2xl font-bold text-gray-800">游戏大厅</h1>
+        <h1 class="text-2xl font-bold text-gray-800">益智乐园</h1>
         <p class="text-gray-500 mt-1">发现好游戏，分享你的游戏体验</p>
       </div>
       <n-button type="primary" @click="$router.push('/my-games')">
@@ -413,16 +413,14 @@ import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useMessage, useDialog } from 'naive-ui';
 import { gameAPI } from '@/api';
-import {
-  SearchOutline,
-  GameControllerOutline,
-  LibraryOutline,
-  HeartOutline,
-  ChatbubbleOutline,
-  AddOutline,
-  CreateOutline,
-  TrashOutline,
-} from '@vicons/ionicons5';
+import SearchOutline from '@vicons/ionicons5/es/SearchOutline'
+import GameControllerOutline from '@vicons/ionicons5/es/GameControllerOutline'
+import LibraryOutline from '@vicons/ionicons5/es/LibraryOutline'
+import HeartOutline from '@vicons/ionicons5/es/HeartOutline'
+import ChatbubbleOutline from '@vicons/ionicons5/es/ChatbubbleOutline'
+import AddOutline from '@vicons/ionicons5/es/AddOutline'
+import CreateOutline from '@vicons/ionicons5/es/CreateOutline'
+import TrashOutline from '@vicons/ionicons5/es/TrashOutline'
 
 const router = useRouter();
 const message = useMessage();

@@ -59,7 +59,7 @@ import { ref, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useMessage } from 'naive-ui';
 import api from '@/api';
-import { ArrowBackOutline } from '@vicons/ionicons5';
+import ArrowBackOutline from '@vicons/ionicons5/es/ArrowBackOutline'
 import ContentCard from '@/components/ContentCard.vue';
 
 const route = useRoute();

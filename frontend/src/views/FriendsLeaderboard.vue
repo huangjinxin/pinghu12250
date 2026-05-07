@@ -2,8 +2,8 @@
   <div class="space-y-6">
     <div class="flex items-center justify-between">
       <div>
-        <h1 class="text-2xl font-bold text-gray-800">好友排行榜</h1>
-        <p class="text-gray-500 mt-1">和好友一起进步</p>
+        <h1 class="text-2xl font-bold text-gray-800">学习榜</h1>
+        <p class="text-gray-500 mt-1">和学伴一起进步</p>
       </div>
       <n-button @click="$router.back()">
         <template #icon><n-icon><ArrowBackOutline /></n-icon></template>
@@ -11,29 +11,41 @@
       </n-button>
     </div>
 
-    <n-tabs v-model:value="period" type="line" animated @update:value="loadLeaderboard">
-      <n-tab-pane name="daily" tab="今日" />
-      <n-tab-pane name="weekly" tab="本周" />
-      <n-tab-pane name="monthly" tab="本月" />
+    <!-- 维度选择 -->
+    <n-tabs v-model:value="dimension" type="segment" animated @update:value="loadLeaderboard">
+      <n-tab-pane name="points" tab="积分" />
+      <n-tab-pane name="diary" tab="日记" />
+      <n-tab-pane name="streak" tab="连续" />
+      <n-tab-pane name="learning" tab="学习" />
+      <n-tab-pane name="works" tab="作品" />
+      <n-tab-pane name="questions" tab="勤学好问" />
     </n-tabs>
+
+    <!-- 时间范围 -->
+    <n-radio-group v-model:value="period" size="small" @update:value="loadLeaderboard">
+      <n-radio-button value="daily">今日</n-radio-button>
+      <n-radio-button value="weekly">本周</n-radio-button>
+      <n-radio-button value="monthly">本月</n-radio-button>
+    </n-radio-group>
 
     <n-spin :show="loading">
       <div v-if="leaderboard.length > 0" class="space-y-3">
-        <n-card v-for="(user, index) in leaderboard" :key="user.id" size="small">
+        <n-card v-for="item in leaderboard" :key="item.user?.id || item.rank" size="small">
           <div class="flex items-center justify-between">
             <div class="flex items-center gap-4">
-              <div class="rank-badge" :class="getRankClass(index)">
-                {{ index + 1 }}
+              <div class="rank-badge" :class="getRankClass(item.rank)">
+                {{ item.rank }}
               </div>
-              <AvatarText :username="user.username" size="md" />
+              <AvatarText :username="item.user?.username" size="md" />
               <div>
-                <h3 class="font-bold">{{ user.profile?.nickname || user.username }}</h3>
-                <p class="text-xs text-gray-500">{{ user.stats?.points || 0 }} 积分</p>
+                <h3 class="font-bold">{{ item.user?.profile?.nickname || item.user?.username }}</h3>
+                <p class="text-xs text-gray-500">
+                  {{ item.value }} {{ item.label }}
+                  <span v-if="item.extra" class="ml-1 text-gray-400">{{ item.extra }}</span>
+                </p>
               </div>
             </div>
-            <n-button size="small" @click="$router.push(`/users/${user.id}`)">
-              查看主页
-            </n-button>
+            <n-button size="small" @click="$router.push(`/users/${item.user?.id}`)">查看</n-button>
           </div>
         </n-card>
       </div>
@@ -44,40 +56,37 @@
 
 <script setup>
 import AvatarText from '@/components/AvatarText.vue'
-import { ref, onMounted } from 'vue';
-import { useRouter } from 'vue-router';
-import { useMessage } from 'naive-ui';
-import api from '@/api';
-import { ArrowBackOutline } from '@vicons/ionicons5';
+import { ref, onMounted } from 'vue'
+import { useMessage } from 'naive-ui'
+import { feedAPI } from '@/api'
+import ArrowBackOutline from '@vicons/ionicons5/es/ArrowBackOutline'
 
-const router = useRouter();
-const message = useMessage();
-const loading = ref(false);
-const period = ref('daily');
-const leaderboard = ref([]);
+const message = useMessage()
+const loading = ref(false)
+const dimension = ref('points')
+const period = ref('weekly')
+const leaderboard = ref([])
 
 const loadLeaderboard = async () => {
-  loading.value = true;
+  loading.value = true
   try {
-    const response = await api.get('/follows/leaderboard', {
-      params: { period: period.value }
-    });
-    leaderboard.value = response.leaderboard || [];
-  } catch (error) {
-    message.error(error.error || '加载排行榜失败');
+    const res = await feedAPI.getLeaderboard({ dimension: dimension.value, period: period.value, limit: 20 })
+    leaderboard.value = res.data?.leaderboard || []
+  } catch (e) {
+    message.error('加载排行榜失败')
   } finally {
-    loading.value = false;
+    loading.value = false
   }
-};
+}
 
-const getRankClass = (index) => {
-  if (index === 0) return 'rank-1';
-  if (index === 1) return 'rank-2';
-  if (index === 2) return 'rank-3';
-  return 'rank-other';
-};
+const getRankClass = (rank) => {
+  if (rank === 1) return 'rank-1'
+  if (rank === 2) return 'rank-2'
+  if (rank === 3) return 'rank-3'
+  return 'rank-other'
+}
 
-onMounted(() => loadLeaderboard());
+onMounted(() => loadLeaderboard())
 </script>
 
 <style scoped>

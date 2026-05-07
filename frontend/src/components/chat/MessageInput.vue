@@ -46,17 +46,15 @@
 
 <script setup>
 import { ref, h } from 'vue';
-import {
-  ShareSocialOutline,
-  BookOutline,
-  DocumentTextOutline,
-  BrushOutline,
-  LibraryOutline,
-  GameControllerOutline,
-  TrophyOutline,
-  HelpCircleOutline,
-  HappyOutline
-} from '@vicons/ionicons5';
+import ShareSocialOutline from '@vicons/ionicons5/es/ShareSocialOutline'
+import BookOutline from '@vicons/ionicons5/es/BookOutline'
+import DocumentTextOutline from '@vicons/ionicons5/es/DocumentTextOutline'
+import BrushOutline from '@vicons/ionicons5/es/BrushOutline'
+import LibraryOutline from '@vicons/ionicons5/es/LibraryOutline'
+import GameControllerOutline from '@vicons/ionicons5/es/GameControllerOutline'
+import TrophyOutline from '@vicons/ionicons5/es/TrophyOutline'
+import HelpCircleOutline from '@vicons/ionicons5/es/HelpCircleOutline'
+import HappyOutline from '@vicons/ionicons5/es/HappyOutline'
 import ShareSelector from '@/components/ShareSelector.vue';
 import EmojiPicker from '@/components/EmojiPicker.vue';
 

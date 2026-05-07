@@ -1,433 +1,395 @@
 <template>
-  <div class="space-y-6">
-    <!-- 欢迎区域 -->
-    <div class="card card-clickable bg-gradient-to-r from-primary-500 to-primary-600 text-white">
-      <div class="flex items-center justify-between">
-        <div>
-          <h1 class="text-2xl font-bold mb-2">
-            {{ greeting }}，{{ authStore.user?.profile?.nickname || authStore.user?.username }}！
-          </h1>
-          <p class="text-primary-100">
-            你已经加入 <span class="font-semibold text-white">{{ joinedDays }}</span> 天了，继续加油！
-          </p>
-        </div>
-        <div class="hidden sm:block">
-          <n-statistic label="今日完成" :value="todayCompleted">
-            <template #suffix>
-              <span class="text-primary-100 text-sm">项</span>
-            </template>
-          </n-statistic>
-        </div>
+  <div class="home">
+    <!-- 顶部状态栏 -->
+    <div class="status-bar">
+      <div class="user-greeting">
+        <span class="greeting-text">{{ greetingText }}</span>
+        <span class="username">{{ nickname }}</span>
       </div>
+      <router-link to="/leaderboard" class="dashboard-btn">
+        📊 进度看板
+      </router-link>
     </div>
 
-    <!-- 三栏布局 -->
-    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
-      <!-- 左侧：今日待办 + 快捷操作 -->
-      <div class="lg:col-span-3 space-y-6">
-        <!-- 今日待办 -->
-        <div class="card">
-          <div class="flex items-center justify-between mb-4">
-            <h2 class="text-lg font-semibold text-gray-800">今日待办</h2>
-            <n-badge :value="tasks.length" :max="99" type="warning" />
-          </div>
-
-          <n-skeleton v-if="loading.tasks" text :repeat="3" />
-          <n-empty v-else-if="tasks.length === 0" description="暂无待办任务" size="small" />
-          <div v-else class="space-y-2">
-            <div
-              v-for="task in tasks"
-              :key="task.id"
-              class="p-3 bg-gray-50 rounded-lg hover:bg-gray-100 cursor-pointer transition-colors group"
-            >
-              <div class="flex items-start justify-between">
-                <div class="font-medium text-sm text-gray-800 group-hover:text-primary-600">
-                  {{ task.title }}
-                </div>
-                <n-tag size="small" :type="getTaskTagType(task)">
-                  {{ getTaskStatus(task) }}
-                </n-tag>
-              </div>
-              <div class="text-xs text-gray-500 mt-1">
-                截止：{{ formatDate(task.dueDate) }}
-              </div>
-            </div>
-          </div>
+    <!-- 主内容区域 -->
+    <div class="home-content">
+      <!-- 今日任务 -->
+      <section class="section">
+        <div class="section-header">
+          <h2>
+            <n-icon :size="20" color="#6366f1"><Flag /></n-icon>
+            今日任务
+          </h2>
+          <router-link to="/challenges" class="link">查看全部 →</router-link>
         </div>
 
-        <!-- 快捷操作 -->
-        <div class="card">
-          <h2 class="text-lg font-semibold text-gray-800 mb-4">快捷操作</h2>
-          <div class="space-y-2">
-            <router-link
-              to="/diaries"
-              class="flex items-center space-x-3 p-3 bg-primary-50 text-primary-700 rounded-lg hover:bg-primary-100 transition-colors"
-            >
-              <n-icon size="20"><CreateOutline /></n-icon>
-              <span class="text-sm font-medium">写日记</span>
-            </router-link>
-            <router-link
-              to="/homeworks"
-              class="flex items-center space-x-3 p-3 bg-green-50 text-green-700 rounded-lg hover:bg-green-100 transition-colors"
-            >
-              <n-icon size="20"><BookOutline /></n-icon>
-              <span class="text-sm font-medium">记录作业</span>
-            </router-link>
-            <router-link
-              to="/works/create"
-              class="flex items-center space-x-3 p-3 bg-purple-50 text-purple-700 rounded-lg hover:bg-purple-100 transition-colors"
-            >
-              <n-icon size="20"><CodeSlashOutline /></n-icon>
-              <span class="text-sm font-medium">创作作品</span>
-            </router-link>
-            <router-link
-              to="/notes"
-              class="flex items-center space-x-3 p-3 bg-accent-50 text-accent-700 rounded-lg hover:bg-accent-100 transition-colors"
-            >
-              <n-icon size="20"><DocumentTextOutline /></n-icon>
-              <span class="text-sm font-medium">写笔记</span>
-            </router-link>
-          </div>
-        </div>
-      </div>
-
-      <!-- 中间：双时间轴 -->
-      <div class="lg:col-span-6">
-        <div class="card">
-          <n-tabs v-model:value="timelineType" type="line" animated>
-            <n-tab-pane name="personal" tab="我的动态">
-              <div class="pt-4">
-                <n-skeleton v-if="loading.posts" text :repeat="5" />
-                <n-empty v-else-if="posts.length === 0" description="暂无动态" />
-                <div v-else class="space-y-4">
-                  <div
-                    v-for="post in posts"
-                    :key="post.id"
-                    class="p-4 border border-gray-100 rounded-xl hover:shadow-card transition-all"
-                  >
-                    <div class="flex items-start space-x-3">
-                      <AvatarText :username="post.author?.username" size="md" />
-                      <div class="flex-1 min-w-0">
-                        <div class="flex items-center space-x-2">
-                          <span class="font-medium text-gray-800">
-                            {{ post.author?.profile?.nickname || post.author?.username }}
-                          </span>
-                          <span class="text-xs text-gray-400">{{ formatDate(post.createdAt) }}</span>
-                        </div>
-                        <p class="mt-2 text-gray-700 whitespace-pre-wrap">{{ post.content }}</p>
-
-                        <!-- 关联内容 -->
-                        <div v-if="post.htmlWork" class="mt-3 p-3 bg-purple-50 rounded-lg">
-                          <router-link
-                            :to="`/works/${post.htmlWork.id}`"
-                            class="flex items-center space-x-2 text-purple-700 font-medium hover:text-purple-800"
-                          >
-                            <n-icon><CodeSlashOutline /></n-icon>
-                            <span>{{ post.htmlWork.title }}</span>
-                          </router-link>
-                        </div>
-
-                        <!-- 互动 -->
-                        <div class="flex items-center space-x-6 mt-3">
-                          <button
-                            class="flex items-center space-x-1 text-sm text-gray-500 hover:text-red-500 transition-colors"
-                            @click="toggleLike(post)"
-                          >
-                            <n-icon :component="post.isLiked ? Heart : HeartOutline" />
-                            <span>{{ post._count?.likes || 0 }}</span>
-                          </button>
-                          <button class="flex items-center space-x-1 text-sm text-gray-500 hover:text-primary-500 transition-colors">
-                            <n-icon :component="ChatbubbleOutline" />
-                            <span>{{ post._count?.comments || 0 }}</span>
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </n-tab-pane>
-            <n-tab-pane name="public" tab="公共动态">
-              <div class="pt-4">
-                <n-skeleton v-if="loading.posts" text :repeat="5" />
-                <n-empty v-else-if="posts.length === 0" description="暂无公共动态" />
-                <div v-else class="space-y-4">
-                  <div
-                    v-for="post in posts"
-                    :key="post.id"
-                    class="p-4 border border-gray-100 rounded-xl hover:shadow-card transition-all"
-                  >
-                    <div class="flex items-start space-x-3">
-                      <AvatarText :username="post.author?.username" size="md" />
-                      <div class="flex-1 min-w-0">
-                        <div class="flex items-center space-x-2">
-                          <span class="font-medium text-gray-800">
-                            {{ post.author?.profile?.nickname || post.author?.username }}
-                          </span>
-                          <span class="text-xs text-gray-400">{{ formatDate(post.createdAt) }}</span>
-                        </div>
-                        <p class="mt-2 text-gray-700 whitespace-pre-wrap">{{ post.content }}</p>
-
-                        <div v-if="post.htmlWork" class="mt-3 p-3 bg-purple-50 rounded-lg">
-                          <router-link
-                            :to="`/works/${post.htmlWork.id}`"
-                            class="flex items-center space-x-2 text-purple-700 font-medium hover:text-purple-800"
-                          >
-                            <n-icon><CodeSlashOutline /></n-icon>
-                            <span>{{ post.htmlWork.title }}</span>
-                          </router-link>
-                        </div>
-
-                        <div class="flex items-center space-x-6 mt-3">
-                          <button
-                            class="flex items-center space-x-1 text-sm text-gray-500 hover:text-red-500 transition-colors"
-                            @click="toggleLike(post)"
-                          >
-                            <n-icon :component="post.isLiked ? Heart : HeartOutline" />
-                            <span>{{ post._count?.likes || 0 }}</span>
-                          </button>
-                          <button class="flex items-center space-x-1 text-sm text-gray-500 hover:text-primary-500 transition-colors">
-                            <n-icon :component="ChatbubbleOutline" />
-                            <span>{{ post._count?.comments || 0 }}</span>
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </n-tab-pane>
-          </n-tabs>
-        </div>
-      </div>
-
-      <!-- 右侧：统计 + 热门作品 -->
-      <div class="lg:col-span-3 space-y-6">
-        <!-- 统计数据 -->
-        <div class="card">
-          <h2 class="text-lg font-semibold text-gray-800 mb-4">我的数据</h2>
-          <n-skeleton v-if="loading.stats" text :repeat="4" />
-          <div v-else class="grid grid-cols-2 gap-3">
-            <div class="text-center p-3 bg-primary-50 rounded-lg">
-              <div class="text-2xl font-bold text-primary-600">{{ stats.diaryCount || 0 }}</div>
-              <div class="text-xs text-gray-600 mt-1">日记</div>
-            </div>
-            <div class="text-center p-3 bg-green-50 rounded-lg">
-              <div class="text-2xl font-bold text-green-600">{{ stats.htmlWorkCount || 0 }}</div>
-              <div class="text-xs text-gray-600 mt-1">作品</div>
-            </div>
-            <div class="text-center p-3 bg-purple-50 rounded-lg">
-              <div class="text-2xl font-bold text-purple-600">{{ stats.booksCount || 0 }}</div>
-              <div class="text-xs text-gray-600 mt-1">书籍</div>
-            </div>
-            <div class="text-center p-3 bg-red-50 rounded-lg">
-              <div class="text-2xl font-bold text-red-600">{{ stats.totalLikes || 0 }}</div>
-              <div class="text-xs text-gray-600 mt-1">点赞</div>
-            </div>
-          </div>
+        <div v-if="loadingTasks" class="loading-placeholder">
+          <n-spin size="small" />
+          <span>加载中...</span>
         </div>
 
-        <!-- 学习热力图 -->
-        <div class="card">
-          <h2 class="text-lg font-semibold text-gray-800 mb-4">学习热力图</h2>
-          <Heatmap :data="heatmapData" />
+        <div v-else class="tasks-grid">
+          <TaskCard
+            v-for="task in todayTasks"
+            :key="task.id"
+            :title="task.name"
+            :status="task.status"
+            :points="task.points"
+            :icon="task.icon"
+            :icon-color="task.color"
+            :icon-bg-color="task.bgColor"
+            :to="task.submitUrl"
+            :reject-reason="task.rejectReason"
+          />
         </div>
+      </section>
 
-        <!-- 热门作品 -->
-        <div class="card">
-          <h2 class="text-lg font-semibold text-gray-800 mb-4">热门作品</h2>
-          <n-skeleton v-if="loading.works" text :repeat="3" />
-          <n-empty v-else-if="popularWorks.length === 0" description="暂无作品" size="small" />
-          <div v-else class="space-y-3">
-            <router-link
-              v-for="work in popularWorks"
-              :key="work.id"
-              :to="`/works/${work.id}`"
-              class="block p-3 border border-gray-100 rounded-lg hover:shadow-card hover:-translate-y-0.5 transition-all"
-            >
-              <div class="font-medium text-sm text-gray-800 truncate">{{ work.title }}</div>
-              <div class="flex items-center justify-between text-xs text-gray-500 mt-2">
-                <span>{{ work.author?.username }}</span>
-                <span class="flex items-center space-x-1">
-                  <n-icon :component="Heart" class="text-red-500" />
-                  <span>{{ work._count?.likes || 0 }}</span>
-                </span>
-              </div>
-            </router-link>
-          </div>
-        </div>
-      </div>
+      <!-- 退回提醒 -->
+      <RejectedAlert
+        :items="rejectedItems"
+        @resubmit="handleResubmit"
+      />
+
+      <!-- 排行榜数据图表 -->
+      <LeaderboardOverview />
     </div>
   </div>
 </template>
 
 <script setup>
-import AvatarText from '@/components/AvatarText.vue'
-import { ref, onMounted, computed, watch } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { useAuthStore } from '@/stores/auth';
-import { postAPI, taskAPI, statsAPI, htmlWorkAPI } from '@/api';
-import {
-  CreateOutline,
-  BookOutline,
-  CodeSlashOutline,
-  DocumentTextOutline,
-  HeartOutline,
-  Heart,
-  ChatbubbleOutline,
-} from '@vicons/ionicons5';
-import Heatmap from '@/components/Heatmap.vue';
+import { submissionAPI, calligraphyAPI, feedAPI, typingAPI, pinyinAPI } from '@/api';
+import TaskCard from '@/components/home/TaskCard.vue';
+import RejectedAlert from '@/components/home/RejectedAlert.vue';
+import LeaderboardOverview from '@/components/home/LeaderboardOverview.vue';
+import Flag from '@vicons/ionicons5/es/Flag'
+import BookOutline from '@vicons/ionicons5/es/BookOutline'
+import CalculatorOutline from '@vicons/ionicons5/es/CalculatorOutline'
+import NewspaperOutline from '@vicons/ionicons5/es/NewspaperOutline'
+import PencilOutline from '@vicons/ionicons5/es/PencilOutline'
+import CameraOutline from '@vicons/ionicons5/es/CameraOutline'
+import HelpCircleOutline from '@vicons/ionicons5/es/HelpCircleOutline'
+import KeypadOutline from '@vicons/ionicons5/es/KeypadOutline'
+import TextOutline from '@vicons/ionicons5/es/TextOutline'
 
 const authStore = useAuthStore();
 
-const timelineType = ref('personal');
-const posts = ref([]);
-const tasks = ref([]);
-const stats = ref({});
-const popularWorks = ref([]);
-const heatmapData = ref({});
-const todayCompleted = ref(0);
+// 用户信息
+const nickname = computed(() =>
+  authStore.user?.profile?.nickname || authStore.user?.username || '同学'
+);
 
-const loading = ref({
-  posts: true,
-  tasks: true,
-  stats: true,
-  works: true,
-});
-
-
-const joinedDays = computed(() => {
-  return authStore.user?.profile?.joinedDays || 0;
-});
-
-const greeting = computed(() => {
+// 问候语
+const greetingText = computed(() => {
   const hour = new Date().getHours();
-  if (hour < 6) return '夜深了';
-  if (hour < 9) return '早上好';
-  if (hour < 12) return '上午好';
-  if (hour < 14) return '中午好';
-  if (hour < 18) return '下午好';
-  if (hour < 22) return '晚上好';
-  return '夜深了';
+  if (hour < 6) return '夜深了，';
+  if (hour < 9) return '早上好，';
+  if (hour < 12) return '上午好，';
+  if (hour < 14) return '中午好，';
+  if (hour < 18) return '下午好，';
+  if (hour < 22) return '晚上好，';
+  return '夜深了，';
 });
 
-const formatDate = (date) => {
-  if (!date) return '';
-  const d = new Date(date);
-  const now = new Date();
-  const diff = now - d;
-  const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+// 状态数据
+const loadingTasks = ref(true);
 
-  if (days === 0) {
-    const hours = Math.floor(diff / (1000 * 60 * 60));
-    if (hours === 0) {
-      const minutes = Math.floor(diff / (1000 * 60));
-      return minutes <= 0 ? '刚刚' : `${minutes}分钟前`;
-    }
-    return `${hours}小时前`;
-  }
-  if (days === 1) return '昨天';
-  if (days < 7) return `${days}天前`;
+// 今日任务配置
+const taskConfigs = [
+  {
+    id: 'diary',
+    name: '日记',
+    templateName: '日记(审批前提项/日)',
+    points: 200,
+    icon: BookOutline,
+    color: '#a855f7',
+    bgColor: '#f3e8ff',
+    submitUrl: '/diaries/new',
+  },
+  {
+    id: 'math',
+    name: '数学',
+    templateName: '可汗学院数学进度',
+    points: 60,
+    icon: CalculatorOutline,
+    color: '#3b82f6',
+    bgColor: '#dbeafe',
+    submitUrl: '/my-growth',
+  },
+  {
+    id: 'poetry',
+    name: '背诗',
+    templateName: '背诗',
+    points: 55,
+    icon: NewspaperOutline,
+    color: '#f97316',
+    bgColor: '#ffedd5',
+    submitUrl: '/my-growth',
+  },
+  {
+    id: 'calligraphy',
+    name: '书写',
+    isCalligraphy: true,
+    points: 50,
+    icon: PencilOutline,
+    color: '#ec4899',
+    bgColor: '#fce7f3',
+    submitUrl: '/works?tab=calligraphy',
+  },
+  {
+    id: 'moments',
+    name: '分享生活',
+    isSocial: 'moments',
+    points: 3,
+    icon: CameraOutline,
+    color: '#14b8a6',
+    bgColor: '#ccfbf1',
+    submitUrl: '/moments',
+  },
+  {
+    id: 'questions',
+    name: '勤学好问',
+    isSocial: 'questions',
+    points: 3,
+    icon: HelpCircleOutline,
+    color: '#8b5cf6',
+    bgColor: '#ede9fe',
+    submitUrl: '/moments?tab=leaderboard',
+  },
+  {
+    id: 'typing',
+    name: '打字训练',
+    isTyping: true,
+    points: 30,
+    icon: KeypadOutline,
+    color: '#6366f1',
+    bgColor: '#eef2ff',
+    submitUrl: '/typing',
+  },
+  {
+    id: 'pinyin',
+    name: '拼音练习',
+    isPinyin: true,
+    points: 30,
+    icon: TextOutline,
+    color: '#0ea5e9',
+    bgColor: '#e0f2fe',
+    submitUrl: '/pinyin',
+  },
+];
 
-  const year = d.getFullYear();
-  const month = d.getMonth() + 1;
-  const day = d.getDate();
+// 今日任务状态
+const todayTasks = ref([]);
+const rejectedItems = ref([]);
 
-  if (year === now.getFullYear()) {
-    return `${month}月${day}日`;
-  }
-  return `${year}年${month}月${day}日`;
-};
-
-const getTaskTagType = (task) => {
-  const status = task.assignment?.status;
-  if (status === 'COMPLETED') return 'success';
-  if (status === 'OVERDUE') return 'error';
-  return 'warning';
-};
-
-const getTaskStatus = (task) => {
-  const status = task.assignment?.status;
-  const labels = {
-    PENDING: '待完成',
-    IN_PROGRESS: '进行中',
-    COMPLETED: '已完成',
-    OVERDUE: '已逾期',
-  };
-  return labels[status] || '待完成';
-};
-
-const toggleLike = async (post) => {
-  // TODO: Implement like toggle
-  post.isLiked = !post.isLiked;
-};
-
-const loadPosts = async () => {
-  loading.value.posts = true;
+// 加载今日任务状态
+async function loadTodayStatus() {
   try {
-    const response = await postAPI.getPosts({
-      type: timelineType.value,
-      limit: 10,
+    const templateNames = taskConfigs
+      .filter(t => !t.isCalligraphy && !t.isSocial && !t.isTyping && !t.isPinyin)
+      .map(t => t.templateName)
+      .join(',');
+    const timezoneOffset = -new Date().getTimezoneOffset();
+
+    // 并行获取提交状态、书写状态、社交任务状态、打字状态、拼音状态
+    const [response, calligraphyRes, socialRes, typingRes, pinyinRes] = await Promise.all([
+      submissionAPI.getTodayStatus({ templateNames, timezoneOffset }),
+      calligraphyAPI.getTodayStatus({ timezoneOffset }),
+      feedAPI.getTodaySocial({ timezoneOffset }).catch(() => ({ data: {} })),
+      typingAPI.getTodayStatus({ timezoneOffset }).catch(() => ({ data: {} })),
+      pinyinAPI.getTodayStatus({ timezoneOffset }).catch(() => ({ data: {} }))
+    ]);
+
+    const todayStatus = response.todayStatus || {};
+    const calligraphyStatus = calligraphyRes.data?.status || 'NOT_SUBMITTED';
+    const socialStatus = socialRes.data || {};
+    const typingStatus = typingRes.data || {};
+    const pinyinStatus = pinyinRes.data || {};
+
+    // 映射任务状态
+    todayTasks.value = taskConfigs.map(config => {
+      let status = 'pending_submit';
+      let rejectReason = '';
+      let submissionId = null;
+
+      if (config.isCalligraphy) {
+        switch (calligraphyStatus) {
+          case 'PENDING':
+            status = 'pending_review';
+            break;
+          case 'APPROVED':
+            status = 'approved';
+            break;
+          case 'REJECTED':
+            status = 'rejected';
+            break;
+        }
+        submissionId = calligraphyRes.data?.workId;
+      } else if (config.isSocial) {
+        status = socialStatus[config.isSocial] ? 'completed' : 'pending_complete';
+      } else if (config.isTyping) {
+        status = typingStatus.completed ? 'completed' : 'pending_complete';
+      } else if (config.isPinyin) {
+        status = pinyinStatus.completed ? 'completed' : 'pending_complete';
+      } else {
+        const submission = todayStatus[config.templateName];
+        if (submission) {
+          switch (submission.status) {
+            case 'PENDING':
+              status = 'pending_review';
+              break;
+            case 'APPROVED':
+              status = 'approved';
+              break;
+            case 'REJECTED':
+              status = 'rejected';
+              rejectReason = submission.reviewNote || '';
+              break;
+          }
+          submissionId = submission.id;
+        }
+      }
+
+      return {
+        ...config,
+        status,
+        rejectReason,
+        submissionId,
+      };
     });
-    posts.value = response.posts || [];
+
+    // 提取退回的提交
+    rejectedItems.value = todayTasks.value
+      .filter(t => t.status === 'rejected')
+      .map(t => ({
+        id: t.submissionId,
+        templateName: t.name,
+        reason: t.rejectReason,
+        rejectedAt: new Date().toISOString(),
+        submissionId: t.submissionId,
+      }));
   } catch (error) {
-    console.error('加载动态失败:', error);
-  } finally {
-    loading.value.posts = false;
+    console.error('加载今日任务状态失败:', error);
   }
-};
+}
 
-const loadTasks = async () => {
-  loading.value.tasks = true;
-  try {
-    const response = await taskAPI.getTasks();
-    tasks.value = (response.tasks || []).filter(t => t.assignment?.status === 'PENDING').slice(0, 5);
-  } catch (error) {
-    console.error('加载任务失败:', error);
-  } finally {
-    loading.value.tasks = false;
-  }
-};
+// 重新提交处理
+function handleResubmit(item) {
+  console.log('重新提交:', item);
+}
 
-const loadStats = async () => {
-  loading.value.stats = true;
-  try {
-    const data = await statsAPI.getOverview();
-    stats.value = data;
-  } catch (error) {
-    console.error('加载统计失败:', error);
-  } finally {
-    loading.value.stats = false;
-  }
-};
-
-const loadPopularWorks = async () => {
-  loading.value.works = true;
-  try {
-    const response = await htmlWorkAPI.getWorks({ limit: 5 });
-    popularWorks.value = response.works || [];
-  } catch (error) {
-    console.error('加载热门作品失败:', error);
-  } finally {
-    loading.value.works = false;
-  }
-};
-
-const loadHeatmap = async () => {
-  try {
-    const data = await statsAPI.getHeatmap({ year: new Date().getFullYear() });
-    heatmapData.value = data.heatmapData || data;
-  } catch (error) {
-    console.error('加载热力图失败:', error);
-  }
-};
-
-watch(timelineType, loadPosts);
-
-onMounted(() => {
-  loadPosts();
-  loadTasks();
-  loadStats();
-  loadPopularWorks();
-  loadHeatmap();
+// 初始化
+onMounted(async () => {
+  loadingTasks.value = true;
+  await loadTodayStatus();
+  loadingTasks.value = false;
 });
 </script>
+
+<style scoped>
+.home {
+  max-width: 100%;
+}
+
+/* 顶部状态栏 */
+.status-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 0;
+  margin-bottom: 16px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.user-greeting {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 20px;
+}
+
+.greeting-text {
+  color: #6b7280;
+}
+
+.username {
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.dashboard-btn {
+  padding: 8px 16px;
+  background: linear-gradient(135deg, #1a1a2e, #16213e);
+  color: #fff;
+  border-radius: 20px;
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: all 0.2s;
+}
+
+.dashboard-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(26, 26, 46, 0.3);
+}
+
+/* 主内容 */
+.home-content {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* 区块 */
+.section {
+  background: white;
+  border-radius: 12px;
+  padding: 20px;
+  border: 1px solid #e5e7eb;
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.section-header h2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  color: #1f2937;
+  margin: 0;
+}
+
+.section-header .link {
+  font-size: 13px;
+  color: var(--primary-600, #4f46e5);
+  text-decoration: none;
+}
+
+.section-header .link:hover {
+  text-decoration: underline;
+}
+
+/* 任务网格 */
+.tasks-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 12px;
+}
+
+/* 加载占位 */
+.loading-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 40px;
+  color: #9ca3af;
+}
+</style>

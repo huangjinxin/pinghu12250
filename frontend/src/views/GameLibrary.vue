@@ -105,7 +105,9 @@ import { ref, watch, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useMessage } from 'naive-ui';
 import { gameAPI } from '@/api';
-import { StarOutline, HeartOutline, ChatboxOutline } from '@vicons/ionicons5';
+import StarOutline from '@vicons/ionicons5/es/StarOutline'
+import HeartOutline from '@vicons/ionicons5/es/HeartOutline'
+import ChatboxOutline from '@vicons/ionicons5/es/ChatboxOutline'
 
 const router = useRouter();
 const message = useMessage();

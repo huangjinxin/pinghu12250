@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI驱动的跨领域智能创造——Pico硬件协作实践（A4打印版）</title>
+    <style>
+        /* ========== 基础变量 ========== */
+        :root {
+            --primary: #2563eb;
+            --secondary: #0891b2;
+            --text: #1e293b;
+            --text-light: #64748b;
+            --border: #d1d5db;
+            --bg-light: #f3f4f6;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: "PingFang SC", "Microsoft YaHei", -apple-system, sans-serif;
+            color: var(--text);
+            line-height: 1.6;
+            font-size: 14px;
+            background: #f5f5f5;
+        }
+
+        /* ========== A4 页面容器 ========== */
+        .page {
+            width: 210mm;
+            min-height: 297mm;
+            padding: 15mm 18mm;
+            margin: 10mm auto;
+            background: white;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        /* ========== 第一页：标题和核心内容 ========== */
+        .header {
+            text-align: center;
+            padding-bottom: 8mm;
+            border-bottom: 2px solid var(--primary);
+            margin-bottom: 6mm;
+        }
+
+        .header-badge {
+            display: inline-block;
+            border: 1px solid var(--primary);
+            padding: 3px 12px;
+            border-radius: 20px;
+            font-size: 11px;
+            color: var(--primary);
+            margin-bottom: 4mm;
+        }
+
+        .header h1 {
+            font-size: 22px;
+            font-weight: 700;
+            margin-bottom: 3mm;
+            line-height: 1.3;
+        }
+
+        .header-subtitle {
+            font-size: 13px;
+            color: var(--text-light);
+        }
+
+        /* ========== 区块标题 ========== */
+        .section-title {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--text);
+            padding: 3mm 0;
+            margin-bottom: 4mm;
+            border-left: 4px solid var(--primary);
+            padding-left: 4mm;
+            background: linear-gradient(90deg, var(--bg-light), transparent);
+        }
+
+        /* ========== 三列卡片布局 ========== */
+        .card-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 4mm;
+            margin-bottom: 6mm;
+        }
+
+        .card {
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            padding: 4mm;
+        }
+
+        .card-icon {
+            font-size: 24px;
+            margin-bottom: 2mm;
+        }
+
+        .card h3 {
+            font-size: 13px;
+            font-weight: 600;
+            margin-bottom: 2mm;
+        }
+
+        .card p {
+            font-size: 11px;
+            color: var(--text-light);
+            line-height: 1.5;
+        }
+
+        /* ========== 两列布局 ========== */
+        .two-col {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 5mm;
+            margin-bottom: 6mm;
+        }
+
+        .col-box {
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            padding: 4mm;
+        }
+
+        .col-box h4 {
+            font-size: 13px;
+            font-weight: 600;
+            margin-bottom: 3mm;
+            padding-bottom: 2mm;
+            border-bottom: 1px dashed var(--border);
+        }
+
+        .col-box p {
+            font-size: 11px;
+            color: var(--text-light);
+            margin-bottom: 2mm;
+        }
+
+        .col-box ul {
+            font-size: 11px;
+            padding-left: 5mm;
+            color: var(--text);
+        }
+
+        .col-box li {
+            margin-bottom: 1.5mm;
+        }
+
+        /* ========== 四列收获卡片 ========== */
+        .outcome-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 3mm;
+            margin-bottom: 6mm;
+        }
+
+        .outcome-card {
+            text-align: center;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            padding: 3mm;
+        }
+
+        .outcome-card .icon {
+            font-size: 20px;
+            margin-bottom: 1mm;
+        }
+
+        .outcome-card h4 {
+            font-size: 12px;
+            font-weight: 600;
+            margin-bottom: 1mm;
+        }
+
+        .outcome-card p {
+            font-size: 10px;
+            color: var(--text-light);
+            line-height: 1.4;
+        }
+
+        /* ========== 流程步骤 ========== */
+        .steps {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 3mm;
+            margin-bottom: 6mm;
+        }
+
+        .step {
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            padding: 3mm;
+            position: relative;
+        }
+
+        .step-num {
+            position: absolute;
+            top: -3mm;
+            left: 3mm;
+            background: var(--primary);
+            color: white;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            font-size: 11px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .step h4 {
+            font-size: 11px;
+            font-weight: 600;
+            margin-top: 2mm;
+            margin-bottom: 2mm;
+        }
+
+        .step p {
+            font-size: 10px;
+            color: var(--text-light);
+            line-height: 1.4;
+        }
+
+        /* ========== 安全保障两行 ========== */
+        .safety-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 3mm;
+            margin-bottom: 6mm;
+        }
+
+        .safety-item {
+            border-left: 3px solid var(--secondary);
+            padding: 3mm 4mm;
+            background: var(--bg-light);
+        }
+
+        .safety-item h4 {
+            font-size: 12px;
+            font-weight: 600;
+            margin-bottom: 1mm;
+        }
+
+        .safety-item p {
+            font-size: 10px;
+            color: var(--text-light);
+        }
+
+        /* ========== 政策导向 ========== */
+        .policy-box {
+            border: 2px solid var(--text);
+            border-radius: 4px;
+            padding: 4mm;
+            margin-bottom: 6mm;
+        }
+
+        .policy-box h3 {
+            font-size: 13px;
+            font-weight: 600;
+            margin-bottom: 3mm;
+            text-align: center;
+        }
+
+        .policy-list {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 3mm;
+        }
+
+        .policy-item {
+            background: var(--bg-light);
+            padding: 3mm;
+            border-radius: 3px;
+        }
+
+        .policy-item strong {
+            font-size: 11px;
+            display: block;
+            margin-bottom: 1mm;
+        }
+
+        .policy-item span {
+            font-size: 10px;
+            color: var(--text-light);
+        }
+
+        /* ========== 致家长 ========== */
+        .closing-box {
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            padding: 5mm;
+            text-align: center;
+        }
+
+        .closing-box h3 {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 3mm;
+        }
+
+        .closing-box p {
+            font-size: 11px;
+            color: var(--text-light);
+            margin-bottom: 3mm;
+            line-height: 1.6;
+        }
+
+        .closing-highlight {
+            background: var(--bg-light);
+            border: 1px dashed var(--border);
+            padding: 3mm 5mm;
+            margin-top: 3mm;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        /* ========== 页脚 ========== */
+        .page-footer {
+            text-align: center;
+            font-size: 10px;
+            color: var(--text-light);
+            padding-top: 4mm;
+            border-top: 1px solid var(--border);
+            margin-top: auto;
+        }
+
+        /* ========== 分页控制 ========== */
+        .page-break {
+            page-break-after: always;
+        }
+
+        /* ========== 打印样式 ========== */
+        @media print {
+            body {
+                background: white;
+                font-size: 12px;
+            }
+
+            .page {
+                width: 100%;
+                min-height: auto;
+                padding: 10mm 12mm;
+                margin: 0;
+                box-shadow: none;
+            }
+
+            /* 黑白打印优化 */
+            .header {
+                border-bottom: 2px solid #333;
+            }
+
+            .header-badge {
+                border: 1px solid #333;
+                color: #333;
+            }
+
+            .section-title {
+                border-left: 4px solid #333;
+                background: #f0f0f0;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+
+            .step-num {
+                background: #333;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+
+            .safety-item {
+                border-left: 3px solid #666;
+                background: #f5f5f5;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+
+            .policy-box {
+                border: 2px solid #333;
+            }
+
+            .policy-item {
+                background: #f5f5f5;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+
+            .closing-highlight {
+                background: #f0f0f0;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+
+            /* 分页 */
+            .page-break {
+                page-break-after: always;
+            }
+
+            .no-break {
+                page-break-inside: avoid;
+            }
+        }
+
+        /* ========== 屏幕预览提示 ========== */
+        .print-hint {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            background: var(--primary);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 12px;
+            cursor: pointer;
+            z-index: 100;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+
+        .print-hint:hover {
+            background: #1d4ed8;
+        }
+
+        @media print {
+            .print-hint {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <button class="print-hint" onclick="window.print()">打印此页 (Ctrl+P)</button>
+
+    <!-- ========== 第一页：正面 ========== -->
+    <div class="page">
+        <!-- 页头 -->
+        <div class="header">
+            
+            <h1>AI驱动的跨领域智能创造——Pico硬件协作实践</h1>
+            
+            <p class="header-subtitle">让孩子从"技术的使用者"成长为"技术的创造者"</p>
+            
+            <p class="header-subtitle">——关于中华路小学人工智能社团活动开展情况的汇报</p>
+        </div>
+
+        <!-- 课程内容 -->
+        <h2 class="section-title">这门课程在学什么？</h2>
+        <div class="card-grid no-break">
+            <div class="card">
+                <div class="card-icon">💡</div>
+                <h3>认识智能技术</h3>
+                <p>通过与智能助手对话，学会清晰表达想法和需求——未来世界的必备能力。</p>
+            </div>
+            <div class="card">
+                <div class="card-icon">🔧</div>
+                <h3>动手控制硬件</h3>
+                <p>使用Pico开发板，让LED灯按自己设计的节奏闪烁，看到想法变成现实。</p>
+            </div>
+            <div class="card">
+                <div class="card-icon">✨</div>
+                <h3>修改即创作</h3>
+                <p>在现有基础上调整参数，通过"微调"体验创作，建立对技术的掌控感。</p>
+            </div>
+        </div>
+
+        <!-- 为什么要学 -->
+        <h2 class="section-title">为什么小学阶段就要接触？</h2>
+        <div class="two-col no-break">
+            <div class="col-box">
+                <h4>抓住思维发展关键期</h4>
+                <p>小学阶段是好奇心最旺盛、思维最活跃的时期。这时接触智能技术，是在最佳时机播下创造力的种子。</p>
+                <h4 style="margin-top:3mm;">从"会用"到"会想"</h4>
+                <p>让孩子理解：技术是可以被创造和改变的。当意识到"我可以让机器按我的想法工作"，思维方式就发生根本转变。</p>
+            </div>
+            <div class="col-box">
+                <h4>培养核心能力</h4>
+                <ul>
+                    <li>培养主动探索而非被动接受的习惯</li>
+                    <li>建立"问题可以被解决"的积极心态</li>
+                    <li>在试错中学会坚持与调整</li>
+                    <li>为未来学习打下思维基础</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- 学习收获 -->
+        <h2 class="section-title">孩子能获得什么？</h2>
+        <div class="outcome-grid no-break">
+            <div class="outcome-card">
+                <div class="icon">🧠</div>
+                <h4>计算思维</h4>
+                <p>把复杂问题拆解成简单步骤，有条理地解决问题</p>
+            </div>
+            <div class="outcome-card">
+                <div class="icon">⚙️</div>
+                <h4>工程意识</h4>
+                <p>理解"设计—实现—测试—改进"的完整流程</p>
+            </div>
+            <div class="outcome-card">
+                <div class="icon">💬</div>
+                <h4>表达能力</h4>
+                <p>通过描述需求，锻炼清晰准确表达的能力</p>
+            </div>
+            <div class="outcome-card">
+                <div class="icon">🤝</div>
+                <h4>合作自信</h4>
+                <p>在互助学习中建立自信，学会协作</p>
+            </div>
+        </div>
+
+        <!-- 教学流程 -->
+        <h2 class="section-title">课堂是如何进行的？</h2>
+        <div class="steps no-break">
+            <div class="step">
+                <span class="step-num">1</span>
+                <h4>情境引入</h4>
+                <p>展示学长作品，引出任务背景——"实验室灯光需要你来修复！"</p>
+            </div>
+            <div class="step">
+                <span class="step-num">2</span>
+                <h4>智能协作</h4>
+                <p>用自己的话描述想要的效果，智能助手帮助生成方案。</p>
+            </div>
+            <div class="step">
+                <span class="step-num">3</span>
+                <h4>动手创作</h4>
+                <p>调整参数，让灯光闪得更快更慢，即时反馈充满乐趣。</p>
+            </div>
+            <div class="step">
+                <span class="step-num">4</span>
+                <h4>互助成长</h4>
+                <p>先完成的成为"小老师"，教会别人也是更深理解。</p>
+            </div>
+        </div>
+
+        <div class="page-footer">
+            中华路小学社团观摩活动 · 第 1 页
+        </div>
+    </div>
+
+    <div class="page-break"></div>
+
+    <!-- ========== 第二页：背面 ========== -->
+    <div class="page">
+        <!-- 安全保障 -->
+        <h2 class="section-title">因材施教与学习安全</h2>
+        <div class="safety-grid no-break">
+            <div class="safety-item">
+                <h4>🔒 本地安全环境</h4>
+                <p>所有学习活动在本地设备完成，不涉及互联网风险内容，家长完全放心。</p>
+            </div>
+            <div class="safety-item">
+                <h4>👨‍🏫 教师全程引导</h4>
+                <p>专业教师在场指导，帮助理解、鼓励探索、及时答疑，有温度的陪伴成长。</p>
+            </div>
+            <div class="safety-item">
+                <h4>📊 分层支持设计</h4>
+                <p>不同基础有不同参与方式：可语音描述、可修改数字、可尝试复杂创作。</p>
+            </div>
+            <div class="safety-item">
+                <h4>🌱 包容试错文化</h4>
+                <p>课堂上没有"失败"，只有"还没成功"，试错是学习过程的重要部分。</p>
+            </div>
+        </div>
+
+        <!-- 政策导向 -->
+        <h2 class="section-title">与国家教育方向同行</h2>
+        <div class="policy-box no-break">
+            <h3>课程设计契合国家人工智能教育整体规划</h3>
+            <div class="policy-list">
+                <div class="policy-item">
+                    <strong>核心素养培育</strong>
+                    <span>响应新课标对"信息意识""计算思维""数字化学习与创新"的培养要求</span>
+                </div>
+                <div class="policy-item">
+                    <strong>实践能力导向</strong>
+                    <span>强调动手实践、解决真实问题，而非单纯的知识记忆</span>
+                </div>
+                <div class="policy-item">
+                    <strong>创新思维启蒙</strong>
+                    <span>鼓励学生大胆尝试、勇于创造，培养面向未来的创新能力</span>
+                </div>
+                <div class="policy-item">
+                    <strong>科学稳妥推进</strong>
+                    <span>学校在国家政策指引下，提前、稳妥、科学地开展智能教育探索</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 理念说明 -->
+        <div style="background: var(--bg-light); border-radius: 4px; padding: 4mm; margin-bottom: 6mm; text-align: center;">
+            <p style="font-size: 12px; font-weight: 500; margin-bottom: 2mm;">📌 我们的理念</p>
+            <p style="font-size: 11px; color: var(--text-light);">允许试错、尊重差异、不追求统一结果。每个孩子都有自己的学习节奏和创作风格。</p>
+        </div>
+
+        <!-- 致家长 -->
+        <h2 class="section-title">写给家长的话</h2>
+        <div class="closing-box no-break">
+            <h3>🌟 关于您可能的疑虑</h3>
+            <p>我们深知，家长对孩子接触智能技术可能有疑虑：会不会太早？会不会沉迷？</p>
+            <p>这门课程的设计初衷，正是为了让孩子在<strong>安全、可控、有引导</strong>的环境中，建立对技术的正确认知。我们不是要培养"小程序员"，而是希望每个孩子都能理解：<strong>技术是可以被理解、
+
+被创造、被掌控的</strong>。</p>
+            <p>我们关注的不是孩子做出多"厉害"的作品，而是他们如何思考问题、如何表达想法、如何面对困难、如何与同伴合作。</p>
+            <div class="closing-highlight">
+                技术是工具，思考才是目的。<br>我们关注孩子如何思考，而不只是做出什么。
+            </div>
+        </div>
+
+        <!-- 课程信息 -->
+        <div style="margin-top: 6mm; display: grid; grid-template-columns: repeat(3, 1fr); gap: 3mm; text-align: center;">
+            <div style="border: 1px solid var(--border); padding: 3mm; border-radius: 4px;">
+                <p style="font-size: 10px; color: var(--text-light);">适合对象</p>
+                <p style="font-size: 12px; font-weight: 600;">小学阶段学生</p>
+            </div>
+            <div style="border: 1px solid var(--border); padding: 3mm; border-radius: 4px;">
+                <p style="font-size: 10px; color: var(--text-light);">前置要求</p>
+                <p style="font-size: 12px; font-weight: 600;">无需编程基础</p>
+            </div>
+            <div style="border: 1px solid var(--border); padding: 3mm; border-radius: 4px;">
+                <p style="font-size: 10px; color: var(--text-light);">培养重点</p>
+                <p style="font-size: 12px; font-weight: 600;">思维与创造力</p>
+            </div>
+        </div>
+
+        <div class="page-footer">
+            中华路小学社团观摩活动 · 第 2 页 · 人工智能通识教育课程展示
+        </div>
+    </div>
+</body>
+</html>

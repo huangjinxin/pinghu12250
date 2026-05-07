@@ -29,7 +29,7 @@
     </div>
 
     <!-- 初始化默认模板 -->
-    <div class="section">
+    <div v-if="props.showInitDefaults" class="section">
       <div class="section-header">
         <h3>初始化默认模板</h3>
       </div>
@@ -69,8 +69,13 @@
 <script setup>
 import { ref, onMounted } from 'vue';
 import { useMessage } from 'naive-ui';
-import { InformationCircleOutline, RefreshOutline } from '@vicons/ionicons5';
+import InformationCircleOutline from '@vicons/ionicons5/es/InformationCircleOutline'
+import RefreshOutline from '@vicons/ionicons5/es/RefreshOutline'
 import { aiPromptAPI } from '@/api/index';
+
+const props = defineProps({
+  showInitDefaults: { type: Boolean, default: true }
+});
 
 const message = useMessage();
 

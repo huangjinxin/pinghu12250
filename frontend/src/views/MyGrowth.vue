@@ -391,6 +391,16 @@
           </div>
         </n-form-item>
 
+        <!-- 显示规则说明描述（如果有） -->
+        <n-alert
+          v-if="selectedTemplate?.description"
+          type="info"
+          title="规则描述"
+          style="margin-bottom: 16px"
+        >
+          <div style="white-space: pre-wrap; word-break: break-all;">{{ selectedTemplate.description }}</div>
+        </n-alert>
+
         <!-- 显示规则音频说明（如果有） -->
         <n-alert
           v-if="selectedTemplate?.audioUrl"
@@ -415,8 +425,13 @@
 <script setup>
 import { ref, computed, onMounted, h } from 'vue';
 import { useMessage, useDialog, NButton, NTag, NSpace, NImage, NIcon } from 'naive-ui';
-import { LinkOutline, CodeSlashOutline, TrophyOutline, EyeOutline, VolumeHighOutline, StarOutline } from '@vicons/ionicons5';
-import { Star as StarFilled } from '@vicons/ionicons5';
+import LinkOutline from '@vicons/ionicons5/es/LinkOutline'
+import CodeSlashOutline from '@vicons/ionicons5/es/CodeSlashOutline'
+import TrophyOutline from '@vicons/ionicons5/es/TrophyOutline'
+import EyeOutline from '@vicons/ionicons5/es/EyeOutline'
+import VolumeHighOutline from '@vicons/ionicons5/es/VolumeHighOutline'
+import StarOutline from '@vicons/ionicons5/es/StarOutline'
+import { default as StarFilled } from '@vicons/ionicons5/es/Star'
 import { useSubmissionStore } from '@/stores/submission';
 import api from '@/api';
 
@@ -504,6 +519,30 @@ const mySubmissionsColumns = [
           key: index
         })
       ));
+    }
+  },
+  {
+    title: '老师审核',
+    key: 'teacher_review_status',
+    width: 100,
+    render: (row) => {
+      if (!row.teacher_review_status) {
+        return h('span', { style: 'color: #999; font-size: 12px' }, '-');
+      }
+      return h(NTag, {
+        type: row.teacher_review_status === 'APPROVED' ? 'success' : (row.teacher_review_status === 'REJECTED' ? 'error' : 'warning'),
+        size: 'small'
+      }, {
+        default: () => row.teacher_review_status === 'APPROVED' ? '已通过' : (row.teacher_review_status === 'REJECTED' ? '已驳回' : '待审核')
+      });
+    }
+  },
+  {
+    title: '审核人',
+    key: 'reviewed_by',
+    width: 80,
+    render: (row) => {
+      return h('span', { style: 'font-size: 12px; color: #666;' }, row.reviewed_by || '系统/管理员');
     }
   },
   {

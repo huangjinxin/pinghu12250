@@ -13,39 +13,23 @@
 </template>
 
 <script setup>
-import { zhCN, dateZhCN } from 'naive-ui';
+import { onMounted, computed } from 'vue';
+import { 
+  zhCN, 
+  dateZhCN,
+  NConfigProvider,
+  NMessageProvider,
+  NDialogProvider,
+  NNotificationProvider,
+  NLoadingBarProvider
+} from 'naive-ui';
+import { useThemeStore } from '@/stores/theme';
 
-// 主题覆盖配置 - 蓝紫色系主色调
-const themeOverrides = {
-  common: {
-    primaryColor: '#6366f1',
-    primaryColorHover: '#818cf8',
-    primaryColorPressed: '#4f46e5',
-    primaryColorSuppl: '#a5b4fc',
-    borderRadius: '8px',
-    borderRadiusSmall: '6px',
-  },
-  Button: {
-    borderRadiusMedium: '8px',
-    borderRadiusLarge: '10px',
-  },
-  Card: {
-    borderRadius: '12px',
-  },
-  Input: {
-    borderRadius: '8px',
-  },
-  Select: {
-    borderRadius: '8px',
-  },
-  Tag: {
-    borderRadius: '6px',
-  },
-  Message: {
-    borderRadius: '8px',
-  },
-  Dialog: {
-    borderRadius: '12px',
-  },
-};
+const themeStore = useThemeStore();
+
+const themeOverrides = computed(() => themeStore.naiveThemeOverrides);
+
+onMounted(() => {
+  themeStore.initTheme();
+});
 </script>

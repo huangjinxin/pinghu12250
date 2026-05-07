@@ -127,7 +127,8 @@ import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useMessage } from 'naive-ui';
 import { gameAPI } from '@/api';
-import { SearchOutline, GameControllerOutline } from '@vicons/ionicons5';
+import SearchOutline from '@vicons/ionicons5/es/SearchOutline'
+import GameControllerOutline from '@vicons/ionicons5/es/GameControllerOutline'
 
 const router = useRouter();
 const message = useMessage();

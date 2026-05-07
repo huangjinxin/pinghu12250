@@ -54,8 +54,12 @@
         :subject="textbook?.subject"
         :textbook-id="textbook?.id"
         :loading="loading"
+        :content-type="contentType"
+        :chapters="chapters"
+        :current-chapter-id="currentChapterId"
         @page-change="onPageChange"
         @text-selection="onTextSelection"
+        @chapter-change="onChapterChange"
       />
     </div>
 
@@ -71,10 +75,10 @@
 </template>
 
 <script setup>
-import { ref, provide, reactive, onMounted, onUnmounted, nextTick } from 'vue';
+import { ref, provide, reactive, onMounted, onUnmounted, nextTick, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useMessage, useDialog } from 'naive-ui';
-import { textbookAPI } from '@/api/index';
+import { textbookAPI, textbookNoteAPI } from '@/api/index';
 import ReaderToolbar from '@/components/textbook/ReaderToolbar.vue';
 import FlipBookMode from '@/components/textbook/FlipBookMode.vue';
 import AssistMode from '@/components/textbook/AssistMode.vue';
@@ -89,12 +93,17 @@ const dialog = useDialog();
 // ===== 阅读器共享状态 =====
 const readerState = reactive({
   mode: 'flipbook',      // 'flipbook' | 'assist'
+  contentType: 'pdf',    // 'pdf' | 'epub'
   pdfDoc: null,
   currentPage: 1,
   totalPages: 0,
   zoom: 1,
   subject: '',
   selection: null,
+  // EPUB 相关
+  chapters: [],
+  currentChapterId: '',
+  currentPosition: null,
   panel: {
     collapsed: false,
     cards: []
@@ -117,12 +126,23 @@ const soundEnabled = ref(true);
 const isFullscreen = ref(false);
 const textSelection = ref(null);
 
+// EPUB 状态
+const contentType = ref('pdf');
+const chapters = ref([]);
+const currentChapterId = ref('');
+
 // 组件引用
 const flipbookModeRef = ref(null);
 const assistModeRef = ref(null);
 
 // ===== 模式切换 =====
 const handleModeChange = (newMode) => {
+  // EPUB 不支持翻书模式
+  if (contentType.value === 'epub' && newMode === 'flipbook') {
+    message.warning('EPUB 教材不支持翻书模式');
+    return;
+  }
+
   mode.value = newMode;
   readerState.mode = newMode;
 
@@ -146,7 +166,25 @@ const loadTextbook = async () => {
     textbook.value = data.textbook;
     readerState.subject = data.textbook.subject;
 
-    if (data.textbook.pdfUrl) {
+    // 检测内容类型
+    contentType.value = data.textbook.contentType || 'pdf';
+    readerState.contentType = contentType.value;
+
+    if (contentType.value === 'epub' && data.textbook.epubMetadata?.chapters) {
+      // EPUB 教材
+      chapters.value = data.textbook.epubMetadata.chapters;
+      readerState.chapters = chapters.value;
+      if (chapters.value.length > 0) {
+        currentChapterId.value = chapters.value[0].id;
+        readerState.currentChapterId = chapters.value[0].id;
+      }
+      // EPUB 不支持翻书模式，强制切换到辅助模式
+      mode.value = 'assist';
+      readerState.mode = 'assist';
+      pdfLoaded.value = true; // 标记教材已加载（用于工具栏显示）
+      loading.value = false;
+    } else if (data.textbook.pdfUrl) {
+      // PDF 教材
       await nextTick();
       await loadPdf(data.textbook.pdfUrl);
     } else {
@@ -174,14 +212,28 @@ const loadPdf = async (pdfUrl) => {
     const pdf = await loadingTask.promise;
     pdfDoc.value = pdf;
     totalPages.value = pdf.numPages;
-    currentPage.value = 1;
+
+    // 检查 URL 中是否有指定页码
+    const queryPage = parseInt(route.query.page);
+    if (queryPage && queryPage >= 1 && queryPage <= pdf.numPages) {
+      currentPage.value = queryPage;
+      readerState.currentPage = queryPage;
+    } else {
+      currentPage.value = 1;
+      readerState.currentPage = 1;
+    }
 
     // 同步到共享状态
     readerState.pdfDoc = pdf;
     readerState.totalPages = pdf.numPages;
-    readerState.currentPage = 1;
 
     pdfLoaded.value = true;
+
+    // 如果有指定页码，延迟跳转确保组件已渲染
+    if (queryPage && queryPage >= 1 && queryPage <= pdf.numPages) {
+      await nextTick();
+      goToPage(queryPage);
+    }
   } catch (error) {
     console.error('加载PDF失败:', error);
     message.error('加载PDF失败');
@@ -195,6 +247,31 @@ const onPageChange = (page) => {
   currentPage.value = page;
   readerState.currentPage = page;
 };
+
+// 跳转到指定页面
+const goToPage = (page) => {
+  if (!pdfLoaded.value || page < 1 || page > totalPages.value) return;
+
+  currentPage.value = page;
+  readerState.currentPage = page;
+
+  // 根据当前模式调用对应组件的跳转方法
+  if (mode.value === 'flipbook') {
+    flipbookModeRef.value?.goToPage?.(page);
+  } else {
+    assistModeRef.value?.goToPage?.(page);
+  }
+};
+
+// 监听 URL query.page 变化
+watch(() => route.query.page, (newPage) => {
+  if (newPage && pdfLoaded.value) {
+    const page = parseInt(newPage);
+    if (page >= 1 && page <= totalPages.value) {
+      goToPage(page);
+    }
+  }
+});
 
 const onFlipbookReady = () => {
   console.log('FlipBook 初始化完成');
@@ -213,6 +290,12 @@ const onNavigationChange = (info) => {
 const onTextSelection = (selection) => {
   textSelection.value = selection;
   readerState.selection = selection;
+};
+
+// EPUB 章节变化处理
+const onChapterChange = (data) => {
+  currentChapterId.value = data.chapterId;
+  readerState.currentChapterId = data.chapterId;
 };
 
 const clearSelection = () => {
@@ -255,15 +338,52 @@ const toggleFullscreen = () => {
   flipbookModeRef.value?.toggleFullscreen();
 };
 
-// ===== PDF 管理 =====
+// ===== 教材文件管理 =====
 const handleUploadPdf = async ({ file, onFinish, onError }) => {
+  const fileName = file.file.name;
+  const isEpub = fileName.toLowerCase().endsWith('.epub');
   const formData = new FormData();
-  formData.append('pdf', file.file);
+
+  // 检查是否有笔记
+  const hasExistingContent = pdfLoaded.value;
+  if (hasExistingContent) {
+    try {
+      const noteCount = await textbookNoteAPI.getCount(textbook.value.id);
+      if (noteCount > 0) {
+        const confirmed = await new Promise(resolve => {
+          dialog.warning({
+            title: '重新上传提醒',
+            content: `该教材下有 ${noteCount} 条学习笔记。重新上传后，笔记中的页码引用可能失效，但笔记内容会保留。`,
+            positiveText: '继续上传',
+            negativeText: '取消',
+            onPositiveClick: () => resolve(true),
+            onNegativeClick: () => resolve(false),
+            onClose: () => resolve(false),
+          });
+        });
+        if (!confirmed) {
+          onError();
+          return;
+        }
+      }
+    } catch (e) {
+      console.warn('获取笔记数量失败:', e);
+    }
+  }
 
   try {
     loading.value = true;
-    await textbookAPI.uploadPdf(textbook.value.id, formData);
-    message.success('上传成功');
+
+    if (isEpub) {
+      formData.append('epub', file.file);
+      await textbookAPI.uploadEpub(textbook.value.id, formData);
+      message.success('EPUB 上传成功');
+    } else {
+      formData.append('pdf', file.file);
+      await textbookAPI.uploadPdf(textbook.value.id, formData);
+      message.success('PDF 上传成功');
+    }
+
     await loadTextbook();
     onFinish();
   } catch (error) {
@@ -272,12 +392,27 @@ const handleUploadPdf = async ({ file, onFinish, onError }) => {
   }
 };
 
-const handleDeletePdf = () => {
+const handleDeletePdf = async () => {
   if (!textbook.value?.id) return;
+
+  const isEpub = textbook.value.contentType === 'epub';
+  const fileType = isEpub ? 'EPUB' : 'PDF';
+
+  // 检查笔记数量
+  let noteCount = 0;
+  try {
+    noteCount = await textbookNoteAPI.getCount(textbook.value.id);
+  } catch (e) {
+    console.warn('获取笔记数量失败:', e);
+  }
+
+  const contentMessage = noteCount > 0
+    ? `该教材下有 ${noteCount} 条学习笔记。删除${fileType}文件后，笔记内容会保留，但将无法跳转到原页面。`
+    : `确定要删除该${fileType}文件吗？`;
 
   dialog.warning({
     title: '确认删除',
-    content: '确定要删除该PDF文件吗？此操作不可恢复。',
+    content: contentMessage,
     positiveText: '删除',
     negativeText: '取消',
     onPositiveClick: async () => {
@@ -289,8 +424,13 @@ const handleDeletePdf = () => {
         }
         pdfLoaded.value = false;
 
-        await textbookAPI.deletePdf(textbook.value.id);
-        message.success('PDF已删除');
+        if (isEpub) {
+          await textbookAPI.deleteEpub(textbook.value.id);
+          message.success('EPUB已删除');
+        } else {
+          await textbookAPI.deletePdf(textbook.value.id);
+          message.success('PDF已删除');
+        }
         await loadTextbook();
       } catch (error) {
         message.error('删除失败');

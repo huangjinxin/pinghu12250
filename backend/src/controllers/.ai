@@ -1,0 +1,51 @@
+# @AI:DIR controllers
+permit: modify-only
+naming: "[module]Controller.js"
+layer: http-handler
+
+# 职责
+role: 仅处理HTTP请求/响应,不含业务逻辑
+
+# 规则
+rules:
+  - 复杂逻辑必须移到services/
+  - 直接prisma调用仅限简单CRUD
+  - 复杂查询/计算必须调用service
+
+# 可导入
+import:
+  - "../services/*"
+  - "../lib/prisma"      # 仅简单CRUD
+  - "../utils/*"
+
+# 禁止
+!pattern:
+  - "items.map(...复杂计算)"  # 移到service
+  - "items.filter(...).reduce(...)"  # 移到service
+  - "for/while循环处理数据"  # 移到service
+
+# 现有controllers
+files:
+  - authController.js
+  - userController.js
+  - textbookController.js
+  - htmlWorkController.js
+  - poetryWorkController.js
+  - creativeWorkController.js
+  - categoryController.js
+  - bookController.js
+  - musicController.js
+  - movieController.js
+  - postController.js
+  - classController.js
+  - campusController.js
+  - ruleController.js
+  - submissionController.js
+
+# 响应规范
+response: |
+  // 成功
+  res.json({ success: true, data: result })
+
+  // 失败
+  res.status(400).json({ success: false, error: '错误信息' })

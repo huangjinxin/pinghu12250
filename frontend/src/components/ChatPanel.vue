@@ -1,3 +1,5 @@
+<!-- @AI:DEPRECATED 使用 textbook/AiConversationPanel.vue 替代 -->
+<!-- @AI:DO-NOT-MODIFY 此文件将被废弃,不要修改或新增功能 -->
 <template>
   <!-- 最小化模式 -->
   <transition name="slide-up">
@@ -47,7 +49,8 @@
 <script setup>
 import { computed, onMounted, onBeforeUnmount } from 'vue';
 import { useChatStore } from '@/stores/chat';
-import { ChatbubblesOutline, CloseOutline } from '@vicons/ionicons5';
+import ChatbubblesOutline from '@vicons/ionicons5/es/ChatbubblesOutline'
+import CloseOutline from '@vicons/ionicons5/es/CloseOutline'
 import ChatPanelContent from './ChatPanelContent.vue';
 
 const chatStore = useChatStore();

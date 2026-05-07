@@ -1,0 +1,18 @@
+# @AI:DIR middleware
+permit: modify-only
+naming: "[name].js"
+layer: middleware
+
+# 现有middleware
+files:
+  - auth.js        # 认证中间件 authenticateToken
+  - upload.js      # 文件上传 multer配置
+  - errorHandler.js # 全局错误处理
+
+# 禁止新增
+reason: 中间件影响全局,新增需人类审批
+
+# 使用方式
+usage: |
+  const { authenticateToken } = require('../middleware/auth');
+  router.get('/protected', authenticateToken, handler);

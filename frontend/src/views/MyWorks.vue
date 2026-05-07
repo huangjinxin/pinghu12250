@@ -9,36 +9,32 @@
         <template #icon>
           <n-icon><AddOutline /></n-icon>
         </template>
-        {{ workType === 'poetry' ? '创建诗词' : '创建作品' }}
+        创建作品
       </n-button>
     </div>
 
-    <!-- 作品类型选择 -->
+    <!-- 栏目选择 -->
     <n-card>
-      <n-tabs v-model:value="workType" type="segment" @update:value="handleWorkTypeChange">
-        <n-tab-pane name="html" tab="HTML作品">
-          <!-- HTML作品状态筛选 -->
-          <div class="mt-4">
-            <n-tabs v-model:value="htmlStatus" type="line" @update:value="loadHtmlWorks">
-              <n-tab-pane name="all" tab="全部" />
-              <n-tab-pane name="public" tab="公开" />
-              <n-tab-pane name="private" tab="私有" />
-            </n-tabs>
-          </div>
-        </n-tab-pane>
-
-        <n-tab-pane name="poetry" tab="唐诗宋词">
-          <!-- 诗词作品状态筛选 -->
-          <div class="mt-4">
-            <n-tabs v-model:value="poetryStatus" type="line" @update:value="loadPoetryWorks">
-              <n-tab-pane name="all" tab="全部" />
-              <n-tab-pane name="pending" tab="待审核" />
-              <n-tab-pane name="approved" tab="已发布" />
-              <n-tab-pane name="rejected" tab="已拒绝" />
-            </n-tabs>
-          </div>
-        </n-tab-pane>
-      </n-tabs>
+      <n-spin :show="loadingCategories">
+        <n-tabs v-model:value="currentCategory" type="segment" @update:value="handleCategoryChange">
+          <n-tab-pane
+            v-for="cat in categories"
+            :key="cat.slug"
+            :name="cat.slug"
+            :tab="cat.icon ? `${cat.icon} ${cat.name}` : cat.name"
+          >
+            <!-- 状态筛选 -->
+            <div class="mt-4">
+              <n-tabs v-model:value="currentStatus" type="line" @update:value="loadWorks">
+                <n-tab-pane name="all" tab="全部" />
+                <n-tab-pane name="PENDING" tab="待审核" />
+                <n-tab-pane name="APPROVED" tab="已发布" />
+                <n-tab-pane name="REJECTED" tab="已拒绝" />
+              </n-tabs>
+            </div>
+          </n-tab-pane>
+        </n-tabs>
+      </n-spin>
     </n-card>
 
     <!-- 搜索栏 -->
@@ -58,122 +54,70 @@
 
     <!-- 作品列表 -->
     <n-spin :show="loading">
-      <!-- HTML作品列表 -->
-      <div v-if="workType === 'html'">
-        <div v-if="htmlWorks.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          <n-card
-            v-for="work in htmlWorks"
-            :key="work.id"
-            class="work-card"
-            hoverable
-          >
-            <div class="work-preview h-32 bg-gray-100 rounded-lg mb-3 overflow-hidden">
-              <iframe
-                v-if="work.htmlContent || work.htmlCode"
-                :srcdoc="work.htmlContent || work.htmlCode"
-                class="w-full h-full pointer-events-none"
-                sandbox="allow-scripts"
-              ></iframe>
+      <div v-if="works.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <n-card
+          v-for="work in works"
+          :key="work.id"
+          class="work-card"
+          hoverable
+          @click="handlePreview(work)"
+        >
+          <div class="work-preview h-40 bg-gray-100 rounded-lg mb-3 overflow-hidden">
+            <iframe
+              :srcdoc="work.htmlCode"
+              class="preview-frame"
+              sandbox="allow-scripts"
+            ></iframe>
+          </div>
+
+          <div class="space-y-3">
+            <div class="flex items-center gap-2">
+              <h3 class="font-bold truncate flex-1">{{ work.title }}</h3>
+              <n-tag v-if="work.status === 'PENDING'" type="warning" size="small">待审核</n-tag>
+              <n-tag v-else-if="work.status === 'APPROVED'" type="success" size="small">已发布</n-tag>
+              <n-tag v-else-if="work.status === 'REJECTED'" type="error" size="small">已拒绝</n-tag>
             </div>
 
-            <div class="space-y-3">
-              <div>
-                <h3 class="font-bold truncate">{{ work.title }}</h3>
-                <p class="text-sm text-gray-500 mt-1 line-clamp-2">{{ work.description || '暂无描述' }}</p>
-              </div>
-
-              <div class="flex items-center gap-2 text-xs text-gray-500">
-                <n-tag v-if="work.visibility === 'PUBLIC'" type="success" size="small">公开</n-tag>
-                <n-tag v-else-if="work.visibility === 'PRIVATE'" type="warning" size="small">私有</n-tag>
-                <n-tag v-else type="default" size="small">草稿</n-tag>
-                <span>{{ formatDate(work.createdAt) }}</span>
-              </div>
-
-              <div class="flex items-center justify-between text-sm text-gray-600">
-                <div class="flex items-center gap-3">
-                  <span class="flex items-center gap-1">
-                    <n-icon><HeartOutline /></n-icon>
-                    {{ work._count?.likes || 0 }}
-                  </span>
-                  <span class="flex items-center gap-1">
-                    <n-icon><ChatbubbleOutline /></n-icon>
-                    {{ work._count?.comments || 0 }}
-                  </span>
-                </div>
-              </div>
-
-              <div class="flex gap-2">
-                <n-button size="small" @click="$router.push(`/works/${work.id}`)">查看</n-button>
-                <n-button size="small" @click="$router.push(`/works/${work.id}/edit`)">编辑</n-button>
-                <n-button size="small" type="error" @click="handleDeleteHtml(work.id)">删除</n-button>
-              </div>
+            <div class="flex items-center gap-2 text-xs text-gray-500">
+              <n-tag size="tiny" :bordered="false">{{ work.Category?.icon }} {{ work.Category?.name }}</n-tag>
+              <span>{{ formatDate(work.createdAt) }}</span>
+              <span class="flex items-center gap-1">
+                <n-icon><HeartOutline /></n-icon>
+                {{ work.likesCount || 0 }}
+              </span>
             </div>
-          </n-card>
-        </div>
-        <n-empty v-else description="还没有创建任何HTML作品" class="py-12">
-          <template #extra>
-            <n-button type="primary" @click="$router.push('/works/create')">立即创建</n-button>
-          </template>
-        </n-empty>
+
+            <!-- 拒绝原因 -->
+            <div v-if="work.status === 'REJECTED' && work.reviewReason" class="text-xs text-red-500">
+              拒绝原因：{{ work.reviewReason }}
+            </div>
+
+            <div class="flex gap-2 flex-wrap" @click.stop>
+              <n-button size="small" @click="handlePreview(work)">预览</n-button>
+              <n-button size="small" type="info" @click="handleEdit(work)">编辑</n-button>
+              <n-button v-if="work.status === 'APPROVED'" size="small" @click="handleShare(work)">分享</n-button>
+              <n-button size="small" type="error" @click="handleDelete(work)">删除</n-button>
+            </div>
+          </div>
+        </n-card>
       </div>
-
-      <!-- 诗词作品列表 -->
-      <div v-else-if="workType === 'poetry'">
-        <div v-if="poetryWorks.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          <n-card
-            v-for="work in poetryWorks"
-            :key="work.id"
-            class="work-card"
-            hoverable
-            @click="handleViewPoetry(work)"
-          >
-            <div class="work-preview h-40 bg-gray-100 rounded-lg mb-3 overflow-hidden">
-              <iframe
-                :srcdoc="work.htmlCode"
-                class="poetry-preview-frame"
-                sandbox="allow-scripts"
-              ></iframe>
-            </div>
-
-            <div class="space-y-3">
-              <div class="flex items-center gap-2">
-                <h3 class="font-bold truncate flex-1">{{ work.title }}</h3>
-                <n-tag v-if="work.status === 'PENDING'" type="warning" size="small">待审核</n-tag>
-                <n-tag v-else-if="work.status === 'APPROVED'" type="success" size="small">已发布</n-tag>
-                <n-tag v-else-if="work.status === 'REJECTED'" type="error" size="small">已拒绝</n-tag>
-              </div>
-
-              <div class="flex items-center gap-2 text-xs text-gray-500">
-                <span>{{ formatDate(work.createdAt) }}</span>
-                <span class="flex items-center gap-1">
-                  <n-icon><HeartOutline /></n-icon>
-                  {{ work._count?.likes || 0 }}
-                </span>
-              </div>
-
-              <!-- 拒绝原因 -->
-              <div v-if="work.status === 'REJECTED' && work.reviewReason" class="text-xs text-red-500">
-                拒绝原因：{{ work.reviewReason }}
-              </div>
-
-              <div class="flex gap-2 flex-wrap" @click.stop>
-                <n-button size="small" @click="handlePreviewPoetry(work)">预览</n-button>
-                <n-button size="small" type="info" @click="handleEditPoetry(work)">编辑</n-button>
-                <n-button v-if="work.status === 'APPROVED'" size="small" @click="handleSharePoetry(work)">分享</n-button>
-                <n-button size="small" type="error" @click="handleDeletePoetry(work)">删除</n-button>
-              </div>
-            </div>
-          </n-card>
-        </div>
-        <n-empty v-else description="还没有创建任何诗词作品" class="py-12">
-          <template #extra>
-            <n-button type="primary" @click="showPoetryDialog = true">立即创建</n-button>
-          </template>
-        </n-empty>
-      </div>
+      <n-empty v-else description="还没有创建任何作品" class="py-12">
+        <template #extra>
+          <n-button type="primary" @click="handleCreate">立即创建</n-button>
+        </template>
+      </n-empty>
     </n-spin>
 
-    <!-- 预览诗词对话框 -->
+    <!-- 分页 -->
+    <div v-if="pagination.totalPages > 1" class="flex justify-center mt-6">
+      <n-pagination
+        v-model:page="pagination.page"
+        :page-count="pagination.totalPages"
+        @update:page="loadWorks"
+      />
+    </div>
+
+    <!-- 预览对话框 -->
     <n-modal
       v-model:show="showPreviewDialog"
       preset="card"
@@ -191,52 +135,80 @@
       <template #footer>
         <n-space justify="end">
           <n-button @click="showPreviewDialog = false">关闭</n-button>
-          <n-button type="info" @click="showPreviewDialog = false; handleEditPoetry(previewWork)">编辑</n-button>
+          <n-button type="info" @click="showPreviewDialog = false; handleEdit(previewWork)">编辑</n-button>
         </n-space>
       </template>
     </n-modal>
 
-    <!-- 创建/编辑诗词对话框 -->
+    <!-- 创建/编辑对话框 -->
     <n-modal
-      v-model:show="showPoetryDialog"
+      v-model:show="showEditDialog"
       preset="card"
-      :title="editingPoetryId ? '编辑唐诗宋词作品' : '创建唐诗宋词作品'"
+      :title="editingWorkId ? '编辑作品' : '创建作品'"
       style="width: 800px; max-width: 95vw;"
     >
-      <n-form ref="poetryFormRef" :model="poetryForm" :rules="poetryRules" label-placement="top">
+      <n-form ref="formRef" :model="form" :rules="formRules" label-placement="top">
+        <n-form-item label="选择栏目" path="categoryId">
+          <n-select
+            v-model:value="form.categoryId"
+            :options="categoryOptions"
+            placeholder="请选择栏目"
+          />
+        </n-form-item>
+
+        <n-form-item v-if="isPoetryCategory" label="作品类型" path="type">
+          <n-select
+            v-model:value="form.type"
+            :options="typeOptions"
+            placeholder="请选择类型"
+          />
+        </n-form-item>
+
         <n-form-item label="作品标题" path="title">
-          <n-input v-model:value="poetryForm.title" placeholder="例如：静夜思、登鹳雀楼" />
+          <n-input v-model:value="form.title" placeholder="输入作品标题" />
         </n-form-item>
 
         <n-form-item label="HTML代码" path="htmlCode">
           <n-input
-            v-model:value="poetryForm.htmlCode"
+            v-model:value="form.htmlCode"
             type="textarea"
-            placeholder="输入完整的HTML代码，包含CSS样式..."
+            placeholder="输入完整的HTML代码..."
             :rows="15"
             style="font-family: monospace;"
           />
         </n-form-item>
 
+        <n-form-item label="内容简介（用于复制）" path="plainText">
+          <n-input
+            v-model:value="form.plainText"
+            type="textarea"
+            placeholder="输入作品的纯文本内容，如诗词正文（不含拼音），方便他人复制..."
+            :rows="6"
+          />
+          <template #feedback>
+            <span class="text-xs text-gray-400">此内容将用于"复制"功能，建议填写诗词原文等纯文本内容</span>
+          </template>
+        </n-form-item>
+
         <n-collapse>
           <n-collapse-item title="HTML模板示例" name="template">
-            <pre class="code-preview">{{ poetryTemplate }}</pre>
-            <n-button size="small" @click="poetryForm.htmlCode = poetryTemplate" style="margin-top: 10px;">
+            <pre class="code-preview">{{ htmlTemplate }}</pre>
+            <n-button size="small" @click="form.htmlCode = htmlTemplate" style="margin-top: 10px;">
               使用此模板
             </n-button>
           </n-collapse-item>
         </n-collapse>
 
         <n-alert type="info" style="margin-top: 16px;">
-          提交后作品将进入审核流程，审核通过后会自动发布到唐诗宋词页面，并获得5积分奖励。
+          提交后作品将进入审核流程，审核通过后会自动发布并获得积分奖励。
         </n-alert>
       </n-form>
 
       <template #footer>
         <n-space justify="end">
-          <n-button @click="handleCancelPoetryDialog">取消</n-button>
-          <n-button type="primary" :loading="submitting" @click="handleSubmitPoetry">
-            {{ editingPoetryId ? '保存修改' : '提交审核' }}
+          <n-button @click="handleCancelDialog">取消</n-button>
+          <n-button type="primary" :loading="submitting" @click="handleSubmit">
+            {{ editingWorkId ? '保存修改' : '提交审核' }}
           </n-button>
         </n-space>
       </template>
@@ -248,57 +220,73 @@
 import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useMessage, useDialog } from 'naive-ui';
-import { useAuthStore } from '@/stores/auth';
-import { htmlWorkAPI } from '@/api';
 import api from '@/api';
-import {
-  AddOutline,
-  SearchOutline,
-  HeartOutline,
-  ChatbubbleOutline,
-} from '@vicons/ionicons5';
+import AddOutline from '@vicons/ionicons5/es/AddOutline'
+import SearchOutline from '@vicons/ionicons5/es/SearchOutline'
+import HeartOutline from '@vicons/ionicons5/es/HeartOutline'
 import { formatDistanceToNow } from 'date-fns';
 import { zhCN } from 'date-fns/locale';
 
 const router = useRouter();
 const message = useMessage();
 const dialog = useDialog();
-const authStore = useAuthStore();
 
-const currentUserId = computed(() => authStore.user?.id);
-
-// 通用状态
+// 状态
 const loading = ref(false);
-const workType = ref('poetry'); // 默认显示诗词作品
+const loadingCategories = ref(false);
+const categories = ref([]);
+const currentCategory = ref('');
+const currentStatus = ref('all');
 const searchQuery = ref('');
+const works = ref([]);
+const pagination = ref({ page: 1, limit: 12, total: 0, totalPages: 0 });
 
-// HTML作品相关
-const htmlWorks = ref([]);
-const htmlStatus = ref('all');
-
-// 诗词作品相关
-const poetryWorks = ref([]);
-const poetryStatus = ref('all');
-const showPoetryDialog = ref(false);
-const submitting = ref(false);
-const poetryFormRef = ref(null);
-const poetryForm = ref({
-  title: '',
-  htmlCode: ''
-});
-const editingPoetryId = ref(null); // 编辑模式的作品ID
-
-// 预览相关
+// 对话框相关
 const showPreviewDialog = ref(false);
 const previewWork = ref(null);
+const showEditDialog = ref(false);
+const editingWorkId = ref(null);
+const submitting = ref(false);
+const formRef = ref(null);
+const form = ref({
+  categoryId: '',
+  type: null,
+  title: '',
+  htmlCode: '',
+  plainText: ''
+});
 
-const poetryRules = {
+// 类型选项（诗词文章栏目用）
+const typeOptions = [
+  { label: '诗', value: '诗' },
+  { label: '词', value: '词' },
+  { label: '古文', value: '古文' },
+  { label: '现代文', value: '现代文' },
+  { label: '其他', value: '其他' },
+];
+
+// 判断当前选择的栏目是否为诗词文章
+const isPoetryCategory = computed(() => {
+  const cat = categories.value.find(c => c.id === form.value.categoryId);
+  return cat?.slug === 'poetry';
+});
+
+const formRules = {
+  categoryId: { required: true, message: '请选择栏目', trigger: 'change' },
   title: { required: true, message: '请输入作品标题', trigger: 'blur' },
   htmlCode: { required: true, message: '请输入HTML代码', trigger: 'blur' }
 };
 
+// 栏目选项
+const categoryOptions = computed(() => {
+  return categories.value.map(cat => ({
+    label: cat.icon ? `${cat.icon} ${cat.name}` : cat.name,
+    value: cat.id
+  }));
+});
+
 // HTML模板
-const poetryTemplate = `<!DOCTYPE html>
+const htmlTemplate = `<!DOCTYPE html>
 <html>
 <head>
   <style>
@@ -311,69 +299,76 @@ const poetryTemplate = `<!DOCTYPE html>
       background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
       font-family: "楷体", "STKaiti", serif;
     }
-    .poem-container {
+    .container {
       background: rgba(255,255,255,0.95);
       padding: 40px 60px;
       border-radius: 20px;
       box-shadow: 0 20px 60px rgba(0,0,0,0.3);
       text-align: center;
     }
-    .poem-title {
+    h1 {
       font-size: 32px;
       color: #8B4513;
-      margin-bottom: 10px;
+      margin-bottom: 20px;
     }
-    .poem-author {
-      font-size: 18px;
-      color: #666;
-      margin-bottom: 30px;
-    }
-    .poem-content {
-      font-size: 24px;
-      line-height: 2;
+    .content {
+      font-size: 20px;
+      line-height: 1.8;
       color: #333;
     }
   </style>
 </head>
 <body>
-  <div class="poem-container">
-    <h1 class="poem-title">诗词标题</h1>
-    <p class="poem-author">【朝代】作者</p>
-    <div class="poem-content">
-      第一句，<br>
-      第二句。<br>
-      第三句，<br>
-      第四句。
+  <div class="container">
+    <h1>作品标题</h1>
+    <div class="content">
+      在这里编写你的内容...
     </div>
   </div>
 </body>
 </html>`;
 
-// 加载HTML作品
-const loadHtmlWorks = async () => {
+// 加载栏目列表
+const loadCategories = async () => {
+  loadingCategories.value = true;
+  try {
+    const response = await api.get('/categories');
+    categories.value = response.data || [];
+    if (categories.value.length > 0 && !currentCategory.value) {
+      currentCategory.value = categories.value[0].slug;
+      loadWorks();
+    }
+  } catch (error) {
+    message.error(error.error || '加载栏目失败');
+  } finally {
+    loadingCategories.value = false;
+  }
+};
+
+// 加载作品列表
+const loadWorks = async () => {
   loading.value = true;
   try {
     const params = {
-      myOnly: true,
+      category: currentCategory.value,
+      page: pagination.value.page,
+      limit: pagination.value.limit,
     };
 
-    if (htmlStatus.value !== 'all') {
-      params.visibility = htmlStatus.value.toUpperCase();
+    if (currentStatus.value !== 'all') {
+      params.status = currentStatus.value;
     }
 
     if (searchQuery.value) {
       params.search = searchQuery.value;
     }
 
-    const response = await htmlWorkAPI.getWorks(params);
-    const allWorks = response.works || [];
-
-    // 前端二次验证：确保只显示当前用户的作品
-    if (currentUserId.value) {
-      htmlWorks.value = allWorks.filter(work => work.authorId === currentUserId.value);
-    } else {
-      htmlWorks.value = [];
-    }
+    const response = await api.get('/creative-works/my', { params });
+    works.value = response.data?.works || [];
+    pagination.value = {
+      ...pagination.value,
+      ...response.data?.pagination
+    };
   } catch (error) {
     message.error(error.error || '加载作品失败');
   } finally {
@@ -381,115 +376,54 @@ const loadHtmlWorks = async () => {
   }
 };
 
-// 加载诗词作品
-const loadPoetryWorks = async () => {
-  loading.value = true;
-  try {
-    const params = { myOnly: true };
-
-    if (searchQuery.value) {
-      params.search = searchQuery.value;
-    }
-
-    const response = await api.get('/poetry-works', { params });
-    let works = response.works || [];
-
-    // 根据状态筛选
-    if (poetryStatus.value !== 'all') {
-      works = works.filter(w => w.status === poetryStatus.value.toUpperCase());
-    }
-
-    poetryWorks.value = works;
-  } catch (error) {
-    message.error(error.error || '加载诗词作品失败');
-  } finally {
-    loading.value = false;
-  }
-};
-
-// 切换作品类型
-const handleWorkTypeChange = (type) => {
-  if (type === 'html') {
-    loadHtmlWorks();
-  } else {
-    loadPoetryWorks();
-  }
+// 切换栏目
+const handleCategoryChange = () => {
+  pagination.value.page = 1;
+  currentStatus.value = 'all';
+  loadWorks();
 };
 
 // 搜索
 const handleSearch = () => {
-  if (workType.value === 'html') {
-    loadHtmlWorks();
-  } else {
-    loadPoetryWorks();
-  }
+  pagination.value.page = 1;
+  loadWorks();
 };
 
-// 创建按钮
+// 创建作品
 const handleCreate = () => {
-  if (workType.value === 'poetry') {
-    showPoetryDialog.value = true;
-  } else {
-    router.push('/works/create');
-  }
+  editingWorkId.value = null;
+  form.value = {
+    categoryId: categories.value.find(c => c.slug === currentCategory.value)?.id || '',
+    type: null,
+    title: '',
+    htmlCode: '',
+    plainText: ''
+  };
+  showEditDialog.value = true;
 };
 
-// 提交诗词作品（创建或更新）
-const handleSubmitPoetry = async () => {
-  try {
-    await poetryFormRef.value?.validate();
-  } catch {
-    return;
-  }
-
-  submitting.value = true;
-  try {
-    if (editingPoetryId.value) {
-      // 编辑模式
-      await api.put(`/poetry-works/${editingPoetryId.value}`, poetryForm.value);
-      message.success('保存成功，作品已重新提交审核');
-    } else {
-      // 创建模式
-      await api.post('/poetry-works', poetryForm.value);
-      message.success('提交成功，作品已进入审核流程');
-    }
-    showPoetryDialog.value = false;
-    poetryForm.value = { title: '', htmlCode: '' };
-    editingPoetryId.value = null;
-    loadPoetryWorks();
-  } catch (error) {
-    message.error(error.error || '提交失败');
-  } finally {
-    submitting.value = false;
-  }
+// 编辑作品
+const handleEdit = (work) => {
+  editingWorkId.value = work.id;
+  form.value = {
+    categoryId: work.categoryId,
+    type: work.type || null,
+    title: work.title,
+    htmlCode: work.htmlCode,
+    plainText: work.plainText || ''
+  };
+  showEditDialog.value = true;
 };
 
-// 取消对话框
-const handleCancelPoetryDialog = () => {
-  showPoetryDialog.value = false;
-  poetryForm.value = { title: '', htmlCode: '' };
-  editingPoetryId.value = null;
-};
-
-// 预览诗词
-const handlePreviewPoetry = (work) => {
+// 预览作品
+const handlePreview = (work) => {
   previewWork.value = work;
   showPreviewDialog.value = true;
 };
 
-// 编辑诗词
-const handleEditPoetry = (work) => {
-  editingPoetryId.value = work.id;
-  poetryForm.value = {
-    title: work.title,
-    htmlCode: work.htmlCode
-  };
-  showPoetryDialog.value = true;
-};
-
-// 分享诗词
-const handleSharePoetry = async (work) => {
-  const shareUrl = `${window.location.origin}/poetry/${work.id}`;
+// 分享作品
+const handleShare = async (work) => {
+  const shareUrl = `${window.location.origin}/creative/${work.id}`;
   try {
     await navigator.clipboard.writeText(shareUrl);
     message.success('分享链接已复制');
@@ -504,8 +438,8 @@ const handleSharePoetry = async (work) => {
   }
 };
 
-// 删除诗词
-const handleDeletePoetry = (work) => {
+// 删除作品
+const handleDelete = (work) => {
   dialog.warning({
     title: '确认删除',
     content: `确定要删除作品《${work.title}》吗？此操作不可恢复。`,
@@ -513,9 +447,9 @@ const handleDeletePoetry = (work) => {
     negativeText: '取消',
     onPositiveClick: async () => {
       try {
-        await api.delete(`/poetry-works/${work.id}`);
+        await api.delete(`/creative-works/${work.id}`);
         message.success('删除成功');
-        loadPoetryWorks();
+        loadWorks();
       } catch (error) {
         message.error(error.error || '删除失败');
       }
@@ -523,30 +457,45 @@ const handleDeletePoetry = (work) => {
   });
 };
 
-// 删除HTML作品
-const handleDeleteHtml = (id) => {
-  const workToDelete = htmlWorks.value.find(w => w.id === id);
-
-  if (!workToDelete || workToDelete.authorId !== currentUserId.value) {
-    message.error('无权删除此作品');
+// 提交表单
+const handleSubmit = async () => {
+  try {
+    await formRef.value?.validate();
+  } catch {
     return;
   }
 
-  dialog.warning({
-    title: '确认删除',
-    content: '确定要删除这个作品吗？此操作不可恢复。',
-    positiveText: '确定',
-    negativeText: '取消',
-    onPositiveClick: async () => {
-      try {
-        await htmlWorkAPI.deleteWork(id);
-        message.success('删除成功');
-        loadHtmlWorks();
-      } catch (error) {
-        message.error(error.error || '删除失败');
-      }
-    },
-  });
+  submitting.value = true;
+  try {
+    if (editingWorkId.value) {
+      await api.put(`/creative-works/${editingWorkId.value}`, {
+        title: form.value.title,
+        type: form.value.type,
+        htmlCode: form.value.htmlCode,
+        plainText: form.value.plainText,
+        categoryId: form.value.categoryId
+      });
+      message.success('保存成功，作品已重新提交审核');
+    } else {
+      await api.post('/creative-works', form.value);
+      message.success('提交成功，作品已进入审核流程');
+    }
+    showEditDialog.value = false;
+    form.value = { categoryId: '', type: null, title: '', htmlCode: '', plainText: '' };
+    editingWorkId.value = null;
+    loadWorks();
+  } catch (error) {
+    message.error(error.error || '提交失败');
+  } finally {
+    submitting.value = false;
+  }
+};
+
+// 取消对话框
+const handleCancelDialog = () => {
+  showEditDialog.value = false;
+  form.value = { categoryId: '', type: null, title: '', htmlCode: '', plainText: '' };
+  editingWorkId.value = null;
 };
 
 const formatDate = (date) => {
@@ -557,8 +506,7 @@ const formatDate = (date) => {
 };
 
 onMounted(() => {
-  // 默认加载诗词作品
-  loadPoetryWorks();
+  loadCategories();
 });
 </script>
 
@@ -572,14 +520,7 @@ onMounted(() => {
   transform: translateY(-4px);
 }
 
-.line-clamp-2 {
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
-.poetry-preview-frame {
+.preview-frame {
   width: 200%;
   height: 200%;
   border: none;

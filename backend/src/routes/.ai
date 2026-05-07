@@ -1,0 +1,41 @@
+# @AI:DIR routes
+permit: add
+naming: "[module].js"
+layer: routing
+
+# 职责
+role: 路由定义,连接URL到controller/handler
+
+# 规则
+rules:
+  - 简单handler可内联
+  - 复杂逻辑必须调用controller
+  - 认证中间件: authenticateToken
+
+# 可导入
+import:
+  - "../controllers/*"
+  - "../middleware/*"
+  - "../lib/prisma"      # 仅简单内联handler
+  - "express"
+
+# 路由命名规范
+pattern: |
+  const router = express.Router();
+
+  // RESTful
+  router.get('/', handler.getList);
+  router.get('/:id', handler.getById);
+  router.post('/', handler.create);
+  router.put('/:id', handler.update);
+  router.delete('/:id', handler.delete);
+
+  // 自定义动作
+  router.post('/:id/[action]', handler.[action]);
+
+  module.exports = router;
+
+# 注册路由
+register: |
+  // 在 src/index.js 中
+  app.use('/api/[modules]', require('./routes/[module]'));

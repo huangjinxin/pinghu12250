@@ -1,0 +1,375 @@
+# API 路由映射表
+# 前端 API 对象 → 后端路由文件 → 主要端点
+# 更新时间: 2025-12-26
+
+# ========== 认证与用户 ==========
+auth:
+  api: authAPI
+  route: backend/src/routes/auth.js
+  base_path: /api/auth
+  endpoints:
+    - { method: POST, path: /register, desc: 用户注册 }
+    - { method: POST, path: /login, desc: 用户登录 }
+    - { method: POST, path: /refresh, desc: 刷新Token }
+
+user:
+  api: userAPI
+  route: backend/src/routes/user.js
+  controller: backend/src/controllers/userController.js
+  base_path: /api/users
+  endpoints:
+    - { method: GET, path: /me, desc: 获取当前用户 }
+    - { method: PUT, path: /me, desc: 更新个人信息 }
+    - { method: PUT, path: /me/password, desc: 修改密码 }
+    - { method: POST, path: /me/avatar, desc: 上传头像 }
+    - { method: GET, path: /:id, desc: 获取用户详情 }
+    - { method: GET, path: /:id/stats, desc: 用户统计 }
+
+admin:
+  api: adminAPI
+  route: backend/src/routes/admin.js
+  base_path: /api/admin
+  endpoints:
+    - { method: GET, path: /users, desc: 用户列表 }
+    - { method: POST, path: /users, desc: 创建用户 }
+    - { method: PUT, path: /users/:id/status, desc: 更新状态 }
+    - { method: DELETE, path: /users/:id, desc: 删除用户 }
+    - { method: GET, path: /stats, desc: 系统统计 }
+
+# ========== 内容创作 ==========
+diary:
+  api: diaryAPI
+  route: backend/src/routes/diary.js
+  base_path: /api/diaries
+  endpoints:
+    - { method: GET, path: /, desc: 日记列表 }
+    - { method: POST, path: /, desc: 创建日记 }
+    - { method: PUT, path: /:id, desc: 更新日记 }
+    - { method: DELETE, path: /:id, desc: 删除日记 }
+    - { method: POST, path: /:id/comments, desc: 添加评论 }
+
+homework:
+  api: homeworkAPI
+  route: backend/src/routes/homework.js
+  base_path: /api/homeworks
+
+note:
+  api: noteAPI
+  route: backend/src/routes/note.js
+  base_path: /api/notes
+
+readingNote:
+  api: readingNoteAPI
+  route: backend/src/routes/readingNote.js
+  base_path: /api/reading-notes
+
+htmlWork:
+  api: htmlWorkAPI
+  route: backend/src/routes/htmlWork.js
+  controller: backend/src/controllers/htmlWorkController.js
+  base_path: /api/html-works
+  endpoints:
+    - { method: GET, path: /, desc: 作品列表 }
+    - { method: GET, path: /categories/list, desc: 分类列表 }
+    - { method: GET, path: /:id, desc: 作品详情 }
+    - { method: POST, path: /, desc: 创建作品 }
+    - { method: PUT, path: /:id, desc: 更新作品 }
+    - { method: POST, path: /:id/fork, desc: Fork作品 }
+    - { method: POST, path: /:id/like, desc: 点赞 }
+
+# ========== 教材系统（核心复杂模块）==========
+textbook:
+  api: textbookAPI
+  route: backend/src/routes/textbook.js
+  controller: backend/src/controllers/textbookController.js
+  base_path: /api/textbooks
+  endpoints:
+    - { method: GET, path: /public, desc: 公开教材列表 }
+    - { method: GET, path: /public/:id/toc, desc: 教材目录 }
+    - { method: GET, path: /my, desc: 我的教材 }
+    - { method: POST, path: /, desc: 创建教材 }
+    - { method: GET, path: /:id, desc: 教材详情 }
+    - { method: PUT, path: /:id, desc: 更新教材 }
+    - { method: POST, path: /:id/pdf, desc: 上传PDF }
+    - { method: DELETE, path: /:id/pdf, desc: 删除PDF }
+    - { method: POST, path: /units, desc: 创建单元 }
+    - { method: POST, path: /lessons, desc: 创建课文 }
+    - { method: GET, path: /favorites, desc: 收藏列表 }
+
+textbookNote:
+  api: textbookNoteAPI
+  route: backend/src/routes/textbookNote.js
+  base_path: /api/textbook-notes
+  endpoints:
+    - { method: GET, path: /, desc: 笔记列表 }
+    - { method: POST, path: /, desc: 创建笔记 }
+    - { method: PUT, path: /:id, desc: 更新笔记 }
+    - { method: DELETE, path: /:id, desc: 删除笔记 }
+
+textbookChat:
+  api: textbookChatAPI
+  route: backend/src/routes/textbookChat.js
+  base_path: /api/textbook-chat
+  endpoints:
+    - { method: GET, path: /:textbookId, desc: 聊天记录 }
+    - { method: POST, path: /:textbookId, desc: 添加消息 }
+    - { method: DELETE, path: /:textbookId/:messageId, desc: 删除消息 }
+    - { method: DELETE, path: /:textbookId/clear, desc: 清空记录 }
+
+aiAnalysis:
+  api: aiAnalysisAPI
+  route: backend/src/routes/aiAnalysis.js
+  service: backend/src/services/aiService.js
+  base_path: /api/ai-analysis
+  endpoints:
+    - { method: POST, path: /analyze, desc: AI分析, timeout: 120000 }
+    - { method: POST, path: /chat, desc: AI对话, timeout: 120000 }
+    - { method: GET, path: /chat/stream, desc: 流式对话(SSE) }
+    - { method: POST, path: /abort/:connectionId, desc: 中断对话 }
+    - { method: GET, path: /logs, desc: 分析日志 }
+
+aiConfig:
+  api: aiConfigAPI
+  route: backend/src/routes/aiConfig.js
+  base_path: /api/ai-config
+  admin_only: true
+  endpoints:
+    - { method: GET, path: /, desc: 配置列表 }
+    - { method: POST, path: /, desc: 创建配置 }
+    - { method: PUT, path: /:id, desc: 更新配置 }
+    - { method: PUT, path: /:id/default, desc: 设为默认 }
+    - { method: POST, path: /:id/test, desc: 测试连接 }
+
+aiPrompt:
+  api: aiPromptAPI
+  route: backend/src/routes/aiPrompt.js
+  base_path: /api/ai-prompts
+  endpoints:
+    - { method: GET, path: /, desc: 提示词列表 }
+    - { method: GET, path: /default, desc: 默认提示词 }
+    - { method: GET, path: /system, desc: 系统提示词 }
+    - { method: POST, path: /system, desc: 保存系统提示词 }
+    - { method: GET, path: /textbook/:textbookId, desc: 教材提示词 }
+
+# ========== 积分与成就 ==========
+point:
+  api: pointAPI
+  route: backend/src/routes/point.js
+  service: backend/src/services/pointService.js
+  base_path: /api/points
+  endpoints:
+    - { method: GET, path: /my, desc: 我的积分 }
+    - { method: GET, path: /records, desc: 积分记录 }
+    - { method: GET, path: /stats, desc: 积分统计 }
+    - { method: GET, path: /leaderboard, desc: 排行榜 }
+    - { method: GET, path: /daily-limit, desc: 每日限制 }
+    - { method: POST, path: /exchange, desc: 积分兑换 }
+    - { method: GET, path: /admin/rules, desc: 积分规则(管理) }
+    - { method: POST, path: /admin/adjust, desc: 调整积分(管理) }
+
+achievement:
+  api: achievementAPI
+  route: backend/src/routes/achievements.js
+  service: backend/src/services/achievementService.js
+  base_path: /api/achievements
+  endpoints:
+    - { method: GET, path: /my, desc: 我的成就 }
+    - { method: GET, path: /all, desc: 所有成就 }
+    - { method: GET, path: /progress, desc: 成就进度 }
+    - { method: POST, path: /:id/showcase, desc: 展示成就 }
+
+challenge:
+  api: challengeAPI
+  route: backend/src/routes/challenge.js
+  service: backend/src/services/challengeService.js
+  base_path: /api/challenges
+  endpoints:
+    - { method: GET, path: /today, desc: 今日挑战 }
+    - { method: GET, path: /my, desc: 我的挑战 }
+    - { method: POST, path: /:recordId/claim, desc: 领取奖励 }
+    - { method: GET, path: /history, desc: 历史记录 }
+
+# ========== 社交系统 ==========
+follow:
+  api: friendAPI
+  route: backend/src/routes/follows.js
+  service: backend/src/services/followService.js
+  base_path: /api/follows
+  endpoints:
+    - { method: POST, path: /:userId, desc: 关注用户 }
+    - { method: DELETE, path: /:userId, desc: 取消关注 }
+    - { method: GET, path: /following, desc: 我的关注 }
+    - { method: GET, path: /followers, desc: 我的粉丝 }
+    - { method: GET, path: /friends, desc: 互相关注 }
+    - { method: GET, path: /recommendations, desc: 推荐用户 }
+
+post:
+  api: postAPI
+  route: backend/src/routes/post.js
+  controller: backend/src/controllers/postController.js
+  base_path: /api/posts
+  endpoints:
+    - { method: GET, path: /, desc: 动态列表 }
+    - { method: POST, path: /, desc: 发布动态 }
+    - { method: DELETE, path: /:id, desc: 删除动态 }
+    - { method: POST, path: /:id/like, desc: 点赞 }
+    - { method: POST, path: /:id/comments, desc: 评论 }
+
+question:
+  api: questionAPI
+  route: backend/src/routes/question.js
+  base_path: /api/questions
+  endpoints:
+    - { method: GET, path: /, desc: 问题列表 }
+    - { method: GET, path: /:id, desc: 问题详情 }
+    - { method: POST, path: /, desc: 发布问题 }
+    - { method: POST, path: /:id/answers, desc: 回答问题 }
+    - { method: POST, path: /:id/accept, desc: 采纳答案 }
+    - { method: POST, path: /:id/add-reward, desc: 增加悬赏 }
+
+# ========== 媒体库 ==========
+book:
+  api: bookAPI
+  route: backend/src/routes/book.js
+  controller: backend/src/controllers/bookController.js
+  base_path: /api/books
+
+music:
+  api: musicAPI
+  route: backend/src/routes/music.js
+  controller: backend/src/controllers/musicController.js
+  base_path: /api/music
+
+movie:
+  api: movieAPI
+  route: backend/src/routes/movie.js
+  controller: backend/src/controllers/movieController.js
+  base_path: /api/movies
+
+game:
+  api: gameAPI
+  route: backend/src/routes/game.js
+  base_path: /api/games
+  endpoints:
+    - { method: GET, path: /feed, desc: 游戏动态 }
+    - { method: GET, path: /hot, desc: 热门游戏 }
+    - { method: GET, path: /search, desc: 搜索游戏 }
+    - { method: GET, path: /:id, desc: 游戏详情 }
+    - { method: POST, path: /:id/add-to-library, desc: 加入库 }
+    - { method: POST, path: /:id/short-review, desc: 短评 }
+    - { method: POST, path: /:id/long-review, desc: 长评 }
+
+# ========== 学习与任务 ==========
+learning:
+  api: learningAPI
+  route: backend/src/routes/learning.js
+  base_path: /api/learning
+  endpoints:
+    - { method: GET, path: /projects, desc: 学习项目 }
+    - { method: POST, path: /start, desc: 开始计时 }
+    - { method: GET, path: /active-timer, desc: 当前计时 }
+    - { method: POST, path: /stop, desc: 停止计时 }
+    - { method: GET, path: /sessions, desc: 学习记录 }
+    - { method: GET, path: /stats, desc: 统计数据 }
+    - { method: GET, path: /heatmap, desc: 热力图 }
+
+task:
+  api: taskAPI
+  route: backend/src/routes/task.js
+  base_path: /api/tasks
+
+class:
+  api: classAPI
+  route: backend/src/routes/class.js
+  controller: backend/src/controllers/classController.js
+  base_path: /api/classes
+
+# ========== 钱包与支付 ==========
+wallet:
+  api: walletAPI
+  route: backend/src/routes/wallet.js
+  service: backend/src/services/walletService.js
+  base_path: /api/wallet
+  market_path: /api/market
+  endpoints:
+    - { method: GET, path: /wallet, desc: 钱包信息 }
+    - { method: GET, path: /wallet/transactions, desc: 交易记录 }
+    - { method: GET, path: /market/works, desc: 市集作品 }
+    - { method: POST, path: /market/works/:id/purchase, desc: 购买作品 }
+
+pay:
+  api: payAPI
+  route: backend/src/routes/pay.js
+  base_path: /api/pay
+  endpoints:
+    - { method: POST, path: /codes, desc: 创建支付码(管理) }
+    - { method: GET, path: /codes, desc: 支付码列表(管理) }
+    - { method: GET, path: /scan/:code, desc: 扫码获取信息 }
+    - { method: POST, path: /submit, desc: 提交支付 }
+    - { method: GET, path: /my-orders, desc: 我的订单 }
+
+# ========== 奖罚系统 ==========
+rewardRule:
+  api: rewardRuleAPI
+  route: backend/src/routes/rules.js
+  controller: backend/src/controllers/ruleController.js
+  base_path: /api/reward-rules
+
+submission:
+  api: submissionAPI
+  route: backend/src/routes/submissions.js
+  controller: backend/src/controllers/submissionController.js
+  base_path: /api/submissions
+
+# ========== 其他 ==========
+tag:
+  api: tagAPI
+  route: backend/src/routes/tag.js
+  service: backend/src/services/tagService.js
+  base_path: /api/tags
+
+stats:
+  api: statsAPI
+  route: backend/src/routes/stats.js
+  base_path: /api/stats
+
+search:
+  api: searchAPI
+  route: backend/src/routes/search.js
+  base_path: /api/search
+
+calendar:
+  api: calendarAPI
+  route: backend/src/routes/calendar.js
+  base_path: /api/calendar
+
+board:
+  api: boardAPI
+  route: backend/src/routes/board.js
+  base_path: /api/boards
+
+campus:
+  api: campusAPI
+  route: backend/src/routes/campus.js
+  controller: backend/src/controllers/campusController.js
+  base_path: /api/campuses
+
+# ========== 图片优化 ==========
+imgProxy:
+  route: backend/src/routes/imgProxy.js
+  base_path: /api/img-proxy
+  endpoints:
+    - { method: GET, path: /, desc: 图片缩略图代理(返回WebP) }
+  params:
+    - { name: url, type: string, required: true, desc: 图片路径(如 /uploads/avatars/xxx.jpg) }
+    - { name: w, type: number, required: false, default: 400, desc: 缩略图宽度 }
+    - { name: q, type: number, required: false, default: 80, desc: WebP质量(1-100) }
+  response:
+    - { Content-Type: image/webp }
+    - { Cache-Control: public, max-age=31536000, immutable }
+  security:
+    - 仅允许 /uploads/ 和 /photos-static/ 前缀
+  cache:
+    - 路径: backend/public/img-cache/
+    - 命名: {md5(url|w|q)}.webp
+    - 有效期: 1年

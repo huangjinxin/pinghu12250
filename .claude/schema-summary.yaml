@@ -1,0 +1,303 @@
+# Prisma 数据模型摘要
+# 避免每次读取 2000+ 行的 schema.prisma
+# 更新时间: 2025-12-26
+
+# ========== 枚举类型 ==========
+enums:
+  Role: [STUDENT, PARENT, TEACHER, ADMIN]
+  UserStatus: [PENDING, ACTIVE, DISABLED]
+  GamePlayStatus: [WANT_TO_PLAY, PLAYING, COMPLETED, DROPPED]
+  TaskStatus: [PENDING, IN_PROGRESS, COMPLETED, OVERDUE]
+  ReadingStatus: [WANT_TO_READ, READING, COMPLETED, DROPPED]
+  ListeningStatus: [WANT_TO_LISTEN, LISTENING, COMPLETED, DROPPED]
+  WatchingStatus: [WANT_TO_WATCH, WATCHING, COMPLETED, DROPPED]
+
+# ========== 用户系统 ==========
+User:
+  key_fields: [id, email, username, password, role, status, avatar]
+  relations: [profile, student, teacher, school, class]
+  business_rules:
+    - 新用户默认 status=PENDING，需管理员审核
+    - paymentPassword 默认 123456，加密存储
+    - totalPoints 积分总数，loginStreakDays 连续登录天数
+
+Profile:
+  key_fields: [id, userId, nickname, realName, gender, birthday, bio]
+  relation: User (1:1)
+
+Student:
+  key_fields: [id, userId, studentNumber, grade]
+  relations: [user, parentRelations]
+
+Teacher:
+  key_fields: [id, userId, title, department]
+  relations: [user, classes]
+
+StudentParent:
+  desc: 家长-学生关联表
+  key_fields: [parentId, childId, relationship]
+  note: 一个家长可关联多个孩子
+
+# ========== 班级与学校 ==========
+School:
+  key_fields: [id, name, address]
+
+Class:
+  key_fields: [id, name, grade, schoolId]
+  relations: [school, teachers, students]
+
+TeacherClass:
+  desc: 老师-班级多对多关联
+  key_fields: [teacherId, classId, role]
+
+# ========== 内容创作 ==========
+Diary:
+  key_fields: [id, userId, title, content, mood, isPublic]
+  relations: [user, comments, tags]
+
+Homework:
+  key_fields: [id, userId, title, content, subject]
+
+Note:
+  key_fields: [id, userId, title, content, category]
+  note: 支持 Tiptap 富文本
+
+HTMLWork:
+  key_fields: [id, userId, title, html, css, js, isPublic, forSale, price]
+  relations: [user, likes, comments]
+  business_rules:
+    - forSale=true 时可在市集出售
+    - forkCount 记录被 fork 次数
+
+PoetryWork:
+  key_fields: [id, userId, title, content, style, subject]
+  relations: [user, likes]
+
+ReadingNote:
+  key_fields: [id, userId, textbookId, pageNumber, selectedText, noteContent, noteType]
+  note: 教材阅读时的查字/笔记
+
+# ========== 教材系统 ==========
+Textbook:
+  key_fields: [id, subject, grade, semester, version, title, pdfPath, coverPath]
+  unique: [subject, grade, semester, version]
+  relations: [units, creator, favorites]
+
+TextbookUnit:
+  key_fields: [id, textbookId, title, orderIndex]
+  relations: [textbook, lessons]
+
+TextbookLesson:
+  key_fields: [id, unitId, title, orderIndex, content, status]
+  status_values: [DRAFT, PENDING, APPROVED, PUBLISHED, REJECTED]
+
+TextbookChatMessage:
+  key_fields: [id, textbookId, userId, role, content, context]
+  role_values: [user, assistant, system]
+  note: AI对话历史记录
+
+TextbookFavorite:
+  key_fields: [id, userId, textbookId]
+  note: 教材收藏
+
+# ========== AI 配置 ==========
+AiApiConfig:
+  key_fields: [id, name, provider, baseUrl, apiKey, model, isDefault, isActive]
+  note: 支持多个 AI 服务商配置
+
+AiPromptTemplate:
+  key_fields: [id, name, subject, systemPrompt, userPromptTemplate, isDefault]
+  note: 科目级别的提示词模板
+
+SystemPrompt:
+  key_fields: [id, name, content]
+  note: 全局系统提示词
+
+TextbookPrompt:
+  key_fields: [id, textbookId, name, systemPrompt, isActive]
+  note: 教材级别的自定义提示词
+
+AiAnalysisLog:
+  key_fields: [id, userId, textbookId, inputText, outputText, model, tokens, responseTime]
+  note: AI 调用日志，用于统计和调试
+
+# ========== 积分系统 ==========
+PointRule:
+  key_fields: [id, code, name, points, maxDaily, description]
+  examples:
+    - { code: LOGIN, points: 5, maxDaily: 1 }
+    - { code: POST_DIARY, points: 10, maxDaily: 3 }
+    - { code: COMPLETE_HOMEWORK, points: 15 }
+
+PointLog:
+  key_fields: [id, userId, points, reason, ruleCode]
+  note: 积分变动记录
+
+UserPoints:
+  key_fields: [id, userId, totalPoints, level]
+  note: 用户积分汇总（与 User.totalPoints 冗余但查询更快）
+
+DailyPointsLimit:
+  key_fields: [id, userId, date, earnedPoints, ruleCode, count]
+  note: 每日积分限制追踪
+
+PointExchange:
+  key_fields: [id, userId, points, coins, rate]
+  note: 积分兑换虎币记录
+
+# ========== 成就系统 ==========
+Achievement:
+  key_fields: [id, name, description, icon, category, condition, points]
+  condition_examples:
+    - { type: count, target: diary, value: 10 }  # 写10篇日记
+    - { type: streak, target: login, value: 7 }  # 连续登录7天
+
+UserAchievement:
+  key_fields: [id, userId, achievementId, unlockedAt, isShowcase]
+  note: isShowcase=true 表示用户选择展示
+
+AchievementProgress:
+  key_fields: [id, userId, achievementId, currentValue, targetValue]
+
+# ========== 挑战系统 ==========
+ChallengeTemplate:
+  key_fields: [id, title, description, type, targetValue, rewardPoints]
+
+DailyChallenge:
+  key_fields: [id, templateId, date, isActive]
+  note: 每日生成的挑战实例
+
+UserChallengeRecord:
+  key_fields: [id, userId, challengeId, progress, status, claimedAt]
+  status_values: [IN_PROGRESS, COMPLETED, CLAIMED]
+
+# ========== 社交系统 ==========
+UserFollow:
+  key_fields: [id, followerId, followingId]
+  note: 单向关注
+
+Friendship:
+  key_fields: [id, userAId, userBId, status]
+  status_values: [PENDING, ACCEPTED, REJECTED]
+  note: 双向好友关系
+
+Dynamic:
+  desc: 动态/帖子
+  key_fields: [id, userId, content, images]
+
+Like:
+  key_fields: [id, userId, targetType, targetId]
+  targetType_values: [post, diary, work, comment]
+
+Comment:
+  key_fields: [id, userId, targetType, targetId, content, parentId]
+  note: parentId 支持嵌套评论
+
+# ========== 游戏系统 ==========
+Game:
+  key_fields: [id, name, coverUrl, description, releaseDate, avgRating]
+  relations: [records, shortReviews, longReviews]
+
+UserGameRecord:
+  key_fields: [id, userId, gameId, status, rating, playTime]
+  status: GamePlayStatus 枚举
+
+GameShortReview:
+  key_fields: [id, userId, gameId, content, rating]
+  note: 短评（140字以内）
+
+GameLongReview:
+  key_fields: [id, userId, gameId, title, content, rating]
+  relations: [comments, likes]
+
+# ========== 媒体库 ==========
+Book:
+  key_fields: [id, title, author, isbn, coverUrl]
+
+UserBookshelf:
+  key_fields: [id, userId, bookId, status, rating]
+  status: ReadingStatus 枚举
+
+ReadingLog:
+  key_fields: [id, userId, bookId, content, pagesRead]
+
+Music:
+  key_fields: [id, title, artist, album, coverUrl]
+
+UserMusicLibrary:
+  key_fields: [id, userId, musicId, status]
+  status: ListeningStatus 枚举
+
+MusicLog:
+  key_fields: [id, userId, musicId, content]
+
+Movie:
+  key_fields: [id, title, director, year, coverUrl]
+
+UserMovieLibrary:
+  key_fields: [id, userId, movieId, status, rating]
+  status: WatchingStatus 枚举
+
+MovieLog:
+  key_fields: [id, userId, movieId, content]
+
+# ========== 任务系统 ==========
+Task:
+  key_fields: [id, creatorId, title, description, dueDate, status, assigneeType]
+  assigneeType_values: [CLASS, STUDENT, ALL]
+
+TaskSubmission:
+  key_fields: [id, taskId, userId, content, attachments, status, score]
+
+# ========== 钱包与支付 ==========
+Wallet:
+  key_fields: [id, userId, balance]
+  note: 虎币钱包
+
+WalletTransaction:
+  key_fields: [id, walletId, amount, type, description]
+  type_values: [EARN, SPEND, EXCHANGE]
+
+PayCode:
+  key_fields: [id, code, name, amount, category, isActive]
+  note: 扫码支付的支付码
+
+PayOrder:
+  key_fields: [id, userId, payCodeId, amount, status]
+  status_values: [PENDING, PAID, CANCELLED]
+
+# ========== 奖罚系统 ==========
+RuleType:
+  key_fields: [id, name, category]
+  category_values: [REWARD, PUNISHMENT]
+
+RuleTemplate:
+  key_fields: [id, typeId, name, points, description, isActive]
+
+RuleSubmission:
+  key_fields: [id, userId, templateId, description, status, reviewerId]
+  status_values: [PENDING, APPROVED, REJECTED]
+
+# ========== 标签系统 ==========
+GlobalTag:
+  key_fields: [id, name, category, usageCount]
+  note: 全局标签库
+
+ContentTag:
+  key_fields: [id, tagId, targetType, targetId]
+  note: 内容-标签关联
+
+# ========== 系统 ==========
+ActivityLog:
+  key_fields: [id, userId, action, targetType, targetId, metadata]
+  note: 用户活动日志
+
+CalendarEvent:
+  key_fields: [id, userId, title, startAt, endAt, type]
+
+Message:
+  key_fields: [id, senderId, receiverId, content, isRead]
+
+SystemSetting:
+  key_fields: [id, key, value]
+  note: 系统配置键值对

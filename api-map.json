@@ -1,0 +1,3 @@
+{
+  "GET /api/photos": "Returns Dynamic objects with user mapped to author"
+}

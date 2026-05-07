@@ -6,26 +6,48 @@ const express = require('express');
 const router = express.Router();
 const { authenticate, isAdmin } = require('../middleware/auth');
 const bcrypt = require('bcryptjs');
+const adminCreditController = require('../controllers/adminCreditController');
 
 // 使用 Prisma 单例
 const prisma = require('../lib/prisma');
 
+// ========== 信用管理 ==========
+router.get('/credit-rules', authenticate, isAdmin, adminCreditController.getRules);
+router.post('/credit-rules', authenticate, isAdmin, adminCreditController.createRule);
+router.put('/credit-rules/:id', authenticate, isAdmin, adminCreditController.updateRule);
+router.delete('/credit-rules/:id', authenticate, isAdmin, adminCreditController.deleteRule);
+
+router.get('/credit-profiles', authenticate, isAdmin, adminCreditController.getAllUserProfiles);
+router.get('/credit-profiles/:userId', authenticate, isAdmin, adminCreditController.getUserCreditDetail);
+router.get('/credit-profiles/:userId/history', authenticate, isAdmin, adminCreditController.getUserCreditHistory);
+
 // GET /api/admin/users - 获取所有用户
 router.get('/users', authenticate, isAdmin, async (req, res, next) => {
   try {
-    const { status, role, keyword, page = 1, limit = 20 } = req.query;
+    const { status, role, keyword, search, schoolId, classId, page = 1, limit = 20 } = req.query;
     const skip = (parseInt(page) - 1) * parseInt(limit);
 
     const where = {};
     if (status) where.status = status;
-    if (role) where.role = role;
+    if (role === 'BOT') {
+      where.username = { startsWith: 'echo-bot' };
+    } else if (role) {
+      where.role = role;
+    }
+    if (schoolId) {
+      where.schoolId = schoolId;
+    }
+    if (classId) {
+      where.classId = classId;
+    }
 
     // 关键词搜索（用户名、昵称、邮箱）
-    if (keyword) {
+    const searchTerm = keyword || search;
+    if (searchTerm) {
       where.OR = [
-        { username: { contains: keyword } },
-        { email: { contains: keyword } },
-        { profile: { nickname: { contains: keyword } } },
+        { username: { contains: searchTerm } },
+        { email: { contains: searchTerm } },
+        { profile: { is: { nickname: { contains: searchTerm } } } },
       ];
     }
 
@@ -39,14 +61,45 @@ router.get('/users', authenticate, isAdmin, async (req, res, next) => {
           role: true,
           status: true,
           avatar: true,
+          classId: true,
           createdAt: true,
+          twoFactorEnabled: true,
           profile: {
             select: {
               nickname: true,
             },
           },
-          // 家长关联的孩子（家长作为 parent，所以查 parentRelations）
-          parentRelations: {
+          class: {
+            select: {
+              id: true,
+              name: true,
+              grade: true,
+              school: {
+                select: {
+                  id: true,
+                  name: true,
+                },
+              },
+            },
+          },
+          Student: {
+            select: {
+              class: {
+                select: {
+                  id: true,
+                  name: true,
+                  grade: true,
+                  school: {
+                    select: {
+                      id: true,
+                      name: true,
+                    },
+                  },
+                },
+              },
+            },
+          },
+          StudentParent_StudentParent_parentIdToUser: {
             select: {
               child: {
                 select: {
@@ -66,7 +119,12 @@ router.get('/users', authenticate, isAdmin, async (req, res, next) => {
     ]);
 
     res.json({
-      users,
+      users: users.map(({ class: classInfo, Student, StudentParent_StudentParent_parentIdToUser, ...user }) => ({
+        ...user,
+        classInfo,
+        student: Student,
+        parentRelations: StudentParent_StudentParent_parentIdToUser,
+      })),
       pagination: {
         page: parseInt(page),
         limit: parseInt(limit),
@@ -203,24 +261,45 @@ router.get('/activity-logs', authenticate, isAdmin, async (req, res, next) => {
 // GET /api/admin/stats - 获取管理统计数据
 router.get('/stats', authenticate, isAdmin, async (req, res, next) => {
   try {
+    // 获取昨天的时间范围
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    yesterday.setHours(0, 0, 0, 0);
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+
     const [
       totalUsers,
       pendingUsers,
       activeUsers,
       disabledUsers,
+      yesterdayActivity,
       todayLogins,
+      bestTypingScore,
     ] = await Promise.all([
       prisma.user.count(),
       prisma.user.count({ where: { status: 'PENDING' } }),
       prisma.user.count({ where: { status: 'ACTIVE' } }),
       prisma.user.count({ where: { status: 'DISABLED' } }),
+      // 昨日活跃用户数（去重）
+      prisma.activityLog.groupBy({
+        by: ['userId'],
+        where: {
+          action: 'login',
+          createdAt: { gte: yesterday, lt: todayStart },
+        },
+      }),
+      // 今日登录次数
       prisma.activityLog.count({
         where: {
           action: 'login',
-          createdAt: {
-            gte: new Date(new Date().setHours(0, 0, 0, 0)),
-          },
+          createdAt: { gte: todayStart },
         },
+      }),
+      // 打字最高分
+      prisma.typingPractice.aggregate({
+        where: { isValid: true },
+        _max: { score: true }
       }),
     ]);
 
@@ -229,7 +308,9 @@ router.get('/stats', authenticate, isAdmin, async (req, res, next) => {
       pendingUsers,
       activeUsers,
       disabledUsers,
+      yesterdayActive: yesterdayActivity.length,
       todayLogins,
+      bestTypingScore: bestTypingScore._max.score || 0,
     });
   } catch (error) {
     next(error);
@@ -625,6 +706,366 @@ router.delete('/users/:id', authenticate, isAdmin, async (req, res, next) => {
     });
 
     res.json({ message: '用户删除成功' });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// DELETE /api/admin/users/:id/2fa - 清空用户的两步验证（管理员专用）
+router.delete('/users/:id/2fa', authenticate, isAdmin, async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    const user = await prisma.user.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        username: true,
+        twoFactorEnabled: true,
+      },
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: '用户不存在' });
+    }
+
+    if (!user.twoFactorEnabled) {
+      return res.status(400).json({ error: '该用户未启用两步验证' });
+    }
+
+    // 清空 2FA 设置
+    await prisma.user.update({
+      where: { id },
+      data: {
+        twoFactorEnabled: false,
+        twoFactorSecret: null,
+        twoFactorBackupCodes: [],
+        twoFactorEnabledAt: null,
+      },
+    });
+
+    // 记录活动日志
+    await prisma.activityLog.create({
+      data: {
+        userId: req.user.id,
+        action: 'clear_user_2fa',
+        targetType: 'user',
+        targetId: id,
+        description: `清空了用户 ${user.username} 的两步验证`,
+      },
+    });
+
+    console.log(`[Admin] 管理员 ${req.user.id} 清空了用户 ${user.username} 的 2FA`);
+
+    res.json({
+      success: true,
+      message: '两步验证已清空',
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// 获取待审核用户列表
+router.get('/users/pending', authenticate, isAdmin, async (req, res, next) => {
+  try {
+    const users = await prisma.user.findMany({
+      where: {
+        OR: [
+          { status: 'PENDING' },
+          { needsReview: true }
+        ]
+      },
+      select: {
+        id: true,
+        username: true,
+        email: true,
+        realName: true,
+        birthDate: true,
+        studentNumber: true,
+        role: true,
+        status: true,
+        needsReview: true,
+        registeredAt: true,
+        classId: true,
+        class: { select: { name: true } },
+        inviteCode: {
+          select: {
+            code: true,
+            creator: { select: { username: true } }
+          }
+        }
+      },
+      orderBy: { registeredAt: 'desc' }
+    });
+
+    res.json({ success: true, data: users });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// 审核通过用户
+router.post('/users/:id/approve', authenticate, isAdmin, async (req, res, next) => {
+  try {
+    const user = await prisma.user.update({
+      where: { id: req.params.id },
+      data: {
+        status: 'ACTIVE',
+        needsReview: false,
+        approvedBy: req.user.id,
+        approvedAt: new Date()
+      }
+    });
+
+    res.json({ success: true, data: user, message: '用户已审核通过' });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// 拒绝用户（禁用账号）
+router.post('/users/:id/reject', authenticate, isAdmin, async (req, res, next) => {
+  try {
+    const { reason } = req.body;
+
+    const user = await prisma.user.update({
+      where: { id: req.params.id },
+      data: {
+        status: 'DISABLED',
+        approvedBy: req.user.id,
+        approvedAt: new Date()
+      }
+    });
+
+    res.json({ success: true, data: user, message: '用户已被拒绝' });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// PUT /api/admin/users/:id/assign-class - 分配学生班级
+router.put('/users/:id/assign-class', authenticate, isAdmin, async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { classId } = req.body;
+
+    // 验证用户存在且是学生
+    const user = await prisma.user.findUnique({
+      where: { id },
+      select: { id: true, role: true },
+    });
+
+    if (!user) {
+      return res.status(404).json({ success: false, error: '用户不存在' });
+    }
+
+    if (user.role !== 'STUDENT') {
+      return res.status(400).json({ success: false, error: '只能为学生分配班级' });
+    }
+
+    // 验证班级存在
+    if (classId) {
+      const classExists = await prisma.class.findUnique({
+        where: { id: classId },
+      });
+
+      if (!classExists) {
+        return res.status(400).json({ success: false, error: '班级不存在' });
+      }
+    }
+
+    // 更新用户班级
+    const updatedUser = await prisma.user.update({
+      where: { id },
+      data: { classId: classId || null },
+      select: {
+        id: true,
+        username: true,
+        classId: true,
+        class: {
+          select: {
+            id: true,
+            name: true,
+            grade: true,
+            school: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    // 同时更新Student表（如果存在）
+    await prisma.student.updateMany({
+      where: { userId: id },
+      data: { classId: classId || null },
+    });
+
+    res.json({ success: true, data: updatedUser, message: '班级分配成功' });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// GET /api/admin/users/:id/settings - 获取用户所有设置
+router.get('/users/:id/settings', authenticate, isAdmin, async (req, res, next) => {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: req.params.id },
+      include: {
+        profile: true,
+        class: {
+          select: {
+            id: true,
+            name: true,
+            grade: true,
+            school: { select: { id: true, name: true } },
+          },
+        },
+      },
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: '用户不存在' });
+    }
+
+    const settings = {
+      basic: {
+        nickname: user.profile?.nickname || '',
+        grade: user.profile?.grade || '',
+        bio: user.profile?.bio || '',
+        interests: user.profile?.interests || [],
+      },
+      privacy: {
+        profilePublic: user.profile?.profilePublic ?? true,
+        showStats: user.profile?.showStats ?? true,
+        hideFromParents: user.profile?.hideFromParents ?? false,
+      },
+      security: {
+        twoFactorEnabled: user.twoFactorEnabled,
+        twoFactorEnabledAt: user.twoFactorEnabledAt,
+        autoAcceptFriend: user.autoAcceptFriend ?? false,
+        friendRequestMessage: user.friendRequestMessage || '',
+      },
+      school: user.class ? {
+        schoolId: user.class.school?.id,
+        schoolName: user.class.school?.name,
+        classId: user.class.id,
+        className: user.class.name,
+        classGrade: user.class.grade,
+      } : null,
+    };
+
+    res.json({ success: true, data: settings });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// PUT /api/admin/users/:id/settings - 更新用户设置
+router.put('/users/:id/settings', authenticate, isAdmin, async (req, res, next) => {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: req.params.id },
+      include: { profile: true },
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: '用户不存在' });
+    }
+
+    const { basic, privacy, security } = req.body;
+    const changes = [];
+
+    // 更新基本资料
+    if (basic && user.Profile) {
+      const profileUpdate = {};
+      if (basic.nickname !== undefined && basic.nickname !== user.Profile.nickname) {
+        profileUpdate.nickname = basic.nickname;
+        changes.push(`昵称`);
+      }
+      if (basic.grade !== undefined && basic.grade !== user.Profile.grade) {
+        profileUpdate.grade = basic.grade;
+        changes.push(`年级`);
+      }
+      if (basic.bio !== undefined && basic.bio !== user.Profile.bio) {
+        profileUpdate.bio = basic.bio;
+        changes.push(`个人简介`);
+      }
+      if (basic.interests !== undefined && JSON.stringify(basic.interests) !== JSON.stringify(user.Profile.interests)) {
+        profileUpdate.interests = basic.interests;
+        changes.push(`兴趣爱好`);
+      }
+
+      if (Object.keys(profileUpdate).length > 0) {
+        await prisma.profile.update({
+          where: { userId: user.id },
+          data: profileUpdate,
+        });
+      }
+    }
+
+    // 更新隐私设置
+    if (privacy && user.Profile) {
+      const profileUpdate = {};
+      if (privacy.profilePublic !== undefined && privacy.profilePublic !== user.Profile.profilePublic) {
+        profileUpdate.profilePublic = privacy.profilePublic;
+        changes.push(`个人主页公开状态`);
+      }
+      if (privacy.showStats !== undefined && privacy.showStats !== user.Profile.showStats) {
+        profileUpdate.showStats = privacy.showStats;
+        changes.push(`统计数据展示`);
+      }
+      if (privacy.hideFromParents !== undefined && privacy.hideFromParents !== user.Profile.hideFromParents) {
+        profileUpdate.hideFromParents = privacy.hideFromParents;
+        changes.push(`家长共享设置`);
+      }
+
+      if (Object.keys(profileUpdate).length > 0) {
+        await prisma.profile.update({
+          where: { userId: user.id },
+          data: profileUpdate,
+        });
+      }
+    }
+
+    // 更新安全设置
+    if (security) {
+      const userUpdate = {};
+      if (security.autoAcceptFriend !== undefined && security.autoAcceptFriend !== user.autoAcceptFriend) {
+        userUpdate.autoAcceptFriend = security.autoAcceptFriend;
+        changes.push(`自动接受好友`);
+      }
+      if (security.friendRequestMessage !== undefined && security.friendRequestMessage !== user.friendRequestMessage) {
+        userUpdate.friendRequestMessage = security.friendRequestMessage;
+        changes.push(`好友请求消息`);
+      }
+
+      if (Object.keys(userUpdate).length > 0) {
+        await prisma.user.update({
+          where: { id: user.id },
+          data: userUpdate,
+        });
+      }
+    }
+
+    if (changes.length > 0) {
+      await prisma.activityLog.create({
+        data: {
+          userId: req.user.id,
+          action: 'update_user_settings',
+          targetType: 'user',
+          targetId: user.id,
+          description: `修改了用户 ${user.username} 的设置：${changes.join('、')}`,
+        },
+      });
+    }
+
+    res.json({ success: true, message: '设置更新成功' });
   } catch (error) {
     next(error);
   }

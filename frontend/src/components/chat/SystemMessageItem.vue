@@ -30,14 +30,12 @@
 import { computed } from 'vue';
 import { formatDistanceToNow } from 'date-fns';
 import { zhCN } from 'date-fns/locale';
-import {
-  TrophyOutline,
-  CartOutline,
-  PersonAddOutline,
-  PeopleOutline,
-  CheckmarkCircleOutline,
-  NotificationsOutline
-} from '@vicons/ionicons5';
+import TrophyOutline from '@vicons/ionicons5/es/TrophyOutline'
+import CartOutline from '@vicons/ionicons5/es/CartOutline'
+import PersonAddOutline from '@vicons/ionicons5/es/PersonAddOutline'
+import PeopleOutline from '@vicons/ionicons5/es/PeopleOutline'
+import CheckmarkCircleOutline from '@vicons/ionicons5/es/CheckmarkCircleOutline'
+import NotificationsOutline from '@vicons/ionicons5/es/NotificationsOutline'
 
 const props = defineProps({
   message: {

@@ -90,7 +90,7 @@ import { ref, onMounted } from 'vue';
 import { useMessage, useDialog } from 'naive-ui';
 import { homeworkAPI } from '@/api';
 import { format } from 'date-fns';
-import { AddOutline } from '@vicons/ionicons5';
+import AddOutline from '@vicons/ionicons5/es/AddOutline'
 import TagSelector from '@/components/TagSelector.vue';
 
 const message = useMessage();

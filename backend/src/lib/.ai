@@ -1,0 +1,19 @@
+# @AI:DIR lib
+permit: none
+locked: true
+
+# 绝对禁止修改
+reason: 底层基础设施,修改可能导致全局故障
+
+# 文件说明
+files:
+  prisma.js: Prisma单例,全项目通过此文件获取客户端
+
+# 正确用法
+usage: |
+  // 正确
+  const prisma = require('../lib/prisma');
+
+  // 错误 - 绝对禁止
+  const { PrismaClient } = require('@prisma/client');
+  const prisma = new PrismaClient();

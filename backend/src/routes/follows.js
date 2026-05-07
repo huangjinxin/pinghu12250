@@ -93,6 +93,28 @@ router.delete('/:userId', authenticate, async (req, res) => {
   }
 });
 
+/**
+ * DELETE /api/follows/friends/:userId
+ * 解除好友关系（同时删除会话和聊天记录）
+ */
+router.delete('/friends/:userId', authenticate, async (req, res) => {
+  try {
+    const currentUserId = req.user.id;
+    const targetUserId = req.params.userId;
+
+    const result = await followService.unfriend(currentUserId, targetUserId);
+
+    if (!result.success) {
+      return res.status(400).json({ error: result.error });
+    }
+
+    res.json({ success: true, data: result.data });
+  } catch (error) {
+    console.error('解除好友关系失败:', error);
+    res.status(500).json({ error: '解除好友关系失败' });
+  }
+});
+
 // ========== 查询接口 ==========
 
 /**
@@ -148,7 +170,8 @@ router.get('/friends', authenticate, async (req, res) => {
 
     const result = await followService.getFriends(userId, { page, limit });
 
-    res.json(result);
+    // 统一返回格式为 { success, data }
+    res.json({ success: true, data: result.users });
   } catch (error) {
     console.error('获取好友列表失败:', error);
     res.status(500).json({ error: '获取好友列表失败' });

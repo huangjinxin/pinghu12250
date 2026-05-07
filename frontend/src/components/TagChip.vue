@@ -18,7 +18,7 @@
 <script setup>
 import { computed } from 'vue';
 import { useRouter } from 'vue-router';
-import { PricetagOutline } from '@vicons/ionicons5';
+import PricetagOutline from '@vicons/ionicons5/es/PricetagOutline'
 
 const props = defineProps({
   tag: {

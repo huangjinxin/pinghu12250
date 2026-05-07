@@ -6,9 +6,15 @@ const express = require('express');
 const router = express.Router();
 const textbookController = require('../controllers/textbookController');
 const { authenticate, authorize } = require('../middleware/auth');
-const { pdfUpload } = require('../middleware/upload');
+const { pdfUpload, epubUpload } = require('../middleware/upload');
 
 // ========== 公开接口（无需登录） ==========
+
+// GET /api/textbooks/options - 获取所有教材的属性选项（科目、年级、学期）
+router.get('/options', textbookController.getTextbookOptions);
+
+// GET /api/textbooks/upload-settings - 获取教材上传设置（管理员配置的选项）
+router.get('/upload-settings', textbookController.getUploadSettings);
 
 // GET /api/textbooks/public - 获取已发布的教材列表
 router.get('/public', textbookController.getPublicTextbooks);
@@ -18,6 +24,9 @@ router.get('/public/:id/toc', textbookController.getPublicTextbookToc);
 
 // GET /api/textbooks/public/lesson/:id - 获取公开课文详情
 router.get('/public/lesson/:id', textbookController.getPublicLesson);
+
+// GET /api/textbooks/public/:id - 获取公开教材详情（放在最后避免匹配冲突）
+router.get('/public/:id', textbookController.getPublicTextbookDetail);
 
 // ========== 管理员接口 ==========
 
@@ -30,7 +39,19 @@ router.get('/admin/stats', authenticate, authorize('ADMIN'), textbookController.
 // PUT /api/textbooks/admin/lesson/:id/review - 审核课文
 router.put('/admin/lesson/:id/review', authenticate, authorize('ADMIN'), textbookController.reviewLesson);
 
+// POST /api/textbooks/upload-settings - 保存教材上传设置（管理员专用）
+router.post('/upload-settings', authenticate, authorize('ADMIN'), textbookController.saveUploadSettings);
+
 // ========== 用户接口（需登录） ==========
+
+// GET /api/textbooks/favorites - 获取我的收藏列表
+router.get('/favorites', authenticate, textbookController.getFavorites);
+
+// POST /api/textbooks/favorites/:id - 收藏教材
+router.post('/favorites/:id', authenticate, textbookController.addFavorite);
+
+// DELETE /api/textbooks/favorites/:id - 取消收藏
+router.delete('/favorites/:id', authenticate, textbookController.removeFavorite);
 
 // GET /api/textbooks/my - 获取我的教材列表
 router.get('/my', authenticate, textbookController.getMyTextbooks);
@@ -85,6 +106,20 @@ router.delete('/:id/pdf', authenticate, textbookController.deletePdf);
 
 // GET /api/textbooks/:id/pdf - 获取教材PDF信息
 router.get('/:id/pdf', authenticate, textbookController.getPdf);
+
+// ========== EPUB管理 ==========
+
+// POST /api/textbooks/:id/epub - 上传教材EPUB
+router.post('/:id/epub', authenticate, epubUpload.single('epub'), textbookController.uploadEpub);
+
+// DELETE /api/textbooks/:id/epub - 删除教材EPUB
+router.delete('/:id/epub', authenticate, textbookController.deleteEpub);
+
+// GET /api/textbooks/:id/epub/toc - 获取EPUB目录
+router.get('/:id/epub/toc', authenticate, textbookController.getEpubToc);
+
+// GET /api/textbooks/:id/epub/chapter/:chapterId - 获取EPUB章节内容
+router.get('/:id/epub/chapter/:chapterId', authenticate, textbookController.getEpubChapter);
 
 // ========== 封面管理 ==========
 

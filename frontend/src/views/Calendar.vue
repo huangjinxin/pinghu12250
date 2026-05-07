@@ -111,7 +111,9 @@ import { ref, computed, onMounted } from 'vue';
 import { useMessage, useDialog } from 'naive-ui';
 import { calendarAPI } from '@/api';
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, isSameMonth, isToday, isSameDay } from 'date-fns';
-import { AddOutline, ChevronBackOutline, ChevronForwardOutline } from '@vicons/ionicons5';
+import AddOutline from '@vicons/ionicons5/es/AddOutline'
+import ChevronBackOutline from '@vicons/ionicons5/es/ChevronBackOutline'
+import ChevronForwardOutline from '@vicons/ionicons5/es/ChevronForwardOutline'
 
 const message = useMessage();
 const dialog = useDialog();

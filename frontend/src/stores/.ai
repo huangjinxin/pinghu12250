@@ -1,0 +1,37 @@
+# @AI:DIR stores
+permit: modify-only
+naming: "[module].js"
+approval: 新增store需人类审批
+
+# 现有stores
+files:
+  - auth.js       # 认证状态
+  - chat.js       # 聊天状态
+  - rewardRule.js # 奖惩规则
+  - parent.js     # 家长端状态
+  - submission.js # 提交状态
+
+# 可导入
+import:
+  - "@/api/*"
+  - "@/utils/*"
+
+# 禁止导入
+!import:
+  - "@/components/*"
+  - "@/views/*"
+  - "@/composables/*"
+
+# 命名规范
+pattern: |
+  export const use[Module]Store = defineStore('[module]', {
+    state: () => ({
+      [module]List: [],
+      current[Module]: null,
+      [module]Loading: false,
+    }),
+    actions: {
+      async fetch[Module]List() {},
+      async fetch[Module]ById(id) {},
+    }
+  })

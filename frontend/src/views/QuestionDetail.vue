@@ -158,7 +158,12 @@ import { useMessage, useDialog } from 'naive-ui';
 import { useRoute, useRouter } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
 import { questionAPI } from '@/api';
-import { Diamond, Eye, ThumbsUp, Checkmark, ArrowBack, TrashOutline } from '@vicons/ionicons5';
+import Diamond from '@vicons/ionicons5/es/Diamond'
+import Eye from '@vicons/ionicons5/es/Eye'
+import ThumbsUp from '@vicons/ionicons5/es/ThumbsUp'
+import Checkmark from '@vicons/ionicons5/es/Checkmark'
+import ArrowBack from '@vicons/ionicons5/es/ArrowBack'
+import TrashOutline from '@vicons/ionicons5/es/TrashOutline'
 
 const message = useMessage();
 const dialog = useDialog();

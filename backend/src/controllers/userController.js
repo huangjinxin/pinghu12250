@@ -18,6 +18,14 @@ exports.getCurrentUser = async (req, res, next) => {
       where: { id: req.user.id },
       include: {
         profile: true,
+        class: {
+          select: {
+            id: true,
+            name: true,
+            grade: true,
+            school: { select: { id: true, name: true } },
+          },
+        },
         parentRelations: {
           include: {
             parent: {
@@ -142,7 +150,7 @@ async function getCheckInStats(userId) {
  */
 exports.updateCurrentUser = async (req, res, next) => {
   try {
-    const { nickname, bio, grade, interests, profilePublic, showStats } = req.body;
+    const { nickname, bio, grade, interests, profilePublic, showStats, hideFromParents } = req.body;
 
     const user = await prisma.user.update({
       where: { id: req.user.id },
@@ -155,6 +163,7 @@ exports.updateCurrentUser = async (req, res, next) => {
             ...(interests && { interests }),
             ...(profilePublic !== undefined && { profilePublic }),
             ...(showStats !== undefined && { showStats }),
+            ...(hideFromParents !== undefined && { hideFromParents }),
           },
         },
       },
@@ -198,10 +207,23 @@ exports.updatePassword = async (req, res, next) => {
 
     await prisma.user.update({
       where: { id: req.user.id },
-      data: { password: hashedPassword },
+      data: { 
+        password: hashedPassword,
+        passwordChangedAt: new Date()
+      },
     });
 
-    res.json({ message: '密码修改成功' });
+    // 吊销所有现有会话
+    await prisma.userSession.updateMany({
+      where: { userId: req.user.id },
+      data: { isRevoked: true }
+    });
+
+    // 清除当前请求的 Cookie，强制重新登录
+    res.clearCookie('accessToken');
+    res.clearCookie('refreshToken');
+
+    res.json({ message: '密码修改成功，所有设备已下线，请重新登录' });
   } catch (error) {
     next(error);
   }
@@ -482,6 +504,124 @@ exports.linkParent = async (req, res, next) => {
 };
 
 /**
+ * 生成邀请码（用户操作：家长/同学）
+ */
+exports.generateInviteCode = async (req, res, next) => {
+  try {
+    const { inviteType } = req.body;
+
+    if (req.user.role !== 'STUDENT') {
+      return res.status(403).json({ error: '只有学生可以生成邀请码' });
+    }
+
+    if (!['PARENT', 'CLASSMATE'].includes(inviteType)) {
+      return res.status(400).json({ error: '邀请类型无效' });
+    }
+
+    if (inviteType === 'PARENT') {
+      const usedCount = await prisma.inviteCode.count({
+        where: {
+          createdBy: req.user.id,
+          inviteType: 'PARENT',
+        },
+      });
+
+      if (usedCount >= 3) {
+        return res.status(403).json({ error: '最多只能生成3个家长邀请码' });
+      }
+    }
+
+    const [parentSetting, classmateSetting] = await Promise.all([
+      prisma.systemSetting.findUnique({ where: { key: 'parent_invite_cost' } }),
+      prisma.systemSetting.findUnique({ where: { key: 'classmate_invite_cost' } }),
+    ]);
+
+    const parentCost = parentSetting ? parseInt(parentSetting.value) : 10;
+    const classmateCost = classmateSetting ? parseInt(classmateSetting.value) : 5;
+    const cost = inviteType === 'PARENT' ? parentCost : classmateCost;
+
+    const pointService = require('../services/pointService');
+    const deductResult = await pointService.deductPointsDirect(
+      req.user.id,
+      cost,
+      'invite_code',
+      { inviteType, description: `生成${inviteType === 'PARENT' ? '家长' : '同学'}邀请码` }
+    );
+
+    if (!deductResult.success) {
+      return res.status(400).json({ error: deductResult.error || '积分不足' });
+    }
+
+    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+
+    const role = inviteType === 'PARENT' ? 'PARENT' : 'STUDENT';
+
+    const code = await prisma.inviteCode.create({
+      data: {
+        createdBy: req.user.id,
+        maxUses: 1,
+        expiresAt,
+        role,
+        inviteType,
+      },
+    });
+
+    res.json({
+      success: true,
+      data: code,
+      deductedPoints: cost,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * 获取我的邀请记录
+ */
+exports.getInviteRecords = async (req, res, next) => {
+  try {
+    const codes = await prisma.inviteCode.findMany({
+      where: {
+        createdBy: req.user.id,
+        inviteType: { in: ['PARENT', 'CLASSMATE'] },
+      },
+      include: {
+        users: {
+          select: {
+            id: true,
+            username: true,
+            email: true,
+            role: true,
+            profile: { select: { nickname: true } },
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    const parentUsedCount = await prisma.inviteCode.count({
+      where: {
+        createdBy: req.user.id,
+        inviteType: 'PARENT',
+        usedCount: { gte: 1 },
+      },
+    });
+
+    res.json({
+      success: true,
+      data: {
+        codes,
+        parentUsedCount,
+        parentRemaining: 3 - parentUsedCount,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
  * 获取我的孩子列表（家长操作）- 包含成长统计和最近动态
  */
 exports.getChildren = async (req, res, next) => {
@@ -525,10 +665,10 @@ exports.getChildren = async (req, res, next) => {
         ) + 1; // +1 是因为注册当天算第1天
 
         // 并行获取统计数据
-        const [worksCount, poetryWorksCount, submissionsCount, wallet, recentActivities] = await Promise.all([
-          // HTML作品数量
-          prisma.hTMLWork.count({
-            where: { authorId: child.id },
+        const [approvedCount, poetryWorksCount, submissionsCount, wallet, recentActivities] = await Promise.all([
+          // 审核通过的提交数量
+          prisma.ruleSubmission.count({
+            where: { userId: child.id, status: 'APPROVED' },
           }),
           // 诗词作品数量
           prisma.poetryWork.count({
@@ -552,8 +692,7 @@ exports.getChildren = async (req, res, next) => {
           stats: {
             totalPoints: child.totalPoints || 0,
             learningCoins: wallet?.balance || 0,
-            worksCount: worksCount + poetryWorksCount,
-            htmlWorksCount: worksCount,
+            approvedCount,
             poetryWorksCount,
             submissionsCount,
             joinedDays,
@@ -782,19 +921,31 @@ exports.getChildFinancialDetails = async (req, res, next) => {
  */
 exports.getTeachers = async (req, res, next) => {
   try {
-    const teachers = await prisma.user.findMany({
-      where: { role: 'TEACHER' },
-      select: {
-        id: true,
-        username: true,
-        email: true,
-        avatar: true,
-        profile: true,
+    const teachers = await prisma.teacher.findMany({
+      include: {
+        user: {
+          select: {
+            id: true,
+            username: true,
+            email: true,
+            avatar: true,
+            profile: true,
+          },
+        },
       },
       orderBy: { createdAt: 'desc' },
     });
 
-    res.json({ teachers });
+    res.json({
+      teachers: teachers.map(teacher => ({
+        id: teacher.id,
+        userId: teacher.user.id,
+        username: teacher.user.username,
+        email: teacher.user.email,
+        avatar: teacher.user.avatar,
+        profile: teacher.user.profile,
+      })),
+    });
   } catch (error) {
     next(error);
   }
@@ -1231,6 +1382,429 @@ exports.getUserMovieLogs = async (req, res, next) => {
         limit: parseInt(limit),
         total,
         totalPages: Math.ceil(total / parseInt(limit)),
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * 更新设备推送token
+ */
+exports.updateDeviceToken = async (req, res, next) => {
+  try {
+    const { deviceToken, deviceId, deviceName } = req.body;
+
+    await prisma.user.update({
+      where: { id: req.user.id },
+      data: { deviceToken }
+    });
+
+    if (deviceToken && deviceId) {
+      await prisma.syncDevice.upsert({
+        where: { deviceId },
+        update: {
+          userId: req.user.id,
+          deviceType: 'ios',
+          deviceName: deviceName || 'iOS Device',
+          pushToken: deviceToken,
+          isActive: true,
+          lastSyncAt: new Date(),
+          updatedAt: new Date()
+        },
+        create: {
+          userId: req.user.id,
+          deviceId,
+          deviceType: 'ios',
+          deviceName: deviceName || 'iOS Device',
+          pushToken: deviceToken,
+          isActive: true
+        }
+      });
+    }
+
+    res.json({ success: true, message: '设备token已更新' });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * 搜索用户
+ */
+exports.searchUsers = async (req, res, next) => {
+  try {
+    const { q } = req.query;
+    const currentUserId = req.user.id;
+
+    if (!q || q.trim().length === 0) {
+      return res.json({ success: true, data: [] });
+    }
+
+    const users = await prisma.user.findMany({
+      where: {
+        OR: [
+          { username: { contains: q, mode: 'insensitive' } },
+          { profile: { nickname: { contains: q, mode: 'insensitive' } } }
+        ],
+        id: { not: currentUserId }
+      },
+      take: 20,
+      select: {
+        id: true,
+        username: true,
+        avatar: true,
+        role: true,
+        profile: { select: { nickname: true } }
+      }
+    });
+
+    // 检查好友状态
+    const userIds = users.map(u => u.id);
+    const friendships = await prisma.friendship.findMany({
+      where: {
+        OR: [
+          { userId1: currentUserId, userId2: { in: userIds } },
+          { userId1: { in: userIds }, userId2: currentUserId }
+        ]
+      }
+    });
+
+    const friendIds = new Set(
+      friendships.map(f => f.userId1 === currentUserId ? f.userId2 : f.userId1)
+    );
+
+    // 检查好友申请状态
+    const requests = await prisma.friendRequest.findMany({
+      where: {
+        OR: [
+          { fromUserId: currentUserId, toUserId: { in: userIds }, status: 'PENDING' },
+          { fromUserId: { in: userIds }, toUserId: currentUserId, status: 'PENDING' }
+        ]
+      }
+    });
+
+    const requestMap = new Map();
+    requests.forEach(req => {
+      if (req.fromUserId === currentUserId) {
+        requestMap.set(req.toUserId, 'SENT');
+      } else {
+        requestMap.set(req.fromUserId, 'RECEIVED');
+      }
+    });
+
+    const result = users.map(u => ({
+      id: u.id,
+      username: u.username,
+      nickname: u.profile?.nickname,
+      avatar: u.avatar,
+      role: u.role,
+      isFriend: friendIds.has(u.id),
+      requestStatus: requestMap.get(u.id) || 'NONE'
+    }));
+
+    res.json({ success: true, data: result });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * 获取好友设置
+ */
+exports.getFriendSettings = async (req, res, next) => {
+  try {
+    const userId = req.user.id;
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        autoAcceptFriend: true,
+        friendRequestMessage: true
+      }
+    });
+
+    res.json({ success: true, data: user });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * 更新好友设置
+ */
+exports.updateFriendSettings = async (req, res, next) => {
+  try {
+    const userId = req.user.id;
+    const { autoAcceptFriend, friendRequestMessage } = req.body;
+
+    const user = await prisma.user.update({
+      where: { id: userId },
+      data: {
+        autoAcceptFriend,
+        friendRequestMessage
+      },
+      select: {
+        autoAcceptFriend: true,
+        friendRequestMessage: true
+      }
+    });
+
+    res.json({ success: true, data: user });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * 用户自行修改学校班级（每月一次限制）
+ */
+exports.updateMySchoolClass = async (req, res, next) => {
+  try {
+    const userId = req.user.id;
+    const { classId } = req.body;
+
+    if (!classId) {
+      return res.status(400).json({ error: '班级ID为必填项' });
+    }
+
+    // 验证班级存在
+    const classRecord = await prisma.class.findUnique({
+      where: { id: classId },
+      include: { school: true },
+    });
+
+    if (!classRecord) {
+      return res.status(400).json({ error: '班级不存在' });
+    }
+
+    // 检查每月一次限制
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, role: true, schoolClassUpdatedAt: true },
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: '用户不存在' });
+    }
+
+    if (user.schoolClassUpdatedAt) {
+      const lastUpdate = new Date(user.schoolClassUpdatedAt);
+      const now = new Date();
+      const diffDays = (now - lastUpdate) / (1000 * 60 * 60 * 24);
+      if (diffDays < 30) {
+        const remainingDays = Math.ceil(30 - diffDays);
+        return res.status(400).json({
+          error: `距离上次修改不足30天，还需等待 ${remainingDays} 天`,
+          remainingDays,
+          lastUpdatedAt: user.schoolClassUpdatedAt,
+        });
+      }
+    }
+
+    // 更新用户班级（同时更新 schoolId）
+    const updatedUser = await prisma.user.update({
+      where: { id: userId },
+      data: {
+        classId,
+        schoolClassUpdatedAt: new Date(),
+      },
+      select: {
+        id: true,
+        classId: true,
+        class: {
+          select: {
+            id: true,
+            name: true,
+            grade: true,
+            school: { select: { id: true, name: true } },
+          },
+        },
+      },
+    });
+
+    // 同时更新 Student 表
+    await prisma.student.updateMany({
+      where: { userId },
+      data: { classId },
+    });
+
+    // 记录活动日志
+    await prisma.activityLog.create({
+      data: {
+        userId,
+        action: 'update_school_class',
+        targetType: 'user',
+        targetId: userId,
+        description: `用户自行修改了学校班级为 ${classRecord.school.name} - ${classRecord.grade} ${classRecord.name}`,
+      },
+    });
+
+    res.json({
+      success: true,
+      data: updatedUser,
+      message: '学校班级修改成功',
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * 获取登录活动记录
+ * GET /api/users/me/login-activities
+ */
+exports.getLoginActivities = async (req, res, next) => {
+  try {
+    const userId = req.user.id;
+    const { page = 1, pageSize = 20, type } = req.query;
+
+    const skip = (parseInt(page) - 1) * parseInt(pageSize);
+    const take = Math.min(parseInt(pageSize), 100);
+
+    const where = { userId };
+    if (type === 'success') {
+      where.isSuccess = true;
+    } else if (type === 'failed') {
+      where.isSuccess = false;
+    }
+
+    const [activities, total] = await Promise.all([
+      prisma.loginActivity.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take,
+      }),
+      prisma.loginActivity.count({ where }),
+    ]);
+
+    // 获取设备统计
+    const deviceStats = await prisma.loginActivity.groupBy({
+      by: ['deviceName'],
+      where: { userId, isSuccess: true },
+      _count: { deviceName: true },
+    });
+
+    // 获取地点统计
+    const locationStats = await prisma.loginActivity.groupBy({
+      by: ['city'],
+      where: { userId, isSuccess: true, city: { not: null } },
+      _count: { city: true },
+    });
+
+    // 获取最近的登录活动（用于判断是否有异常）
+    const recentLogins = await prisma.loginActivity.findMany({
+      where: { userId, isSuccess: true },
+      orderBy: { createdAt: 'desc' },
+      take: 10,
+      select: {
+        ipAddress: true,
+        deviceName: true,
+        browser: true,
+        city: true,
+      },
+    });
+
+    // 检测潜在的可疑活动
+    const suspiciousActivities = [];
+    const uniqueDevices = new Set(recentLogins.map(l => `${l.ipAddress}-${l.deviceName}`));
+    const uniqueLocations = new Set(recentLogins.filter(l => l.city).map(l => l.city));
+
+    activities.forEach(activity => {
+      const activityKey = `${activity.ipAddress}-${activity.deviceName}`;
+      const isNewDevice = !recentLogins.slice(1).some(l => `${l.ipAddress}-${l.deviceName}` === activityKey);
+      const isNewLocation = activity.city && !recentLogins.slice(1).some(l => l.city === activity.city);
+
+      if (activity.isSuccess) {
+        if (isNewDevice || isNewLocation) {
+          suspiciousActivities.push({
+            id: activity.id,
+            reason: isNewDevice ? '新设备登录' : '新地点登录',
+            activity,
+          });
+        }
+      }
+    });
+
+    res.json({
+      success: true,
+      data: {
+        activities,
+        total,
+        page: parseInt(page),
+        pageSize: parseInt(pageSize),
+        totalPages: Math.ceil(total / parseInt(pageSize)),
+        deviceStats: deviceStats.map(d => ({
+          deviceName: d.deviceName,
+          count: d._count.deviceName,
+        })),
+        locationStats: locationStats.map(l => ({
+          city: l.city,
+          count: l._count.city,
+        })),
+        suspiciousActivities: suspiciousActivities.slice(0, 5),
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * 获取用户操作日志
+ * GET /api/users/me/activity-logs
+ */
+exports.getActivityLogs = async (req, res, next) => {
+  try {
+    const userId = req.user.id;
+    const { page = 1, pageSize = 50, action } = req.query;
+
+    const skip = (parseInt(page) - 1) * parseInt(pageSize);
+    const take = Math.min(parseInt(pageSize), 100);
+
+    const where = { userId };
+    if (action) {
+      where.action = action;
+    }
+
+    const [logs, total] = await Promise.all([
+      prisma.activityLog.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take,
+      }),
+      prisma.activityLog.count({ where }),
+    ]);
+
+    // 获取操作类型统计
+    const actionStats = await prisma.activityLog.groupBy({
+      by: ['action'],
+      where: { userId },
+      _count: { action: true },
+    });
+
+    // 获取今日操作数量
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const todayCount = await prisma.activityLog.count({
+      where: { userId, createdAt: { gte: today } },
+    });
+
+    res.json({
+      success: true,
+      data: {
+        logs,
+        total,
+        page: parseInt(page),
+        pageSize: parseInt(pageSize),
+        totalPages: Math.ceil(total / parseInt(pageSize)),
+        todayCount,
+        actionStats: actionStats.map(s => ({
+          action: s.action,
+          count: s._count.action,
+        })),
       },
     });
   } catch (error) {

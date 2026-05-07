@@ -157,7 +157,8 @@
 import { ref, h, onMounted } from 'vue';
 import { NButton, NTag, NIcon, useMessage } from 'naive-ui';
 import { adminGameAPI, gameAPI } from '@/api';
-import { AddCircleOutline, GameControllerOutline } from '@vicons/ionicons5';
+import AddCircleOutline from '@vicons/ionicons5/es/AddCircleOutline'
+import GameControllerOutline from '@vicons/ionicons5/es/GameControllerOutline'
 
 const message = useMessage();
 

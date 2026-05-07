@@ -131,13 +131,11 @@
 import { ref, reactive, onMounted } from 'vue';
 import { useMessage } from 'naive-ui';
 import api from '@/api';
-import {
-  ArrowBackOutline,
-  CheckmarkCircleOutline,
-  FlameOutline,
-  TrophyOutline,
-  LogoUsd,
-} from '@vicons/ionicons5';
+import ArrowBackOutline from '@vicons/ionicons5/es/ArrowBackOutline'
+import CheckmarkCircleOutline from '@vicons/ionicons5/es/CheckmarkCircleOutline'
+import FlameOutline from '@vicons/ionicons5/es/FlameOutline'
+import TrophyOutline from '@vicons/ionicons5/es/TrophyOutline'
+import LogoUsd from '@vicons/ionicons5/es/LogoUsd'
 
 const message = useMessage();
 

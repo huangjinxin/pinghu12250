@@ -28,6 +28,9 @@ router.get('/admin/stats', authenticate, authorize('ADMIN'), poetryWorkControlle
 // GET /api/poetry-works/admin/history - 获取已审核作品（管理员）
 router.get('/admin/history', authenticate, authorize('ADMIN'), poetryWorkController.getReviewedWorks);
 
+// POST /api/poetry-works/admin/regenerate-covers - 批量生成封面（管理员）
+router.post('/admin/regenerate-covers', authenticate, authorize('ADMIN'), poetryWorkController.regenerateCovers);
+
 // POST /api/poetry-works - 创建作品
 router.post('/', authenticate, poetryWorkController.createWork);
 

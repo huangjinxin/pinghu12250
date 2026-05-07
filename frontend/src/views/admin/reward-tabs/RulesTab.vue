@@ -162,6 +162,17 @@
             允许用户选择数量（积分 × 数量）
           </n-checkbox>
         </n-form-item>
+
+        <n-form-item label="每日提交限制">
+          <n-input-number
+            v-model:value="formData.dailyLimit"
+            :min="0"
+            :max="100"
+            placeholder="0=不限制"
+            style="width: 100%"
+          />
+          <div class="text-xs text-gray-500 mt-1">0表示不限制，大于0表示每天最多可提交次数</div>
+        </n-form-item>
       </n-form>
 
       <template #footer>
@@ -177,7 +188,7 @@
 <script setup>
 import { ref, h, onMounted } from 'vue';
 import { NButton, NTag, NSpace, NPopconfirm, useMessage } from 'naive-ui';
-import { Add } from '@vicons/ionicons5';
+import Add from '@vicons/ionicons5/es/Add'
 import { useRewardRuleStore } from '@/stores/rewardRule';
 
 const message = useMessage();
@@ -198,7 +209,8 @@ const formData = ref({
   requireAudio: false,
   requireLink: false,
   audioUrl: '',
-  allowQuantity: false
+  allowQuantity: false,
+  dailyLimit: 0
 });
 
 const formRules = {
@@ -254,6 +266,12 @@ const columns = [
       if (row.requireLink) items.push('链接');
       return items.join(' / ') || '无';
     }
+  },
+  {
+    title: '每日限制',
+    key: 'dailyLimit',
+    width: 100,
+    render: (row) => row.dailyLimit > 0 ? row.dailyLimit + '次/天' : '不限'
   },
   {
     title: '状态',

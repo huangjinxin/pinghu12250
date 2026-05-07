@@ -77,7 +77,9 @@ import { html } from '@codemirror/lang-html';
 import { css } from '@codemirror/lang-css';
 import { javascript } from '@codemirror/lang-javascript';
 import { oneDark } from '@codemirror/theme-one-dark';
-import { ArrowBackOutline, PlayOutline, SaveOutline } from '@vicons/ionicons5';
+import ArrowBackOutline from '@vicons/ionicons5/es/ArrowBackOutline'
+import PlayOutline from '@vicons/ionicons5/es/PlayOutline'
+import SaveOutline from '@vicons/ionicons5/es/SaveOutline'
 
 const route = useRoute();
 const router = useRouter();

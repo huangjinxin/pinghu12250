@@ -3,7 +3,7 @@
     <!-- 页面标题 -->
     <div class="flex items-center justify-between">
       <div>
-        <h1 class="text-2xl font-bold text-gray-800">游戏大厅</h1>
+        <h1 class="text-2xl font-bold text-gray-800">益智乐园</h1>
         <p class="text-gray-500 mt-1">探索游戏，分享你的游玩体验</p>
       </div>
       <div class="flex gap-2">
@@ -128,13 +128,11 @@ import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useMessage } from 'naive-ui';
 import { gameAPI } from '@/api';
-import {
-  GameControllerOutline,
-  SearchOutline,
-  StarOutline,
-  HeartOutline,
-  ChatboxOutline,
-} from '@vicons/ionicons5';
+import GameControllerOutline from '@vicons/ionicons5/es/GameControllerOutline'
+import SearchOutline from '@vicons/ionicons5/es/SearchOutline'
+import StarOutline from '@vicons/ionicons5/es/StarOutline'
+import HeartOutline from '@vicons/ionicons5/es/HeartOutline'
+import ChatboxOutline from '@vicons/ionicons5/es/ChatboxOutline'
 
 const router = useRouter();
 const message = useMessage();

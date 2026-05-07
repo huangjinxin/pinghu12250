@@ -5,14 +5,23 @@
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>苹湖少儿空间</title>
-    <!-- PDF.js v2.5.207 - 无私有字段，最大兼容性 -->
-    <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@2.5.207/build/pdf.min.js"></script>
+    <!-- PDF.js v2.5.207 - 使用本地文件避免 CDN 超时 -->
+    <script src="/libs/pdfjs/pdf.min.js"></script>
     <script>
-      pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@2.5.207/build/pdf.worker.min.js';
+      pdfjsLib.GlobalWorkerOptions.workerSrc = '/libs/pdfjs/pdf.worker.min.js';
     </script>
   </head>
   <body>
-    <div id="app"></div>
+    <div id="app">
+      <div id="app-loading" style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;font-family:system-ui,sans-serif;color:#666">
+        <div style="width:40px;height:40px;border:3px solid #e0e0e0;border-top-color:#409eff;border-radius:50%;animation:spin .8s linear infinite"></div>
+        <p id="loading-text" style="margin-top:16px;font-size:14px;transition:opacity .3s"></p>
+      </div>
+      <style>@keyframes spin{to{transform:rotate(360deg)}}</style>
+      <script>
+        !function(){var t=["欢迎来到苹湖少儿空间","正在进入，请稍候...","准备好开始学习了吗？","精彩内容即将呈现...","今天也要加油哦！"],i=0,e=document.getElementById("loading-text");if(e){e.textContent=t[0];setInterval(function(){e.style.opacity=0;setTimeout(function(){i=(i+1)%t.length;e.textContent=t[i];e.style.opacity=1},300)},2500)}}();
+      </script>
+    </div>
     <script type="module" src="/src/main.js"></script>
   </body>
 </html>

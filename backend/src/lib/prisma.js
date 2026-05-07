@@ -1,3 +1,6 @@
+// @AI:LOCK 此文件禁止修改
+// @AI:SINGLETON 全项目唯一Prisma实例,必须通过此文件获取
+// @AI:USAGE const prisma = require('../lib/prisma')
 /**
  * Prisma Client 单例模式
  * 避免创建多个数据库连接实例，防止连接池耗尽

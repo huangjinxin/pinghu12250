@@ -64,6 +64,49 @@ router.post('/system', authenticate, authorize('ADMIN'), async (req, res) => {
   }
 });
 
+// 获取勤学好问机器人提示词
+router.get('/bot/echo', authenticate, authorize('TEACHER', 'ADMIN'), async (req, res) => {
+  try {
+    const prompt = await prisma.aiPrompt.findUnique({ where: { key: 'echo_bot_system' } });
+    res.json({ success: true, data: prompt });
+  } catch (error) {
+    console.error('获取勤学好问提示词失败:', error);
+    res.status(500).json({ success: false, error: '获取失败' });
+  }
+});
+
+// 保存勤学好问机器人提示词
+router.post('/bot/echo', authenticate, authorize('TEACHER', 'ADMIN'), async (req, res) => {
+  try {
+    const { content } = req.body;
+    if (!content) {
+      return res.status(400).json({ success: false, error: '提示词内容必填' });
+    }
+
+    const prompt = await prisma.aiPrompt.upsert({
+      where: { key: 'echo_bot_system' },
+      update: { content, updatedBy: req.user.id, name: '勤学好问机器人提示词' },
+      create: { key: 'echo_bot_system', name: '勤学好问机器人提示词', content, updatedBy: req.user.id }
+    });
+
+    res.json({ success: true, data: prompt, message: '保存成功' });
+  } catch (error) {
+    console.error('保存勤学好问提示词失败:', error);
+    res.status(500).json({ success: false, error: '保存失败' });
+  }
+});
+
+// 重置勤学好问机器人提示词
+router.post('/bot/echo/reset', authenticate, authorize('TEACHER', 'ADMIN'), async (req, res) => {
+  try {
+    await prisma.aiPrompt.deleteMany({ where: { key: 'echo_bot_system' } });
+    res.json({ success: true, message: '已恢复默认提示词' });
+  } catch (error) {
+    console.error('重置勤学好问提示词失败:', error);
+    res.status(500).json({ success: false, error: '重置失败' });
+  }
+});
+
 // 初始化默认模板（管理员）
 router.post('/init-defaults', authenticate, authorize('ADMIN'), async (req, res) => {
   try {
@@ -521,5 +564,231 @@ router.put('/:id/default', authenticate, authorize('TEACHER', 'ADMIN'), async (r
     res.status(500).json({ success: false, error: '设置失败' });
   }
 });
+
+// ========== 评分提示词 API ==========
+
+// 获取评分提示词
+router.get('/eval/:key', authenticate, async (req, res) => {
+  try {
+    const { key } = req.params;
+    let prompt = await prisma.aiPrompt.findUnique({ where: { key } });
+
+    // 如果数据库中没有，则返回默认提示词
+    if (!prompt) {
+      const defaultContent = getDefaultEvalPrompt(key);
+      if (defaultContent) {
+        prompt = { key, name: getEvalPromptName(key), content: defaultContent };
+      }
+    }
+
+    res.json({ success: true, data: prompt });
+  } catch (error) {
+    console.error('获取评分提示词失败:', error);
+    res.status(500).json({ success: false, error: '获取失败' });
+  }
+});
+
+// 保存/更新评分提示词（管理员）
+router.post('/eval/:key', authenticate, authorize('ADMIN'), async (req, res) => {
+  try {
+    const { key } = req.params;
+    const { content } = req.body;
+
+    if (!content) {
+      return res.status(400).json({ success: false, error: '提示词内容必填' });
+    }
+
+    const prompt = await prisma.aiPrompt.upsert({
+      where: { key },
+      update: { content, updatedBy: req.user.id },
+      create: { key, name: getEvalPromptName(key), content, updatedBy: req.user.id }
+    });
+
+    res.json({ success: true, data: prompt });
+  } catch (error) {
+    console.error('保存评分提示词失败:', error);
+    res.status(500).json({ success: false, error: '保存失败' });
+  }
+});
+
+// 重置评分提示词为默认（管理员）
+router.post('/eval/:key/reset', authenticate, authorize('ADMIN'), async (req, res) => {
+  try {
+    const { key } = req.params;
+    const defaultContent = getDefaultEvalPrompt(key);
+
+    if (!defaultContent) {
+      return res.status(404).json({ success: false, error: '未找到默认提示词' });
+    }
+
+    await prisma.aiPrompt.deleteMany({ where: { key } });
+
+    res.json({ success: true, data: { key, content: defaultContent } });
+  } catch (error) {
+    console.error('重置评分提示词失败:', error);
+    res.status(500).json({ success: false, error: '重置失败' });
+  }
+});
+
+// 获取评分提示词名称
+function getEvalPromptName(key) {
+  const names = {
+    'calligraphy_eval': '书法作品评分提示词',
+    'vocabulary_eval': '生词本评分提示词'
+  };
+  return names[key] || key;
+}
+
+// 获取默认评分提示词
+function getDefaultEvalPrompt(key) {
+  const prompts = {
+    'calligraphy_eval': `你是一位极其严格的书法评审专家，对小学生书法评分必须非常苛刻。
+
+作品内容：「{{text}}」（共{{charCount}}字）
+
+【评分原则-必须严格遵守】
+1. 评分必须压低，大部分作品总分不超过60分
+2. 重点找问题，不要给鼓励性分数
+3. 每个字都要单独评价，给出具体的改进建议
+4. 发现问题要直接指出，不要委婉
+
+【评分维度-严格标准】
+
+一、字形相似度（满分50分，严格打分）
+将用户书写的每个字与标准字逐一对比：
+- 笔画数量是否正确
+- 笔画位置是否准确
+- 字形结构是否匹配
+
+严格评分标准：
+- 90%以上相似：40-50分（极少给）
+- 75-89%相似：25-39分
+- 60-74%相似：15-24分
+- 40-59%相似：5-14分
+- 40%以下或认不出：0-4分
+
+二、笔画质量（满分30分，严格打分）
+- 笔画是否流畅连贯
+- 起笔收笔是否规范
+- 笔画粗细是否协调
+- 有无明显抖动或断笔
+
+严格评分标准：
+- 完美流畅：25-30分
+- 基本流畅但有问题：15-24分
+- 明显不流畅：5-14分
+- 很差：0-4分
+
+三、整体美观（满分20分，严格打分）
+- 字间距是否均匀
+- 整体布局是否协调
+- 书写是否工整端正
+
+严格评分标准：
+- 很美观：15-20分
+- 一般：8-14分
+- 较差：0-7分
+
+【输出要求】
+只输出 JSON：
+{
+  "shapeMatch": {
+    "score": 25,
+    "charScores": [
+      {"char": "字1", "similarity": 0.65, "reason": "横画偏短，结构松散", "improvements": ["注意横画长度", "加强结构练习"]},
+      {"char": "字2", "similarity": 0.58, "reason": "走之底不规范", "improvements": ["练习走之底笔画", "控制字形大小"]}
+    ],
+    "comment": "整体字形把握较好，但部分笔画位置需调整"
+  },
+  "strokeQuality": {
+    "score": 10,
+    "comment": "笔画有抖动，起收笔不够干净利落"
+  },
+  "aesthetics": {
+    "score": 6,
+    "comment": "字间距不够均匀，整体偏向右倾"
+  },
+  "overallScore": 41,
+  "level": "needsWork",
+  "summary": "书写基本功有待提高，建议从基础笔画开始练习",
+  "improvements": [
+    "注意横画的长度比例",
+    "加强竖画的垂直度练习",
+    "控制书写速度，减少抖动"
+  ]
+}
+
+【关键要求】
+- charScores数组中每个字必须有improvements字段，给出该字的具体改进建议
+- overallScore必须严格，大部分作品不超过60分
+- level: excellent(>=70) / good(50-69) / needsWork(<50)`,
+
+    'vocabulary_eval': `你是一位严格的书法评审专家，请对这个生词书写进行专业评分。
+
+目标字：「{{character}}」
+
+【评分原则】
+- 严格按照标准评分，不要给予鼓励性加分
+- 重点关注字形准确度和与原字的相似度
+- 发现问题直接指出，给出具体改进建议
+
+【评分维度】
+
+一、字形相似度（权重 50%，满分 50 分）
+将用户书写的字与标准字进行对比：
+- 笔画数量是否正确
+- 笔画位置是否准确
+- 字形结构是否匹配
+- 整体轮廓是否相似
+
+评分标准：
+- 完全匹配（95%+相似）：45-50 分
+- 高度相似（80-94%）：35-44 分
+- 基本相似（60-79%）：25-34 分
+- 差异明显（40-59%）：15-24 分
+- 难以辨认（<40%）：0-14 分
+
+二、笔画质量（权重 30%，满分 30 分）
+- 笔画是否流畅连贯
+- 起笔收笔是否规范
+- 笔画粗细是否协调
+- 有无明显抖动或断笔
+
+三、整体美观（权重 20%，满分 20 分）
+- 字形是否端正
+- 比例是否协调
+- 书写是否工整
+
+【输出要求】
+只输出 JSON：
+{
+  "shapeMatch": {
+    "score": 35,
+    "similarity": 0.75,
+    "issues": ["横画偏短", "竖画歪斜"],
+    "comment": "字形基本正确，但笔画位置需调整"
+  },
+  "strokeQuality": {
+    "score": 20,
+    "comment": "笔画有抖动，起收笔不够干净利落"
+  },
+  "aesthetics": {
+    "score": 12,
+    "comment": "字形略向右倾，比例需调整"
+  },
+  "overallScore": 67,
+  "level": "good",
+  "summary": "书写基本功尚可，但字形准确度需要加强",
+  "improvements": [
+    "注意横画的长度比例",
+    "加强竖画的垂直度练习",
+    "控制书写速度，减少抖动"
+  ]
+}
+
+level: excellent(>=85) / good(60-84) / needsWork(<60)`
+  };
+  return prompts[key] || null;
+}
 
 module.exports = router;

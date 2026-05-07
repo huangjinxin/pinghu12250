@@ -220,7 +220,9 @@
 <script setup>
 import { ref, onMounted, reactive } from 'vue';
 import { useMessage } from 'naive-ui';
-import { SearchOutline, RefreshOutline, ShareSocialOutline } from '@vicons/ionicons5';
+import SearchOutline from '@vicons/ionicons5/es/SearchOutline'
+import RefreshOutline from '@vicons/ionicons5/es/RefreshOutline'
+import ShareSocialOutline from '@vicons/ionicons5/es/ShareSocialOutline'
 import AvatarText from '@/components/AvatarText.vue';
 import api from '@/api';
 

@@ -42,114 +42,34 @@ async function main() {
   // ========== 创建积分规则 ==========
   console.log('创建积分规则...');
 
-  // 日记模块积分规则 (D001-D009)
+  // 日记模块积分规则 - 字数级别 (D001-D016，与 diaryLevels.js 一致)
   await prisma.pointRule.createMany({
     data: [
-      {
-        id: 'D001',
-        category: 'diary',
-        action: 'create',
-        name: '发布日记-入门级',
-        description: '发布字数≥800的日记可获得5积分',
-        conditionType: 'word_count',
-        conditionValue: 800,
-        points: 5,
-        dailyLimit: 0,
-        isEnabled: true,
-      },
-      {
-        id: 'D002',
-        category: 'diary',
-        action: 'create',
-        name: '发布日记-良好级',
-        description: '发布字数≥1000的日记可获得10积分',
-        conditionType: 'word_count',
-        conditionValue: 1000,
-        points: 10,
-        dailyLimit: 0,
-        isEnabled: true,
-      },
-      {
-        id: 'D003',
-        category: 'diary',
-        action: 'create',
-        name: '发布日记-优秀级',
-        description: '发布字数≥1200的日记可获得15积分',
-        conditionType: 'word_count',
-        conditionValue: 1200,
-        points: 15,
-        dailyLimit: 0,
-        isEnabled: true,
-      },
-      {
-        id: 'D004',
-        category: 'diary',
-        action: 'create',
-        name: '发布日记-卓越级',
-        description: '发布字数≥1500的日记可获得20积分',
-        conditionType: 'word_count',
-        conditionValue: 1500,
-        points: 20,
-        dailyLimit: 0,
-        isEnabled: true,
-      },
-      {
-        id: 'D005',
-        category: 'diary',
-        action: 'create',
-        name: '发布日记-大师级',
-        description: '发布字数≥2000的日记可获得30积分',
-        conditionType: 'word_count',
-        conditionValue: 2000,
-        points: 30,
-        dailyLimit: 0,
-        isEnabled: true,
-      },
-      {
-        id: 'D006',
-        category: 'diary',
-        action: 'create',
-        name: '发布日记-不合格',
-        description: '发布字数<800的日记扣2积分',
-        conditionType: 'word_count',
-        conditionValue: 800,
-        points: -2,
-        dailyLimit: 0,
-        isEnabled: true,
-      },
-      {
-        id: 'D007',
-        category: 'diary',
-        action: 'like',
-        name: '日记被点赞',
-        description: '日记被其他用户点赞获得1积分',
-        conditionType: 'none',
-        points: 1,
-        dailyLimit: 0,
-        isEnabled: true,
-      },
-      {
-        id: 'D008',
-        category: 'diary',
-        action: 'dislike',
-        name: '日记被点踩',
-        description: '日记被其他用户点踩扣1积分',
-        conditionType: 'none',
-        points: -1,
-        dailyLimit: 0,
-        isEnabled: true,
-      },
-      {
-        id: 'D009',
-        category: 'diary',
-        action: 'delete',
-        name: '删除日记',
-        description: '删除日记时扣除该日记获得的所有积分',
-        conditionType: 'none',
-        points: 0,
-        dailyLimit: 0,
-        isEnabled: true,
-      },
+      { id: 'D001', category: 'diary', action: 'create', name: '发布日记-萌芽级', description: '发布字数<800的日记扣2积分', conditionType: 'word_count', conditionValue: 0, points: -2, dailyLimit: 0, isEnabled: true },
+      { id: 'D002', category: 'diary', action: 'create', name: '发布日记-入门级', description: '发布字数≥800的日记可获得5积分', conditionType: 'word_count', conditionValue: 800, points: 5, dailyLimit: 0, isEnabled: true },
+      { id: 'D003', category: 'diary', action: 'create', name: '发布日记-良好级', description: '发布字数≥1000的日记可获得10积分', conditionType: 'word_count', conditionValue: 1000, points: 10, dailyLimit: 0, isEnabled: true },
+      { id: 'D004', category: 'diary', action: 'create', name: '发布日记-优秀级', description: '发布字数≥1200的日记可获得15积分', conditionType: 'word_count', conditionValue: 1200, points: 15, dailyLimit: 0, isEnabled: true },
+      { id: 'D005', category: 'diary', action: 'create', name: '发布日记-卓越级', description: '发布字数≥1500的日记可获得20积分', conditionType: 'word_count', conditionValue: 1500, points: 20, dailyLimit: 0, isEnabled: true },
+      { id: 'D006', category: 'diary', action: 'create', name: '发布日记-大师级', description: '发布字数≥2000的日记可获得30积分', conditionType: 'word_count', conditionValue: 2000, points: 30, dailyLimit: 0, isEnabled: true },
+      { id: 'D007', category: 'diary', action: 'create', name: '发布日记-精英级', description: '发布字数≥3000的日记可获得40积分', conditionType: 'word_count', conditionValue: 3000, points: 40, dailyLimit: 0, isEnabled: true },
+      { id: 'D008', category: 'diary', action: 'create', name: '发布日记-专家级', description: '发布字数≥4000的日记可获得50积分', conditionType: 'word_count', conditionValue: 4000, points: 50, dailyLimit: 0, isEnabled: true },
+      { id: 'D009', category: 'diary', action: 'create', name: '发布日记-宗师级', description: '发布字数≥5000的日记可获得60积分', conditionType: 'word_count', conditionValue: 5000, points: 60, dailyLimit: 0, isEnabled: true },
+      { id: 'D010', category: 'diary', action: 'create', name: '发布日记-传奇级', description: '发布字数≥6000的日记可获得70积分', conditionType: 'word_count', conditionValue: 6000, points: 70, dailyLimit: 0, isEnabled: true },
+      { id: 'D011', category: 'diary', action: 'create', name: '发布日记-史诗级', description: '发布字数≥8000的日记可获得85积分', conditionType: 'word_count', conditionValue: 8000, points: 85, dailyLimit: 0, isEnabled: true },
+      { id: 'D012', category: 'diary', action: 'create', name: '发布日记-神话级', description: '发布字数≥10000的日记可获得100积分', conditionType: 'word_count', conditionValue: 10000, points: 100, dailyLimit: 0, isEnabled: true },
+      { id: 'D013', category: 'diary', action: 'create', name: '发布日记-不朽级', description: '发布字数≥12000的日记可获得120积分', conditionType: 'word_count', conditionValue: 12000, points: 120, dailyLimit: 0, isEnabled: true },
+      { id: 'D014', category: 'diary', action: 'create', name: '发布日记-创世级', description: '发布字数≥15000的日记可获得150积分', conditionType: 'word_count', conditionValue: 15000, points: 150, dailyLimit: 0, isEnabled: true },
+      { id: 'D015', category: 'diary', action: 'create', name: '发布日记-永恒级', description: '发布字数≥18000的日记可获得180积分', conditionType: 'word_count', conditionValue: 18000, points: 180, dailyLimit: 0, isEnabled: true },
+      { id: 'D016', category: 'diary', action: 'create', name: '发布日记-至尊级', description: '发布字数≥20000的日记可获得200积分', conditionType: 'word_count', conditionValue: 20000, points: 200, dailyLimit: 0, isEnabled: true },
+    ],
+  });
+
+  // 日记模块积分规则 - 互动 (DL/DD/DEL)
+  await prisma.pointRule.createMany({
+    data: [
+      { id: 'DL001', category: 'diary', action: 'like', name: '日记被点赞', description: '日记被其他用户点赞获得1积分', conditionType: 'none', points: 1, dailyLimit: 0, isEnabled: true },
+      { id: 'DD001', category: 'diary', action: 'dislike', name: '日记被点踩', description: '日记被其他用户点踩扣1积分', conditionType: 'none', points: -1, dailyLimit: 0, isEnabled: true },
+      { id: 'DEL001', category: 'diary', action: 'delete', name: '删除日记', description: '删除日记时扣除该日记获得的所有积分', conditionType: 'none', points: 0, dailyLimit: 0, isEnabled: true },
     ],
   });
 
@@ -907,6 +827,90 @@ h1 {
   });
 
   console.log('数据初始化完成！');
+  // ========== 默认学习Bot ==========
+  const defaultBots = [
+    {
+      name: '语文老师', type: 'chinese', sortOrder: 1,
+      avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=chinese-teacher',
+      description: '语文学习助手，陪你读课文、背古诗',
+      welcome: '你好呀！我是你的语文老师，发送"课文"或"古诗"开始学习吧~',
+      modules: [
+        { module: 'textbook', label: '教材阅读', icon: 'BookOutline' },
+        { module: 'recitation', label: '古诗朗诵', icon: 'MicOutline' },
+      ],
+      keywords: [
+        { keyword: '课文', reply: '点击下方卡片开始阅读今日课文', cardType: 'card', cardData: { cardType: 'navigate', title: '📖 今日课文', desc: '开始阅读', target: '/books' } },
+        { keyword: '古诗', reply: '来背一首古诗吧！', cardType: 'card', cardData: { cardType: 'navigate', title: '📜 古诗朗诵', desc: '开始朗诵', target: '/poetry' } },
+        { keyword: '笔记', reply: null, cardType: 'card', cardData: { cardType: 'navigate', title: '📝 我的笔记', desc: '查看笔记', target: '/my-notes' } },
+      ],
+    },
+    {
+      name: '书法老师', type: 'calligraphy', sortOrder: 2,
+      avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=calligraphy-teacher',
+      description: '书法练习助手，帮你练好每一个字',
+      welcome: '欢迎来到书法课堂！发送"练字"开始今日练习~',
+      modules: [
+        { module: 'calligraphy', label: '书法练习', icon: 'BrushOutline' },
+      ],
+      keywords: [
+        { keyword: '练字', reply: '今天练什么字呢？点击开始吧', cardType: 'card', cardData: { cardType: 'navigate', title: '✍️ 今日练字', desc: '开始练习', target: '/writing' } },
+        { keyword: '字帖', reply: null, cardType: 'card', cardData: { cardType: 'navigate', title: '📋 字帖库', desc: '选择字帖', target: '/writing' } },
+      ],
+    },
+    {
+      name: '日记伙伴', type: 'diary', sortOrder: 3,
+      avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=diary-buddy',
+      description: '记录每一天的成长故事',
+      welcome: '嗨！今天发生了什么有趣的事？发送"写日记"开始记录吧~',
+      modules: [
+        { module: 'diary', label: '写日记', icon: 'BookOutline' },
+        { module: 'photo', label: '拍照记录', icon: 'CameraOutline' },
+      ],
+      keywords: [
+        { keyword: '写日记', reply: null, cardType: 'card', cardData: { cardType: 'navigate', title: '📔 写日记', desc: '记录今天', target: '/diaries' } },
+        { keyword: '拍照', reply: '用照片记录美好瞬间吧！', cardType: 'card', cardData: { cardType: 'navigate', title: '📷 拍照日记', desc: '拍照记录', target: '/photos' } },
+      ],
+    },
+    {
+      name: '阅读伙伴', type: 'reading', sortOrder: 4,
+      avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=reading-buddy',
+      description: '一起读书，一起成长',
+      welcome: '今天想读什么书呢？发送"读书"看看书架吧~',
+      modules: [
+        { module: 'books', label: '我的书架', icon: 'LibraryOutline' },
+      ],
+      keywords: [
+        { keyword: '读书', reply: null, cardType: 'card', cardData: { cardType: 'navigate', title: '📚 我的书架', desc: '继续阅读', target: '/books' } },
+        { keyword: '笔记', reply: null, cardType: 'card', cardData: { cardType: 'navigate', title: '📝 读书笔记', desc: '查看笔记', target: '/my-notes' } },
+      ],
+    },
+    {
+      name: '成长助手', type: 'growth', sortOrder: 5,
+      avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=growth-assistant',
+      description: '你的学习进度管家',
+      welcome: '我是你的成长助手！发送"任务"查看今日学习计划~',
+      modules: [
+        { module: 'tasks', label: '学习任务', icon: 'CheckboxOutline' },
+        { module: 'achievements', label: '成就中心', icon: 'RibbonOutline' },
+        { module: 'points', label: '积分中心', icon: 'StarOutline' },
+      ],
+      keywords: [
+        { keyword: '任务', reply: null, cardType: 'card', cardData: { cardType: 'navigate', title: '📋 今日任务', desc: '查看任务', target: '/submit' } },
+        { keyword: '积分', reply: null, cardType: 'card', cardData: { cardType: 'navigate', title: '⭐ 我的积分', desc: '查看积分', target: '/points' } },
+        { keyword: '成就', reply: null, cardType: 'card', cardData: { cardType: 'navigate', title: '🏆 成就中心', desc: '查看成就', target: '/achievements' } },
+      ],
+    },
+  ];
+
+  for (const botData of defaultBots) {
+    await prisma.bot.upsert({
+      where: { id: botData.type }, // 用type做幂等
+      update: { name: botData.name, description: botData.description, welcome: botData.welcome, modules: botData.modules, keywords: botData.keywords },
+      create: { id: botData.type, ...botData },
+    });
+  }
+  console.log('✅ 默认学习Bot已创建');
+
   console.log('\n测试账号：');
   console.log('管理员 - 用户名: admin, 密码: 123456');
   console.log('学生1 - 用户名: xiaoming, 密码: 123456');

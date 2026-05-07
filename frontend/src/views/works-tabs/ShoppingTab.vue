@@ -1,7 +1,7 @@
 <template>
   <div class="shopping-tab">
     <!-- 分类筛选 -->
-    <div class="filter-bar" v-if="categories.length > 0">
+    <WorksFilterBar :show-reset="false" v-if="categories.length > 0">
       <n-space>
         <n-tag
           v-for="cat in ['全部', ...categories]"
@@ -14,7 +14,18 @@
           {{ cat }}
         </n-tag>
       </n-space>
-    </div>
+    </WorksFilterBar>
+
+    <!-- 顶部分页 -->
+    <WorksPagination
+      v-model:page="pagination.page"
+      v-model:pageSize="pagination.limit"
+      :total="pagination.total"
+      item-name="个商品"
+      position="top"
+      @update:page="handlePageChange"
+      @update:pageSize="handlePageSizeChange"
+    />
 
     <!-- 二维码卡片网格 -->
     <n-spin :show="loading">
@@ -26,11 +37,14 @@
           @click="handleCardClick(payCode)"
         >
           <div class="qrcode-image">
-            <img :src="payCode.qrcode" :alt="payCode.title" />
+            <div class="title-avatar" :style="{ background: getAvatarColor(payCode.title) }">
+              {{ payCode.title?.charAt(0) || '?' }}
+            </div>
           </div>
           <div class="card-info">
             <div class="title">{{ payCode.title }}</div>
             <div class="amount">{{ parseFloat(payCode.amount).toFixed(2) }} 学习币</div>
+            <div class="point-price" v-if="payCode.pointPrice">或 {{ payCode.pointPrice }} 积分</div>
             <div class="description" v-if="payCode.description">{{ payCode.description }}</div>
           </div>
           <div class="card-actions">
@@ -49,15 +63,16 @@
       </n-empty>
     </n-spin>
 
-    <!-- 分页 -->
-    <div class="pagination" v-if="pagination.totalPages > 1">
-      <n-pagination
-        v-model:page="pagination.page"
-        :page-count="pagination.totalPages"
-        :page-size="pagination.limit"
-        @update:page="handlePageChange"
-      />
-    </div>
+    <!-- 底部分页 -->
+    <WorksPagination
+      v-model:page="pagination.page"
+      v-model:pageSize="pagination.limit"
+      :total="pagination.total"
+      item-name="个商品"
+      position="bottom"
+      @update:page="handlePageChange"
+      @update:pageSize="handlePageSizeChange"
+    />
 
     <!-- 支付确认弹窗 -->
     <n-modal v-model:show="showPayModal" preset="dialog" title="确认支付">
@@ -69,7 +84,61 @@
           <div class="pay-info">
             <h3>{{ selectedPayCode.title }}</h3>
             <p class="pay-amount">{{ parseFloat(selectedPayCode.amount).toFixed(2) }} 学习币</p>
+            <p class="pay-point-price" v-if="selectedPayCode.pointPrice">或 {{ selectedPayCode.pointPrice }} 积分</p>
             <p class="pay-desc" v-if="selectedPayCode.description">{{ selectedPayCode.description }}</p>
+          </div>
+          <!-- 支付方式选择 -->
+          <div v-if="selectedPayCode.pointPrice" class="pay-method">
+            <n-divider />
+            <n-radio-group v-model:value="selectedPaymentMethod">
+              <n-space vertical>
+                <n-radio value="wallet">学习币支付 ({{ parseFloat(selectedPayCode.amount).toFixed(2) }} 学习币)</n-radio>
+                <n-radio value="points">积分支付 ({{ selectedPayCode.pointPrice }} 积分)</n-radio>
+              </n-space>
+            </n-radio-group>
+          </div>
+          <!-- 分期付款选项（仅学习币支付时可用） -->
+          <div v-if="selectedPayCode.allowInstallment && selectedPaymentMethod === 'wallet'" class="pay-installment">
+            <n-divider />
+            <n-radio-group v-model:value="paymentType">
+              <n-space vertical>
+                <n-radio value="full">全额支付 ({{ parseFloat(selectedPayCode.amount).toFixed(2) }} 学习币)</n-radio>
+                <n-radio value="installment">分期付款</n-radio>
+              </n-space>
+            </n-radio-group>
+            <div v-if="paymentType === 'installment'" class="installment-options">
+              <div class="option-row">
+                <span class="option-label">首付比例</span>
+                <n-select
+                  v-model:value="downPaymentRate"
+                  :options="downPaymentOptions"
+                  style="width: 140px"
+                />
+              </div>
+              <div class="option-row">
+                <span class="option-label">分期期数</span>
+                <n-select
+                  v-model:value="selectedInstallment"
+                  :options="installmentOptions"
+                  placeholder="选择期数"
+                  style="width: 140px"
+                />
+              </div>
+              <div v-if="selectedInstallment" class="installment-summary">
+                <div class="summary-item">
+                  <span>首付金额</span>
+                  <span class="amount">{{ downPaymentAmount }} 学习币</span>
+                </div>
+                <div class="summary-item">
+                  <span>剩余金额</span>
+                  <span>{{ remainingAmount }} 学习币</span>
+                </div>
+                <div class="summary-item">
+                  <span>每期还款</span>
+                  <span>约 {{ installmentAmount }} 学习币 × {{ selectedInstallment }}期</span>
+                </div>
+              </div>
+            </div>
           </div>
           <div class="pay-password">
             <n-input
@@ -86,7 +155,7 @@
         <n-space>
           <n-button @click="closePayModal">取消</n-button>
           <n-button type="primary" :loading="paying" @click="confirmPay">
-            确认支付
+            {{ paymentType === 'installment' ? '确认分期' : '确认支付' }}
           </n-button>
         </n-space>
       </template>
@@ -109,7 +178,7 @@
           </div>
           <div class="flex justify-between">
             <span class="text-gray-600">支付金额</span>
-            <span class="font-bold">{{ Number(paymentResult.amount).toFixed(2) }} 学习币</span>
+            <span class="font-bold">{{ Number(paymentResult.amount).toFixed(paymentResult.paymentMethod === 'points' ? 0 : 2) }} {{ paymentResult.paymentMethod === 'points' ? '积分' : '学习币' }}</span>
           </div>
           <div class="flex justify-between">
             <span class="text-gray-600">支付时间</span>
@@ -136,9 +205,13 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue';
 import { useMessage } from 'naive-ui';
-import { payAPI } from '@/api';
-import { WalletOutline, CheckmarkCircleOutline, CopyOutline } from '@vicons/ionicons5';
+import { payAPI, paymentPlanAPI } from '@/api';
+import WalletOutline from '@vicons/ionicons5/es/WalletOutline'
+import CheckmarkCircleOutline from '@vicons/ionicons5/es/CheckmarkCircleOutline'
+import CopyOutline from '@vicons/ionicons5/es/CopyOutline'
 import { useAuthStore } from '@/stores/auth';
+import WorksFilterBar from '@/components/works/WorksFilterBar.vue';
+import WorksPagination from '@/components/works/WorksPagination.vue';
 
 const message = useMessage();
 const authStore = useAuthStore();
@@ -153,6 +226,10 @@ const showSuccessModal = ref(false);
 const selectedPayCode = ref(null);
 const paymentResult = ref(null);
 const paymentPassword = ref('');
+const paymentType = ref('full');
+const selectedPaymentMethod = ref('wallet');
+const selectedInstallment = ref(null);
+const downPaymentRate = ref(30);
 const pagination = ref({
   page: 1,
   limit: 50,
@@ -163,6 +240,37 @@ const pagination = ref({
 const filteredPayCodes = computed(() => {
   if (!selectedCategory.value) return payCodes.value;
   return payCodes.value.filter(p => p.category === selectedCategory.value);
+});
+
+const installmentOptions = computed(() => {
+  if (!selectedPayCode.value?.installmentOptions) return [];
+  return selectedPayCode.value.installmentOptions.split(',').map(n => {
+    const num = parseInt(n.trim());
+    return { label: `${num}期`, value: num };
+  });
+});
+
+const downPaymentOptions = [
+  { label: '10%', value: 10 },
+  { label: '20%', value: 20 },
+  { label: '30% (推荐)', value: 30 },
+  { label: '40%', value: 40 },
+  { label: '50%', value: 50 },
+];
+
+const downPaymentAmount = computed(() => {
+  if (!selectedPayCode.value) return 0;
+  return (parseFloat(selectedPayCode.value.amount) * downPaymentRate.value / 100).toFixed(2);
+});
+
+const remainingAmount = computed(() => {
+  if (!selectedPayCode.value) return 0;
+  return (parseFloat(selectedPayCode.value.amount) - parseFloat(downPaymentAmount.value)).toFixed(2);
+});
+
+const installmentAmount = computed(() => {
+  if (!selectedPayCode.value || !selectedInstallment.value) return 0;
+  return (parseFloat(remainingAmount.value) / selectedInstallment.value).toFixed(2);
 });
 
 const loadPayCodes = async () => {
@@ -200,6 +308,12 @@ const handlePageChange = (page) => {
   loadPayCodes();
 };
 
+const handlePageSizeChange = (newSize) => {
+  pagination.value.limit = newSize;
+  pagination.value.page = 1;
+  loadPayCodes();
+};
+
 const handleCardClick = (payCode) => {
   selectedPayCode.value = payCode;
   showPayModal.value = true;
@@ -214,6 +328,10 @@ const closePayModal = () => {
   showPayModal.value = false;
   selectedPayCode.value = null;
   paymentPassword.value = '';
+  paymentType.value = 'full';
+  selectedPaymentMethod.value = 'wallet';
+  selectedInstallment.value = null;
+  downPaymentRate.value = 30;
 };
 
 const confirmPay = async () => {
@@ -224,13 +342,45 @@ const confirmPay = async () => {
     return;
   }
 
+  // 分期付款
+  if (paymentType.value === 'installment') {
+    if (!selectedInstallment.value) {
+      message.warning('请选择分期期数');
+      return;
+    }
+
+    paying.value = true;
+    try {
+      const result = await paymentPlanAPI.create(
+        selectedPayCode.value.id,
+        selectedInstallment.value,
+        downPaymentRate.value,
+        paymentPassword.value
+      );
+      if (result.success) {
+        message.success(result.message || '分期付款计划创建成功！');
+        showPayModal.value = false;
+        closePayModal();
+      } else {
+        message.error(result.error || '创建分期计划失败');
+      }
+    } catch (error) {
+      message.error(error.error || '创建分期计划失败');
+    } finally {
+      paying.value = false;
+    }
+    return;
+  }
+
+  // 全额支付
   paying.value = true;
   try {
     const result = await payAPI.submitPayment({
       payCodeId: selectedPayCode.value.id,
       paymentPassword: paymentPassword.value,
+      paymentMethod: selectedPaymentMethod.value,
     });
-    paymentResult.value = result.order;
+    paymentResult.value = { ...result.order, paymentMethod: result.paymentMethod || selectedPaymentMethod.value };
     showPayModal.value = false;
     showSuccessModal.value = true;
   } catch (error) {
@@ -246,6 +396,10 @@ const closeSuccessModal = () => {
   selectedPayCode.value = null;
   paymentResult.value = null;
   paymentPassword.value = '';
+  paymentType.value = 'full';
+  selectedPaymentMethod.value = 'wallet';
+  selectedInstallment.value = null;
+  downPaymentRate.value = 30;
 };
 
 // 格式化日期
@@ -258,10 +412,15 @@ const copyPaymentReceipt = async () => {
   if (!paymentResult.value) return;
 
   const username = authStore.user?.username || '未知用户';
+  const isPoints = paymentResult.value.paymentMethod === 'points';
+  const amountStr = isPoints
+    ? `${Number(paymentResult.value.amount)} 积分`
+    : `${Number(paymentResult.value.amount).toFixed(2)} 学习币`;
   const receiptText = `【支付凭证】
 用户：${username}
 项目：${paymentResult.value.title}
-金额：${Number(paymentResult.value.amount).toFixed(2)} 学习币
+金额：${amountStr}
+支付方式：${isPoints ? '积分支付' : '学习币支付'}
 订单号：${paymentResult.value.orderNo}
 支付时间：${formatDate(paymentResult.value.createdAt)}
 状态：已完成`;
@@ -290,15 +449,25 @@ const copyPaymentReceipt = async () => {
 onMounted(() => {
   loadPayCodes();
 });
+
+const avatarColors = [
+  '#f56c6c', '#e6a23c', '#5cb87a', '#1989fa', '#6f7ad3',
+  '#ff85c0', '#13c2c2', '#722ed1', '#fa541c', '#2f54eb',
+]
+
+function getAvatarColor(title) {
+  if (!title) return avatarColors[0]
+  let hash = 0
+  for (let i = 0; i < title.length; i++) {
+    hash = title.charCodeAt(i) + ((hash << 5) - hash)
+  }
+  return avatarColors[Math.abs(hash) % avatarColors.length]
+}
 </script>
 
 <style scoped>
 .shopping-tab {
-  padding: 16px 0;
-}
-
-.filter-bar {
-  margin-bottom: 20px;
+  padding: 0;
 }
 
 .qrcode-grid {
@@ -337,6 +506,20 @@ onMounted(() => {
   height: 100%;
 }
 
+.title-avatar {
+  width: 100%;
+  height: 100%;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 60px;
+  font-weight: 700;
+  color: white;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  user-select: none;
+}
+
 .card-info .title {
   font-weight: 600;
   font-size: 16px;
@@ -351,6 +534,13 @@ onMounted(() => {
   color: #18a058;
   font-weight: bold;
   font-size: 18px;
+  margin-bottom: 4px;
+}
+
+.card-info .point-price {
+  color: #f0a020;
+  font-weight: 600;
+  font-size: 14px;
   margin-bottom: 8px;
 }
 
@@ -366,12 +556,6 @@ onMounted(() => {
 
 .card-actions {
   margin-top: 12px;
-}
-
-.pagination {
-  display: flex;
-  justify-content: center;
-  margin-top: 24px;
 }
 
 /* 支付确认弹窗样式 */
@@ -407,6 +591,65 @@ onMounted(() => {
 .pay-desc {
   color: #666;
   font-size: 14px;
+}
+
+.pay-point-price {
+  color: #f0a020;
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.pay-method {
+  margin-top: 8px;
+}
+
+.pay-installment {
+  margin-top: 8px;
+}
+
+.installment-options {
+  margin-top: 12px;
+  padding: 12px;
+  background: #f5f5f5;
+  border-radius: 8px;
+}
+
+.option-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.option-label {
+  font-size: 14px;
+  color: #666;
+}
+
+.installment-summary {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px dashed #ddd;
+}
+
+.summary-item {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  margin-bottom: 6px;
+}
+
+.summary-item .amount {
+  color: #18a058;
+  font-weight: 600;
+}
+
+.installment-info {
+  margin-top: 8px;
+  color: #18a058;
+  font-size: 14px;
+  font-weight: 500;
 }
 
 .pay-password {

@@ -75,7 +75,7 @@ import { ref, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { useChatStore } from '@/stores/chat';
 import { useAuthStore } from '@/stores/auth';
-import { SearchOutline } from '@vicons/ionicons5';
+import SearchOutline from '@vicons/ionicons5/es/SearchOutline'
 import AvatarText from '@/components/AvatarText.vue';
 import ConversationList from './chat/ConversationList.vue';
 import ChatView from './chat/ChatView.vue';
@@ -206,7 +206,7 @@ const selectFriendToChat = (friend) => {
 // 处理系统消息点击
 const handleSystemMessageClick = (message) => {
   // 标记为已读
-  chatStore.markSystemMessageRead([message.id]);
+  chatStore.markSystemMessagesRead([message.id]);
 
   // 如果有链接，跳转
   if (message.metadata?.link) {
@@ -221,7 +221,7 @@ const markAllSystemMessagesRead = () => {
     .filter(msg => !msg.isRead)
     .map(msg => msg.id);
   if (unreadIds.length > 0) {
-    chatStore.markSystemMessageRead(unreadIds);
+    chatStore.markSystemMessagesRead(unreadIds);
   }
 };
 </script>

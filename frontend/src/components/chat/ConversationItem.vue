@@ -42,9 +42,10 @@ defineEmits(['click']);
 
 // 格式化时间
 const formattedTime = computed(() => {
-  if (!props.conversation.timestamp) return '';
+  const time = props.conversation.timestamp || props.conversation.lastMessageTime || props.conversation.updatedAt;
+  if (!time) return '';
   try {
-    return formatDistanceToNow(new Date(props.conversation.timestamp), {
+    return formatDistanceToNow(new Date(time), {
       addSuffix: true,
       locale: zhCN
     });

@@ -98,7 +98,7 @@ import { ref, onMounted } from 'vue';
 import { useMessage } from 'naive-ui';
 import { noteAPI, readingNoteAPI } from '@/api';
 import { format } from 'date-fns';
-import { AddOutline } from '@vicons/ionicons5';
+import AddOutline from '@vicons/ionicons5/es/AddOutline'
 import TagSelector from '@/components/TagSelector.vue';
 
 const message = useMessage();

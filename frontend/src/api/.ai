@@ -1,0 +1,22 @@
+# @AI:DIR api
+permit: modify-only
+single_file: index.js
+
+# 绝对禁止
+!create: "*.js"  # 禁止新增任何文件
+
+# 修改规则
+modify:
+  - 仅在文件末尾追加新API对象
+  - 不重构现有代码
+  - 不修改拦截器逻辑
+
+# API对象命名
+pattern: |
+  export const [module]API = {
+    getList: (params) => api.get('/[modules]', { params }),
+    getById: (id) => api.get(`/[modules]/${id}`),
+    create: (data) => api.post('/[modules]', data),
+    update: (id, data) => api.put(`/[modules]/${id}`, data),
+    delete: (id) => api.delete(`/[modules]/${id}`),
+  }

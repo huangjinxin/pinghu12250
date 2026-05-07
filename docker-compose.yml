@@ -1,8 +1,8 @@
 # Docker Compose配置 - 开发环境
 services:
-  # PostgreSQL数据库
+  # PostgreSQL数据库（含 pgvector 扩展）
   postgres:
-    image: postgres:15-alpine
+    image: pgvector/pgvector:pg15
     container_name: children-growth-db
     restart: unless-stopped
     environment:
@@ -37,35 +37,51 @@ services:
       NODE_ENV: development
       FRONTEND_URL: http://localhost:12250
       PDF_STORAGE_DIR: /pdfs
+      PHOTO_STORAGE_DIR: /photos
+      TOTP_ENCRYPTION_KEY: 81b47669f326782c4a2c0b1733f5a374cb11df89d2adbf9fb7ff2558c9f1f768
     volumes:
       - ./backend:/app
       - /app/node_modules
       - ./backend/uploads:/app/uploads
       - /Volumes/2TB-BC01/pinghu/books-ai:/pdfs
+      - /Volumes/2TB-BC01/pinghu/photos:/photos
+      - ./backups:/backups
+      - ./scripts:/scripts
+      - ./logs:/logs
     depends_on:
       postgres:
         condition: service_healthy
-    command: sh -c "npx prisma generate && npm run dev"
+    command: sh -c "npm install && npx prisma generate && npm run dev"
 
-  # 前端应用
-  frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile.dev
-    container_name: children-growth-frontend
+  # 前端已改为本地 vite preview 提供服务（端口12250），不再走Docker
+  # 启动方式: cd frontend && npx vite preview --port 12250 --host
+  # frontend:
+  #   image: nginx:alpine
+  #   container_name: children-growth-frontend
+  #   restart: unless-stopped
+  #   ports:
+  #     - "12250:12250"
+  #   volumes:
+  #     - ./frontend/dist:/usr/share/nginx/html:ro
+  #     - ./frontend/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+  #     - ./frontend/public/games:/usr/share/nginx/html/games:ro
+  #     - ./frontend/public/libs:/usr/share/nginx/html/libs:ro
+  #   depends_on:
+  #     - backend
+
+  # Nginx HTTPS 反向代理 (Tailscale)
+  nginx:
+    image: nginx:alpine
+    container_name: children-growth-nginx
     restart: unless-stopped
     ports:
-      - "12250:12250"
-    environment:
-      VITE_API_URL: http://localhost:12251
-      DOCKER_ENV: "true"
+      - "80:80"
+      - "443:443"
     volumes:
-      - ./frontend:/app
-      - /app/node_modules
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./certs:/etc/nginx/certs:ro
     depends_on:
       - backend
-    stdin_open: true
-    tty: true
 
 volumes:
   postgres_data:

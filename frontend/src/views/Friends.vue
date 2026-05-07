@@ -2,170 +2,187 @@
   <div class="space-y-6">
     <div class="flex items-center justify-between">
       <div>
-        <h1 class="text-2xl font-bold text-gray-800">好友</h1>
-        <p class="text-gray-500 mt-1">管理你的好友关系</p>
+        <h1 class="text-2xl font-bold text-gray-800">学伴动态</h1>
+        <p class="text-gray-500 mt-1">看看学伴们最近学了什么</p>
       </div>
-      <n-button type="primary" @click="$router.push('/friends/leaderboard')">
-        <template #icon><n-icon><TrophyOutline /></n-icon></template>
-        好友排行榜
-      </n-button>
+      <div class="flex gap-2">
+        <n-button @click="showFriendManager = true">
+          <template #icon><n-icon><PersonAdd /></n-icon></template>
+          学伴管理
+        </n-button>
+        <n-button type="primary" @click="$router.push('/friends/leaderboard')">
+          <template #icon><n-icon><TrophyOutline /></n-icon></template>
+          排行榜
+        </n-button>
+      </div>
     </div>
 
-    <!-- 搜索框 -->
-    <div class="card">
-      <n-input
-        v-model:value="searchQuery"
-        placeholder="搜索用户（输入用户名或昵称）"
-        clearable
-        @update:value="handleSearch"
-      >
-        <template #prefix>
-          <n-icon><SearchOutline /></n-icon>
-        </template>
-      </n-input>
-    </div>
-
-    <!-- 搜索结果 -->
-    <div v-if="searchQuery" class="space-y-4">
-      <div class="flex items-center justify-between">
-        <h2 class="text-lg font-semibold text-gray-800">
-          搜索 "{{ searchQuery }}" 的结果
-          <span v-if="searchResults.length > 0" class="text-sm font-normal text-gray-500">
-            (找到 {{ searchResults.length }} 个用户)
-          </span>
-        </h2>
-        <n-button text @click="clearSearch">清除搜索</n-button>
-      </div>
-
-      <div v-if="searchResults.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        <UserCard
-          v-for="user in searchResults"
-          :key="user.id"
-          :user="user"
-          :is-friend="false"
-        />
-      </div>
-
-      <n-empty v-else description="未找到匹配的用户" class="py-12">
+    <!-- 动态流 -->
+    <n-spin :show="loading && page === 1">
+      <n-empty v-if="!loading && items.length === 0" description="暂无学伴动态，去关注一些同学吧">
         <template #extra>
-          <p class="text-sm text-gray-500 mt-2">
-            尝试搜索用户的用户名或昵称
-          </p>
+          <n-button type="primary" @click="showFriendManager = true">发现学伴</n-button>
         </template>
       </n-empty>
-    </div>
 
-    <!-- 标签页 -->
-    <div v-show="!searchQuery">
-      <n-tabs v-model:value="activeTab" type="line" animated @update:value="loadFriends">
-        <n-tab-pane name="friends" tab="我的好友" />
-        <n-tab-pane name="following" tab="我关注的" />
-        <n-tab-pane name="followers" tab="关注我的" />
-        <n-tab-pane name="recommended" tab="推荐关注" />
-      </n-tabs>
-
-      <n-spin :show="loading">
-        <div v-if="users.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          <UserCard
-            v-for="user in users"
-            :key="user.id"
-            :user="user"
-            :tab-status="user._tabStatus"
-          />
+      <div v-else class="space-y-4">
+        <div v-for="item in items" :key="`${item.type}-${item.id}`" class="card cursor-pointer hover:shadow-md transition-shadow" @click="goToDetail(item)">
+          <div class="flex items-center gap-3 mb-3">
+            <AvatarText :username="item.user?.username" size="md" />
+            <div class="flex-1 min-w-0">
+              <span class="font-medium text-gray-800 cursor-pointer hover:text-primary-600" @click.stop="$router.push(`/users/${item.user?.id}`)">
+                {{ item.user?.profile?.nickname || item.user?.username }}
+              </span>
+              <span class="text-gray-500 text-sm ml-2">{{ getActionText(item.type) }}</span>
+            </div>
+            <n-tag :type="getTagType(item.type)" size="small">{{ getTypeName(item.type) }}</n-tag>
+          </div>
+          <p class="text-gray-700 line-clamp-2">{{ item.content }}</p>
+          <div class="flex items-center gap-3 mt-2 text-xs text-gray-400">
+            <span>{{ formatTime(item.createdAt) }}</span>
+            <span v-if="item.meta?.wordCount">{{ item.meta.wordCount }}字</span>
+            <span v-if="item.meta?.imageCount">{{ item.meta.imageCount }}张图</span>
+            <span v-if="item.meta?.category">{{ item.meta.category }}</span>
+          </div>
         </div>
-        <n-empty v-else description="暂无用户" class="py-12" />
-      </n-spin>
-
-      <div v-if="total > pageSize" class="flex justify-center mt-4">
-        <n-pagination
-          v-model:page="page"
-          :page-count="Math.ceil(total / pageSize)"
-          @update:page="loadFriends"
-        />
       </div>
-    </div>
+
+      <div v-if="hasMore" class="text-center mt-4">
+        <n-button :loading="loadingMore" @click="loadMore">加载更多</n-button>
+      </div>
+    </n-spin>
+
+    <!-- 学伴管理抽屉 -->
+    <n-drawer v-model:show="showFriendManager" :width="400" placement="right">
+      <n-drawer-content title="学伴管理">
+        <n-input v-model:value="searchQuery" placeholder="搜索用户" clearable class="mb-4" @update:value="handleSearch">
+          <template #prefix><n-icon><SearchOutline /></n-icon></template>
+        </n-input>
+
+        <n-tabs v-model:value="friendTab" type="line" size="small">
+          <n-tab-pane name="friends" tab="学伴" />
+          <n-tab-pane name="following" tab="关注" />
+          <n-tab-pane name="followers" tab="粉丝" />
+          <n-tab-pane name="recommended" tab="推荐" />
+        </n-tabs>
+
+        <n-spin :show="friendLoading">
+          <div v-if="searchQuery && searchResults.length > 0" class="space-y-3 mt-3">
+            <UserCard v-for="u in searchResults" :key="u.id" :user="u" :is-friend="false" />
+          </div>
+          <div v-else-if="!searchQuery && friendUsers.length > 0" class="space-y-3 mt-3">
+            <UserCard v-for="u in friendUsers" :key="u.id" :user="u" :tab-status="u._tabStatus" />
+          </div>
+          <n-empty v-else description="暂无用户" class="py-8" />
+        </n-spin>
+      </n-drawer-content>
+    </n-drawer>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
-import { useRouter } from 'vue-router';
-import { useMessage } from 'naive-ui';
-import api from '@/api';
-import { TrophyOutline, SearchOutline } from '@vicons/ionicons5';
-import UserCard from '@/components/UserCard.vue';
+import AvatarText from '@/components/AvatarText.vue'
+import UserCard from '@/components/UserCard.vue'
+import { ref, onMounted, watch } from 'vue'
+import { useRouter } from 'vue-router'
+import { useMessage } from 'naive-ui'
+import { feedAPI } from '@/api'
+import api from '@/api'
+import { formatDistanceToNow } from 'date-fns'
+import { zhCN } from 'date-fns/locale'
+import PersonAdd from '@vicons/ionicons5/es/PersonAdd'
+import TrophyOutline from '@vicons/ionicons5/es/TrophyOutline'
+import SearchOutline from '@vicons/ionicons5/es/SearchOutline'
 
-const router = useRouter();
-const message = useMessage();
+const router = useRouter()
+const message = useMessage()
 
-const loading = ref(false);
-const activeTab = ref('friends');
-const users = ref([]);
-const page = ref(1);
-const pageSize = ref(12);
-const total = ref(0);
-const searchQuery = ref('');
-const searchResults = ref([]);
-let searchTimer = null;
+// 动态流状态
+const items = ref([])
+const loading = ref(false)
+const loadingMore = ref(false)
+const page = ref(1)
+const hasMore = ref(false)
 
-const loadFriends = async () => {
-  loading.value = true;
+// 学伴管理状态
+const showFriendManager = ref(false)
+const friendTab = ref('friends')
+const friendUsers = ref([])
+const friendLoading = ref(false)
+const searchQuery = ref('')
+const searchResults = ref([])
+let searchTimer = null
+
+const formatTime = (date) => {
+  if (!date) return ''
+  return formatDistanceToNow(new Date(date), { addSuffix: true, locale: zhCN })
+}
+
+const getTypeName = (type) => ({ diary: '日记', gallery: '画廊', poetry: '诗词', calligraphy: '书法', achievement: '成就' }[type] || '动态')
+const getTagType = (type) => ({ diary: 'info', gallery: 'success', poetry: 'error', calligraphy: 'warning', achievement: 'default' }[type] || 'default')
+const getActionText = (type) => ({ diary: '写了一篇日记', gallery: '发布了画作', poetry: '创作了诗词', calligraphy: '练习了书法', achievement: '解锁了成就' }[type] || '有新动态')
+
+const goToDetail = (item) => {
+  if (item.link) router.push(item.link)
+}
+
+// 加载动态流
+const loadFeed = async (reset = true) => {
+  if (reset) { page.value = 1; loading.value = true }
+  else loadingMore.value = true
+
   try {
-    const endpoints = {
-      friends: '/follows/friends',
-      following: '/follows/following',
-      followers: '/follows/followers',
-      recommended: '/follows/recommended'
-    };
-
-    const response = await api.get(endpoints[activeTab.value], {
-      params: { page: page.value, limit: pageSize.value }
-    });
-
-    // 根据当前标签给用户添加正确的状态标识
-    const usersWithTabStatus = response.users || response.recommendations || [];
-    users.value = usersWithTabStatus.map(user => ({
-      ...user,
-      _tabStatus: activeTab.value // 记录用户的来源标签页
-    }));
-    total.value = response.total || response.recommendations?.length || 0;
-  } catch (error) {
-    console.error('加载好友失败:', error);
-    message.error(error.error || '加载好友失败');
+    const res = await feedAPI.getFeed({ page: page.value, limit: 20 })
+    const data = res.data?.items || []
+    if (reset) items.value = data
+    else items.value.push(...data)
+    hasMore.value = res.data?.hasMore || false
+  } catch (e) {
+    message.error('加载动态失败')
   } finally {
-    loading.value = false;
+    loading.value = false
+    loadingMore.value = false
   }
-};
+}
 
-// 搜索用户（防抖）
+const loadMore = () => { page.value++; loadFeed(false) }
+
+// 学伴管理
+const loadFriendList = async () => {
+  friendLoading.value = true
+  try {
+    const endpoints = { friends: '/follows/friends', following: '/follows/following', followers: '/follows/followers', recommended: '/follows/recommended' }
+    const res = await api.get(endpoints[friendTab.value], { params: { limit: 20 } })
+    friendUsers.value = (res.users || res.recommendations || []).map(u => ({ ...u, _tabStatus: friendTab.value }))
+  } catch (e) {
+    message.error('加载失败')
+  } finally {
+    friendLoading.value = false
+  }
+}
+
 const handleSearch = () => {
-  if (searchTimer) {
-    clearTimeout(searchTimer);
-  }
-
-  if (!searchQuery.value || searchQuery.value.trim().length === 0) {
-    searchResults.value = [];
-    return;
-  }
-
+  if (searchTimer) clearTimeout(searchTimer)
+  if (!searchQuery.value?.trim()) { searchResults.value = []; return }
   searchTimer = setTimeout(async () => {
     try {
-      const response = await api.get('/follows/recommendations', {
-        params: { search: searchQuery.value.trim(), limit: 20 }
-      });
-      searchResults.value = response.users || [];
-    } catch (error) {
-      console.error('搜索用户失败:', error);
-      message.error('搜索用户失败');
-    }
-  }, 500); // 500ms 防抖
-};
+      const res = await api.get('/follows/recommendations', { params: { search: searchQuery.value.trim(), limit: 20 } })
+      searchResults.value = res.users || []
+    } catch (e) { message.error('搜索失败') }
+  }, 500)
+}
 
-// 清除搜索
-const clearSearch = () => {
-  searchQuery.value = '';
-  searchResults.value = [];
-};
+watch(friendTab, loadFriendList)
+watch(showFriendManager, (v) => { if (v) loadFriendList() })
 
-onMounted(() => loadFriends());
+onMounted(() => loadFeed())
 </script>
+
+<style scoped>
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+</style>

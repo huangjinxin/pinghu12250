@@ -62,46 +62,6 @@
           </div>
         </n-tab-pane>
 
-        <!-- 好友列表 -->
-        <n-tab-pane name="friends" tab="好友列表">
-          <div class="friend-list">
-            <template v-if="friends.length > 0">
-              <div
-                v-for="friend in friends"
-                :key="friend.id"
-                class="friend-item"
-                @click="startNewChat(friend)"
-              >
-                <div class="relative">
-                  <AvatarText :username="friend.username" size="md" />
-                  <div
-                    v-if="isUserOnline(friend.id)"
-                    class="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 border-2 border-white rounded-full"
-                  ></div>
-                </div>
-                <div class="flex-1 min-w-0">
-                  <div class="font-medium text-sm text-gray-800 truncate">
-                    {{ friend.profile?.nickname || friend.username }}
-                  </div>
-                  <div class="text-xs text-gray-500">
-                    {{ isInConversation(friend.id) ? '最近联系' : '点击开始聊天' }}
-                  </div>
-                </div>
-                <div v-if="!isInConversation(friend.id)" class="msg-icon">
-                  <n-icon :size="16"><ChatboxEllipsesOutline /></n-icon>
-                </div>
-              </div>
-            </template>
-            <n-empty v-else description="暂无好友" size="small" class="py-8">
-              <template #extra>
-                <n-button text type="primary" @click="goToFriends">
-                  去添加好友
-                </n-button>
-              </template>
-            </n-empty>
-          </div>
-        </n-tab-pane>
-
         <!-- 系统消息 -->
         <n-tab-pane name="system" :tab="`系统 ${systemUnread > 0 ? `(${systemUnread})` : ''}`">
           <div class="message-list">
@@ -130,8 +90,8 @@
 
       <!-- 底部 -->
       <div class="panel-footer">
-        <n-button text size="small" @click="openChatPanel">
-          查看全部会话
+        <n-button text size="small" @click="goToFriends">
+          查看学习圈动态
         </n-button>
       </div>
     </div>
@@ -140,22 +100,20 @@
 
 <script setup>
 import AvatarText from '@/components/AvatarText.vue'
-import { ref, computed, watch } from 'vue';
+import { ref, computed, watch, onUnmounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useChatStore } from '@/stores/chat';
+import { messageAPI } from '@/api';
 import { useMessage } from 'naive-ui';
 import { formatDistanceToNow } from 'date-fns';
 import { zhCN } from 'date-fns/locale';
-import {
-  ChatbubblesOutline,
-  TrophyOutline,
-  Cart,
-  PersonAdd,
-  PeopleOutline,
-  CheckmarkCircleOutline,
-  ChatboxEllipsesOutline,
-  CloseOutline
-} from '@vicons/ionicons5';
+import ChatbubblesOutline from '@vicons/ionicons5/es/ChatbubblesOutline'
+import TrophyOutline from '@vicons/ionicons5/es/TrophyOutline'
+import Cart from '@vicons/ionicons5/es/Cart'
+import PersonAdd from '@vicons/ionicons5/es/PersonAdd'
+import PeopleOutline from '@vicons/ionicons5/es/PeopleOutline'
+import CheckmarkCircleOutline from '@vicons/ionicons5/es/CheckmarkCircleOutline'
+import CloseOutline from '@vicons/ionicons5/es/CloseOutline'
 
 const router = useRouter();
 const chatStore = useChatStore();
@@ -165,8 +123,6 @@ const showPopover = ref(false);
 const activeTab = ref('chat');
 const hasNewMessage = ref(false);
 let flashTimer = null;
-const friends = ref([]);
-const friendsLoading = ref(false);
 
 // 计算属性
 const conversations = computed(() => chatStore.conversations);
@@ -189,59 +145,27 @@ const formatTime = (date) => {
 // 监听未读消息变化，触发闪动效果
 watch(totalUnread, (newVal, oldVal) => {
   if (newVal > oldVal && newVal > 0) {
-    // 有新消息，触发闪动
     hasNewMessage.value = true;
     if (flashTimer) clearTimeout(flashTimer);
     flashTimer = setTimeout(() => {
       hasNewMessage.value = false;
-    }, 3000); // 闪动3秒
+    }, 3000);
   }
 });
 
-// 监听标签页变化，加载好友列表
-watch(activeTab, (newTab) => {
-  if (newTab === 'friends') {
-    loadFriendsList();
-  }
+onUnmounted(() => {
+  if (flashTimer) clearTimeout(flashTimer);
 });
 
-// 加载好友列表
-const loadFriendsList = async () => {
-  friendsLoading.value = true;
-  try {
-    await chatStore.syncFriends();
-    friends.value = chatStore.allFriends;
-  } catch (error) {
-    console.error('加载好友列表失败:', error);
-    message.error('加载好友列表失败');
-  } finally {
-    friendsLoading.value = false;
+// 打开聊天（标记已读并跳转到好友主页）
+const openChat = async (conv) => {
+  if (conv.unreadCount > 0) {
+    try {
+      await messageAPI.markChatRead(conv.id);
+      conv.unreadCount = 0;
+    } catch (e) { /* ignore */ }
   }
-};
-
-// 检查好友是否在会话列表中
-const isInConversation = (friendId) => {
-  return conversations.value.some(c => c.id === friendId);
-};
-
-// 开始新的聊天
-const startNewChat = async (friend) => {
-  try {
-    await chatStore.startNewChat(friend);
-    message.success('正在打开聊天窗口...');
-    // 关闭消息中心弹窗
-    showPopover.value = false;
-  } catch (error) {
-    console.error('开始聊天失败:', error);
-    message.error('开始聊天失败，请重试');
-  }
-};
-
-// 打开聊天 - 现在改为打开聊天面板
-const openChat = (conv) => {
-  // 打开聊天面板
-  chatStore.requestOpenPanel();
-  // 关闭消息中心弹窗
+  router.push(`/users/${conv.id}`);
   showPopover.value = false;
 };
 
@@ -298,12 +222,6 @@ const getSystemMessageColor = (type) => {
     SYSTEM_TASK: '#6366f1'
   };
   return colors[type] || '#6b7280';
-};
-
-// 打开聊天面板
-const openChatPanel = () => {
-  chatStore.requestOpenPanel();
-  showPopover.value = false;
 };
 
 // 关闭消息中心弹窗
@@ -365,18 +283,5 @@ const goToFriends = () => {
 
 .panel-footer {
   @apply px-4 py-2 border-t border-gray-100 text-center;
-}
-
-.friend-list {
-  @apply max-h-96 overflow-y-auto;
-}
-
-.friend-item {
-  @apply flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors;
-  @apply hover:bg-gray-50;
-}
-
-.friend-item .msg-icon {
-  @apply text-gray-400 hover:text-primary-500 transition-colors;
 }
 </style>

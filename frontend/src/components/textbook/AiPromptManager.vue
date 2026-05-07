@@ -118,7 +118,11 @@
 <script setup>
 import { ref, onMounted, h } from 'vue';
 import { useMessage, useDialog } from 'naive-ui';
-import { Add, EllipsisVertical, TrashOutline, CheckmarkCircle, BanOutline } from '@vicons/ionicons5';
+import Add from '@vicons/ionicons5/es/Add'
+import EllipsisVertical from '@vicons/ionicons5/es/EllipsisVertical'
+import TrashOutline from '@vicons/ionicons5/es/TrashOutline'
+import CheckmarkCircle from '@vicons/ionicons5/es/CheckmarkCircle'
+import BanOutline from '@vicons/ionicons5/es/BanOutline'
 import { NIcon } from 'naive-ui';
 import { aiPromptAPI } from '@/api/index';
 

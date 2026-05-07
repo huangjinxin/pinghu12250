@@ -158,13 +158,11 @@ import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useMessage } from 'naive-ui';
 import api from '@/api';
-import {
-  SearchOutline,
-  CodeSlashOutline,
-  LogoUsd,
-  CopyOutline,
-  DownloadOutline,
-} from '@vicons/ionicons5';
+import SearchOutline from '@vicons/ionicons5/es/SearchOutline'
+import CodeSlashOutline from '@vicons/ionicons5/es/CodeSlashOutline'
+import LogoUsd from '@vicons/ionicons5/es/LogoUsd'
+import CopyOutline from '@vicons/ionicons5/es/CopyOutline'
+import DownloadOutline from '@vicons/ionicons5/es/DownloadOutline'
 import { formatDistanceToNow } from 'date-fns';
 import { zhCN } from 'date-fns/locale';
 

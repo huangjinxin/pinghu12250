@@ -8,7 +8,7 @@ const prisma = require('../lib/prisma');
 // 获取所有校区
 exports.getCampuses = async (req, res, next) => {
   try {
-    const campuses = await prisma.campus.findMany({
+    const campuses = await prisma.school.findMany({
       include: {
         _count: {
           select: {
@@ -31,13 +31,13 @@ exports.getCampus = async (req, res, next) => {
   try {
     const { id } = req.params;
 
-    const campus = await prisma.campus.findUnique({
+    const campus = await prisma.school.findUnique({
       where: { id },
       include: {
         classes: {
           include: {
             _count: {
-              select: { students: true },
+              select: { users: true },
             },
           },
         },
@@ -54,7 +54,18 @@ exports.getCampus = async (req, res, next) => {
       return res.status(404).json({ error: '校区不存在' });
     }
 
-    res.json(campus);
+    res.json({
+      ...campus,
+      classes: campus.classes.map(classItem => ({
+        ...classItem,
+        campusId: classItem.schoolId,
+        campus: campus,
+        _count: {
+          ...classItem._count,
+          students: classItem._count?.users || 0,
+        },
+      })),
+    });
   } catch (error) {
     next(error);
   }
@@ -69,7 +80,7 @@ exports.createCampus = async (req, res, next) => {
       return res.status(400).json({ error: '校区名称为必填项' });
     }
 
-    const campus = await prisma.campus.create({
+    const campus = await prisma.school.create({
       data: { name, address, phone },
     });
 
@@ -91,7 +102,7 @@ exports.updateCampus = async (req, res, next) => {
     const { id } = req.params;
     const { name, address, phone } = req.body;
 
-    const campus = await prisma.campus.update({
+    const campus = await prisma.school.update({
       where: { id },
       data: { name, address, phone },
     });
@@ -116,7 +127,7 @@ exports.deleteCampus = async (req, res, next) => {
   try {
     const { id } = req.params;
 
-    await prisma.campus.delete({
+    await prisma.school.delete({
       where: { id },
     });
 

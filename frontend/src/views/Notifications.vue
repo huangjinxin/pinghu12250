@@ -218,16 +218,14 @@ import { useRouter } from 'vue-router';
 import { useMessage } from 'naive-ui';
 import { formatDistanceToNow } from 'date-fns';
 import { zhCN } from 'date-fns/locale';
-import {
-  NotificationsOutline,
-  CheckmarkCircleOutline,
-  InformationCircleOutline,
-  WarningOutline,
-  ChatbubbleOutline,
-  TrophyOutline,
-  DocumentTextOutline,
-  EllipsisVerticalOutline,
-} from '@vicons/ionicons5';
+import NotificationsOutline from '@vicons/ionicons5/es/NotificationsOutline'
+import CheckmarkCircleOutline from '@vicons/ionicons5/es/CheckmarkCircleOutline'
+import InformationCircleOutline from '@vicons/ionicons5/es/InformationCircleOutline'
+import WarningOutline from '@vicons/ionicons5/es/WarningOutline'
+import ChatbubbleOutline from '@vicons/ionicons5/es/ChatbubbleOutline'
+import TrophyOutline from '@vicons/ionicons5/es/TrophyOutline'
+import DocumentTextOutline from '@vicons/ionicons5/es/DocumentTextOutline'
+import EllipsisVerticalOutline from '@vicons/ionicons5/es/EllipsisVerticalOutline'
 
 const router = useRouter();
 const message = useMessage();

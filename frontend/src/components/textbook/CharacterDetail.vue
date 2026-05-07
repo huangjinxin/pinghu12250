@@ -31,7 +31,7 @@
 
 <script setup>
 import { ref, watch } from 'vue';
-import { VolumeHighOutline } from '@vicons/ionicons5';
+import VolumeHighOutline from '@vicons/ionicons5/es/VolumeHighOutline'
 import { lookupCharacter } from '@/api/dict';
 import { speak, isSpeaking } from '@/utils/speechService';
 

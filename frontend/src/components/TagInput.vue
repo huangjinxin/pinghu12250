@@ -42,7 +42,7 @@
 import { ref, watch, computed } from 'vue';
 import { useMessage } from 'naive-ui';
 import api from '@/api';
-import { AddOutline } from '@vicons/ionicons5';
+import AddOutline from '@vicons/ionicons5/es/AddOutline'
 
 const props = defineProps({
   modelValue: {

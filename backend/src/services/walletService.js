@@ -35,23 +35,23 @@ class WalletService {
    * @param {string} type - 交易类型
    * @param {string} description - 描述
    * @param {object} options - 额外选项
+   * @param {object} tx - 可选的事务实例
    * @returns {Promise<{success: boolean, wallet: object, transaction: object}>}
    */
-  async addCoins(userId, amount, type, description, options = {}) {
+  async addCoins(userId, amount, type, description, options = {}, tx = null) {
     try {
       const { relatedType, relatedId } = options;
 
       // 确保金额为正数
       const coinAmount = Math.abs(amount);
-
-      const result = await prisma.$transaction(async (tx) => {
+      const execute = async (client) => {
         // 获取或创建钱包
-        let wallet = await tx.wallet.findUnique({
+        let wallet = await client.wallet.findUnique({
           where: { userId },
         });
 
         if (!wallet) {
-          wallet = await tx.wallet.create({
+          wallet = await client.wallet.create({
             data: {
               userId,
               balance: 0,
@@ -60,7 +60,7 @@ class WalletService {
         }
 
         // 创建交易记录
-        const transaction = await tx.walletTransaction.create({
+        const transaction = await client.walletTransaction.create({
           data: {
             walletId: wallet.id,
             amount: coinAmount,
@@ -72,7 +72,7 @@ class WalletService {
         });
 
         // 更新钱包余额
-        wallet = await tx.wallet.update({
+        wallet = await client.wallet.update({
           where: { id: wallet.id },
           data: {
             balance: {
@@ -82,7 +82,9 @@ class WalletService {
         });
 
         return { wallet, transaction };
-      });
+      };
+
+      const result = tx ? await execute(tx) : await prisma.$transaction(execute);
 
       return {
         success: true,
@@ -101,18 +103,18 @@ class WalletService {
    * @param {string} type - 交易类型
    * @param {string} description - 描述
    * @param {object} options - 额外选项
+   * @param {object} tx - 可选的事务实例
    * @returns {Promise<{success: boolean, wallet: object, transaction: object}>}
    */
-  async deductCoins(userId, amount, type, description, options = {}) {
+  async deductCoins(userId, amount, type, description, options = {}, tx = null) {
     try {
       const { relatedType, relatedId } = options;
 
       // 确保金额为正数
       const coinAmount = Math.abs(amount);
-
-      const result = await prisma.$transaction(async (tx) => {
+      const execute = async (client) => {
         // 获取钱包
-        const wallet = await tx.wallet.findUnique({
+        const wallet = await client.wallet.findUnique({
           where: { userId },
         });
 
@@ -126,7 +128,7 @@ class WalletService {
         }
 
         // 创建交易记录
-        const transaction = await tx.walletTransaction.create({
+        const transaction = await client.walletTransaction.create({
           data: {
             walletId: wallet.id,
             amount: -coinAmount,
@@ -138,7 +140,7 @@ class WalletService {
         });
 
         // 更新钱包余额
-        const updatedWallet = await tx.wallet.update({
+        const updatedWallet = await client.wallet.update({
           where: { id: wallet.id },
           data: {
             balance: {
@@ -148,7 +150,9 @@ class WalletService {
         });
 
         return { wallet: updatedWallet, transaction };
-      });
+      };
+
+      const result = tx ? await execute(tx) : await prisma.$transaction(execute);
 
       return {
         success: true,

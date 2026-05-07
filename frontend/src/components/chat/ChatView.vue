@@ -47,7 +47,7 @@
 
 <script setup>
 import { ref, watch, nextTick } from 'vue';
-import { ChevronBackOutline } from '@vicons/ionicons5';
+import ChevronBackOutline from '@vicons/ionicons5/es/ChevronBackOutline'
 import AvatarText from '@/components/AvatarText.vue';
 import MessageList from './MessageList.vue';
 import MessageInput from './MessageInput.vue';

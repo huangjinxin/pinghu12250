@@ -1,7 +1,7 @@
 <template>
   <div class="space-y-6">
     <!-- 页面标题 -->
-    <div>
+    <div v-if="!embedded">
       <h1 class="text-2xl font-bold text-gray-800">活动日志</h1>
       <p class="text-gray-500 mt-1">查看系统所有用户的操作记录</p>
     </div>
@@ -84,6 +84,8 @@
 <script setup>
 import AvatarText from '@/components/AvatarText.vue'
 import { ref, reactive, onMounted } from 'vue';
+
+defineProps({ embedded: { type: Boolean, default: false } });
 import { useMessage } from 'naive-ui';
 import { adminAPI } from '@/api';
 import { format, formatDistanceToNow } from 'date-fns';

@@ -51,7 +51,8 @@
 
 <script setup>
 import { useRouter } from 'vue-router';
-import { PlayOutline, GameControllerOutline } from '@vicons/ionicons5';
+import PlayOutline from '@vicons/ionicons5/es/PlayOutline'
+import GameControllerOutline from '@vicons/ionicons5/es/GameControllerOutline'
 
 const router = useRouter();
 

@@ -21,7 +21,8 @@
     <div v-else class="message-bubble">
       <div class="message-text">{{ message.content }}</div>
       <div class="message-time">{{ formattedTime }}</div>
-      <div v-if="message.status === 'sending'" class="message-status">发送中</div>
+      <div v-if="message.pendingReply" class="message-status">勤学好问正在思考中</div>
+      <div v-else-if="message.status === 'sending' || message.pending" class="message-status">发送中</div>
       <div v-else-if="message.status === 'failed'" class="message-status failed">发送失败</div>
     </div>
 

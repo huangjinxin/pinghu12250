@@ -29,16 +29,14 @@
 <script setup>
 import { computed } from 'vue';
 import { useRouter } from 'vue-router';
-import {
-  BookOutline,
-  DocumentTextOutline,
-  BrushOutline,
-  LibraryOutline,
-  GameControllerOutline,
-  ChevronForwardOutline,
-  TrophyOutline,
-  HelpCircleOutline
-} from '@vicons/ionicons5';
+import BookOutline from '@vicons/ionicons5/es/BookOutline'
+import DocumentTextOutline from '@vicons/ionicons5/es/DocumentTextOutline'
+import BrushOutline from '@vicons/ionicons5/es/BrushOutline'
+import LibraryOutline from '@vicons/ionicons5/es/LibraryOutline'
+import GameControllerOutline from '@vicons/ionicons5/es/GameControllerOutline'
+import ChevronForwardOutline from '@vicons/ionicons5/es/ChevronForwardOutline'
+import TrophyOutline from '@vicons/ionicons5/es/TrophyOutline'
+import HelpCircleOutline from '@vicons/ionicons5/es/HelpCircleOutline'
 
 const props = defineProps({
   shareData: {

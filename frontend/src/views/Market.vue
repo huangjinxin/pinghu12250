@@ -10,7 +10,7 @@
           <n-icon size="20" color="#f59e0b"><Wallet /></n-icon>
           <span class="font-bold text-yellow-600">{{ wallet.balance || 0 }}</span>
         </div>
-        <n-button @click="$router.push('/wallet')">我的钱包</n-button>
+        <n-button @click="$router.push('/wallet')">成长存折</n-button>
         <n-button type="primary" @click="$router.push('/my-shop')">我的商店</n-button>
       </div>
     </div>
@@ -68,7 +68,8 @@ import { ref, reactive, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useMessage } from 'naive-ui';
 import { walletAPI } from '@/api';
-import { Wallet, LogoUsd } from '@vicons/ionicons5';
+import Wallet from '@vicons/ionicons5/es/Wallet'
+import LogoUsd from '@vicons/ionicons5/es/LogoUsd'
 import PurchaseConfirmModal from '@/components/PurchaseConfirmModal.vue';
 
 const router = useRouter();

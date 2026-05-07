@@ -99,7 +99,8 @@ import { useRoute, useRouter } from 'vue-router';
 import { searchAPI } from '@/api';
 import { formatDistanceToNow } from 'date-fns';
 import { zhCN } from 'date-fns/locale';
-import { SearchOutline, ChevronForwardOutline } from '@vicons/ionicons5';
+import SearchOutline from '@vicons/ionicons5/es/SearchOutline'
+import ChevronForwardOutline from '@vicons/ionicons5/es/ChevronForwardOutline'
 
 const route = useRoute();
 const router = useRouter();

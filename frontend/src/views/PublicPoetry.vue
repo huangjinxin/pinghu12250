@@ -46,6 +46,15 @@
             class="author-select"
             @update:value="handleAuthorChange"
           />
+
+          <n-select
+            v-model:value="selectedType"
+            :options="typeOptions"
+            placeholder="全部类型"
+            clearable
+            class="sort-select"
+            @update:value="handleTypeChange"
+          />
         </div>
 
         <!-- 统计信息 -->
@@ -185,14 +194,12 @@
 import { ref, computed, onMounted, watch, nextTick } from 'vue';
 import { useRouter } from 'vue-router';
 import { useMessage } from 'naive-ui';
-import {
-  SearchOutline,
-  EyeOutline,
-  HeartOutline,
-  ShareSocialOutline,
-  CloseOutline,
-  OpenOutline,
-} from '@vicons/ionicons5';
+import SearchOutline from '@vicons/ionicons5/es/SearchOutline'
+import EyeOutline from '@vicons/ionicons5/es/EyeOutline'
+import HeartOutline from '@vicons/ionicons5/es/HeartOutline'
+import ShareSocialOutline from '@vicons/ionicons5/es/ShareSocialOutline'
+import CloseOutline from '@vicons/ionicons5/es/CloseOutline'
+import OpenOutline from '@vicons/ionicons5/es/OpenOutline'
 import axios from 'axios';
 
 const message = useMessage();
@@ -213,6 +220,7 @@ const pagination = ref({
 const searchQuery = ref('');
 const sortBy = ref('latest');
 const selectedAuthor = ref(null);
+const selectedType = ref(null);
 const currentPage = ref(1);
 
 // 预览状态
@@ -224,6 +232,14 @@ const previewFrame = ref(null);
 const sortOptions = [
   { label: '最新发布', value: 'latest' },
   { label: '最多点赞', value: 'popular' },
+];
+
+const typeOptions = [
+  { label: '诗', value: '诗' },
+  { label: '词', value: '词' },
+  { label: '古文', value: '古文' },
+  { label: '现代文', value: '现代文' },
+  { label: '其他', value: '其他' },
 ];
 
 // 生成预览用的 HTML（注入覆盖样式让内容铺开）
@@ -289,6 +305,7 @@ const loadWorks = async () => {
   loading.value = true;
   try {
     const params = {
+      category: 'poetry',
       page: currentPage.value,
       limit: pagination.value.limit,
       sort: sortBy.value,
@@ -302,12 +319,16 @@ const loadWorks = async () => {
       params.author = selectedAuthor.value;
     }
 
-    const response = await axios.get('/api/poetry-works/public', { params });
-    works.value = response.data.works || [];
-    authors.value = response.data.authors || [];
+    if (selectedType.value) {
+      params.type = selectedType.value;
+    }
+
+    const response = await axios.get('/api/creative-works/public', { params });
+    works.value = response.data?.data?.works || [];
+    authors.value = response.data?.data?.authors || [];
     pagination.value = {
       ...pagination.value,
-      ...response.data.pagination,
+      ...response.data?.data?.pagination,
     };
   } catch (error) {
     console.error('加载诗词作品失败:', error);
@@ -335,6 +356,11 @@ const handleAuthorChange = () => {
   loadWorks();
 };
 
+const handleTypeChange = () => {
+  currentPage.value = 1;
+  loadWorks();
+};
+
 // 分页变化
 const handlePageChange = () => {
   loadWorks();
@@ -348,6 +374,7 @@ const openPreview = (work) => {
   // 使用 nextTick 确保 DOM 更新后再设置 iframe 内容
   nextTick(() => {
     if (previewFrame.value && work.htmlCode) {
+      // 直接使用原始HTML代码
       previewFrame.value.srcdoc = work.htmlCode;
     }
   });

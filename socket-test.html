@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Socket.IO IM 测试工具</title>
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        .panel {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        h2 {
+            margin-top: 0;
+            color: #333;
+        }
+        .status {
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+            font-weight: 500;
+        }
+        .status.connected {
+            background: #d4edda;
+            color: #155724;
+        }
+        .status.disconnected {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        input, button {
+            width: 100%;
+            padding: 10px;
+            margin: 5px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-weight: 500;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .log {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 10px;
+            height: 300px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+        }
+        .log-entry {
+            margin: 5px 0;
+            padding: 5px;
+            border-left: 3px solid #007bff;
+            background: white;
+        }
+        .log-entry.error {
+            border-left-color: #dc3545;
+            background: #fff5f5;
+        }
+        .log-entry.success {
+            border-left-color: #28a745;
+            background: #f0fff4;
+        }
+        .messages {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 10px;
+            height: 200px;
+            overflow-y: auto;
+        }
+        .message {
+            margin: 8px 0;
+            padding: 8px 12px;
+            border-radius: 16px;
+            max-width: 70%;
+        }
+        .message.sent {
+            background: #007bff;
+            color: white;
+            margin-left: auto;
+            text-align: right;
+        }
+        .message.received {
+            background: #e9ecef;
+            color: #333;
+        }
+        .info {
+            background: #e7f3ff;
+            border: 1px solid #b3d9ff;
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+            font-size: 13px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 Socket.IO IM 测试工具</h1>
+
+    <div class="info">
+        <strong>测试账号：</strong><br>
+        账号1: xiaoming / 123456<br>
+        账号2: parent_ming / 123456<br>
+        <strong>提示：</strong>在两个浏览器窗口中分别登录两个账号进行测试
+    </div>
+
+    <div class="container">
+        <!-- 左侧：连接控制 -->
+        <div class="panel">
+            <h2>连接控制</h2>
+            <div id="status" class="status disconnected">未连接</div>
+
+            <input type="text" id="username" placeholder="用户名 (xiaoming)" value="xiaoming">
+            <input type="password" id="password" placeholder="密码" value="123456">
+            <button onclick="login()">1. 登录获取Token</button>
+
+            <input type="text" id="token" placeholder="JWT Token (自动填充)" readonly>
+            <button onclick="connectSocket()" id="connectBtn" disabled>2. 连接Socket</button>
+            <button onclick="disconnectSocket()" id="disconnectBtn" disabled>断开连接</button>
+
+            <h3>发送消息</h3>
+            <input type="text" id="toUserId" placeholder="接收者用户ID">
+            <input type="text" id="messageContent" placeholder="消息内容">
+            <button onclick="sendMessage()" id="sendBtn" disabled>发送消息</button>
+
+            <h3>其他操作</h3>
+            <button onclick="syncMessages()" id="syncBtn" disabled>同步消息</button>
+            <button onclick="clearLogs()">清空日志</button>
+        </div>
+
+        <!-- 右侧：日志和消息 -->
+        <div class="panel">
+            <h2>事件日志</h2>
+            <div id="logs" class="log"></div>
+
+            <h2 style="margin-top: 20px;">消息列表</h2>
+            <div id="messages" class="messages"></div>
+        </div>
+    </div>
+
+    <script>
+        let socket = null;
+        let currentUserId = null;
+        let currentToken = null;
+
+        // 日志函数
+        function log(message, type = 'info') {
+            const logsDiv = document.getElementById('logs');
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            logsDiv.appendChild(entry);
+            logsDiv.scrollTop = logsDiv.scrollHeight;
+        }
+
+        function clearLogs() {
+            document.getElementById('logs').innerHTML = '';
+            document.getElementById('messages').innerHTML = '';
+        }
+
+        // 显示消息
+        function displayMessage(message, isSent = false) {
+            const messagesDiv = document.getElementById('messages');
+            const msgDiv = document.createElement('div');
+            msgDiv.className = `message ${isSent ? 'sent' : 'received'}`;
+            msgDiv.textContent = message.content;
+            messagesDiv.appendChild(msgDiv);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+
+        // 1. 登录
+        async function login() {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+
+            log(`正在登录: ${username}...`);
+
+            try {
+                const response = await fetch('http://localhost:12251/api/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+
+                const data = await response.json();
+
+                if (data.token) {
+                    currentToken = data.token;
+                    currentUserId = data.user.id;
+                    document.getElementById('token').value = currentToken;
+                    document.getElementById('connectBtn').disabled = false;
+                    log(`✅ 登录成功! 用户ID: ${currentUserId}`, 'success');
+                } else {
+                    log(`❌ 登录失败: ${data.error}`, 'error');
+                }
+            } catch (error) {
+                log(`❌ 登录错误: ${error.message}`, 'error');
+            }
+        }
+
+        // 2. 连接Socket
+        function connectSocket() {
+            if (!currentToken) {
+                log('❌ 请先登录', 'error');
+                return;
+            }
+
+            log('正在连接Socket.IO...');
+
+            socket = io('http://localhost:12251', {
+                auth: { token: currentToken },
+                transports: ['polling', 'websocket']
+            });
+
+            // 连接成功
+            socket.on('connect', () => {
+                log('✅ Socket连接成功!', 'success');
+                document.getElementById('status').textContent = '已连接';
+                document.getElementById('status').className = 'status connected';
+                document.getElementById('sendBtn').disabled = false;
+                document.getElementById('syncBtn').disabled = false;
+                document.getElementById('disconnectBtn').disabled = false;
+                document.getElementById('connectBtn').disabled = true;
+            });
+
+            // 连接错误
+            socket.on('connect_error', (error) => {
+                log(`❌ 连接错误: ${error.message}`, 'error');
+            });
+
+            // 认证错误
+            socket.on('auth_error', (data) => {
+                log(`❌ 认证失败: ${data.error}`, 'error');
+            });
+
+            // 断开连接
+            socket.on('disconnect', () => {
+                log('⚠️ Socket已断开');
+                document.getElementById('status').textContent = '未连接';
+                document.getElementById('status').className = 'status disconnected';
+                document.getElementById('sendBtn').disabled = true;
+                document.getElementById('syncBtn').disabled = true;
+                document.getElementById('disconnectBtn').disabled = true;
+                document.getElementById('connectBtn').disabled = false;
+            });
+
+            // 收到新消息
+            socket.on('new_message', (message) => {
+                log(`📨 收到新消息: ${message.content}`, 'success');
+                displayMessage(message, false);
+            });
+
+            // 消息发送确认
+            socket.on('message_sent', (data) => {
+                log(`✅ 消息发送成功: ${data.message.content}`, 'success');
+                displayMessage(data.message, true);
+            });
+
+            // 消息发送失败
+            socket.on('message_error', (data) => {
+                log(`❌ 消息发送失败: ${data.error}`, 'error');
+            });
+
+            // 同步结果
+            socket.on('sync_result', (data) => {
+                log(`📥 同步到 ${data.messages.length} 条消息`, 'success');
+                data.messages.forEach(msg => {
+                    displayMessage(msg, msg.fromUserId === currentUserId);
+                });
+            });
+
+            // 用户上线
+            socket.on('user_online', (data) => {
+                log(`👤 用户上线: ${data.username}`);
+            });
+
+            // 用户下线
+            socket.on('user_offline', (data) => {
+                log(`👤 用户下线: ${data.username}`);
+            });
+
+            // 监听所有事件（调试用）
+            socket.onAny((eventName, ...args) => {
+                console.log(`[Socket事件] ${eventName}:`, args);
+            });
+        }
+
+        // 断开连接
+        function disconnectSocket() {
+            if (socket) {
+                socket.disconnect();
+                log('已主动断开连接');
+            }
+        }
+
+        // 发送消息
+        function sendMessage() {
+            const toUserId = document.getElementById('toUserId').value;
+            const content = document.getElementById('messageContent').value;
+
+            if (!toUserId || !content) {
+                log('❌ 请填写接收者ID和消息内容', 'error');
+                return;
+            }
+
+            const tempId = Date.now().toString();
+            log(`📤 发送消息: ${content} -> ${toUserId}`);
+
+            socket.emit('send_message', {
+                toUserId,
+                content,
+                tempId
+            });
+
+            document.getElementById('messageContent').value = '';
+        }
+
+        // 同步消息
+        function syncMessages() {
+            log('🔄 请求同步消息...');
+            socket.emit('sync_messages', {
+                lastMessageId: '0'
+            });
+        }
+    </script>
+</body>
+</html>

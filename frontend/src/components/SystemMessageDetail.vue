@@ -64,14 +64,12 @@ import { useRouter } from 'vue-router';
 import { useChatStore } from '@/stores/chat';
 import { format } from 'date-fns';
 import { zhCN } from 'date-fns/locale';
-import {
-  TrophyOutline,
-  Cart,
-  PersonAdd,
-  PeopleOutline,
-  CheckmarkCircleOutline,
-  NotificationsOutline
-} from '@vicons/ionicons5';
+import TrophyOutline from '@vicons/ionicons5/es/TrophyOutline'
+import Cart from '@vicons/ionicons5/es/Cart'
+import PersonAdd from '@vicons/ionicons5/es/PersonAdd'
+import PeopleOutline from '@vicons/ionicons5/es/PeopleOutline'
+import CheckmarkCircleOutline from '@vicons/ionicons5/es/CheckmarkCircleOutline'
+import NotificationsOutline from '@vicons/ionicons5/es/NotificationsOutline'
 
 const props = defineProps({
   item: {

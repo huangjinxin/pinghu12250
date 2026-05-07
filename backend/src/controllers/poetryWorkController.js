@@ -4,6 +4,7 @@
 
 const pointService = require('../services/pointService');
 const achievementService = require('../services/achievementService');
+const { generatePoetryCover, deletePoetryCover } = require('../services/poetryCoverService');
 
 // 使用 Prisma 单例
 const prisma = require('../lib/prisma');
@@ -13,7 +14,7 @@ const prisma = require('../lib/prisma');
  */
 exports.getWorks = async (req, res, next) => {
   try {
-    const { userId, myOnly, search, page = 1, limit = 20 } = req.query;
+    const { userId, myOnly, search, page = 1, limit = 20, sort = 'latest', author } = req.query;
     const skip = (parseInt(page) - 1) * parseInt(limit);
 
     let where = {};
@@ -32,12 +33,33 @@ exports.getWorks = async (req, res, next) => {
       ];
     }
 
+    // 作者筛选
+    if (author) {
+      where.authorId = author;
+      // 如果筛选作者且不是自己，只显示已审核的
+      if (author !== req.user.id) {
+        where.status = 'APPROVED';
+        delete where.OR;
+      }
+    }
+
     // 搜索功能：支持标题搜索
     if (search) {
       where.title = { contains: search, mode: 'insensitive' };
     }
 
-    const [works, total] = await Promise.all([
+    // 排序方式
+    let orderBy;
+    if (sort === 'popular') {
+      orderBy = [
+        { likes: { _count: 'desc' } },
+        { createdAt: 'desc' }
+      ];
+    } else {
+      orderBy = { createdAt: 'desc' };
+    }
+
+    const [works, total, authorsList] = await Promise.all([
       prisma.poetryWork.findMany({
         where,
         include: {
@@ -59,17 +81,40 @@ exports.getWorks = async (req, res, next) => {
             },
           },
         },
-        orderBy: {
-          createdAt: 'desc',
-        },
+        orderBy,
         skip,
         take: parseInt(limit),
       }),
       prisma.poetryWork.count({ where }),
+      // 获取所有有作品的作者列表（用于筛选）
+      prisma.poetryWork.findMany({
+        where: { status: 'APPROVED' },
+        select: {
+          author: {
+            select: {
+              id: true,
+              username: true,
+              profile: {
+                select: {
+                  nickname: true,
+                },
+              },
+            },
+          },
+        },
+        distinct: ['authorId'],
+      }),
     ]);
+
+    // 格式化作者列表
+    const authors = authorsList.map(w => ({
+      id: w.author.id,
+      name: w.author.profile?.nickname || w.author.username,
+    }));
 
     res.json({
       works,
+      authors,
       pagination: {
         page: parseInt(page),
         limit: parseInt(limit),
@@ -465,6 +510,19 @@ exports.createWork = async (req, res, next) => {
       },
     });
 
+    // 生成封面图片
+    try {
+      const coverImage = await generatePoetryCover(htmlCode, title, work.id);
+      await prisma.poetryWork.update({
+        where: { id: work.id },
+        data: { coverImage }
+      });
+      work.coverImage = coverImage;
+    } catch (coverError) {
+      console.error('封面生成失败:', coverError);
+      // 封面生成失败不影响作品创建
+    }
+
     // 诗词作品直接进入待审核状态，管理员在后台审核
     // 审核通过后会自动奖励5积分
     res.status(201).json({
@@ -501,12 +559,30 @@ exports.updateWork = async (req, res, next) => {
       return res.status(403).json({ error: '无权编辑该作品' });
     }
 
+    // 删除旧封面
+    if (work.coverImage) {
+      try {
+        await deletePoetryCover(work.coverImage);
+      } catch (e) {
+        console.error('删除旧封面失败:', e);
+      }
+    }
+
+    // 生成新封面
+    let coverImage = null;
+    try {
+      coverImage = await generatePoetryCover(htmlCode, title, id);
+    } catch (coverError) {
+      console.error('封面生成失败:', coverError);
+    }
+
     // 更新作品，重新进入审核流程
     const updatedWork = await prisma.poetryWork.update({
       where: { id },
       data: {
         title,
         htmlCode,
+        coverImage,
         status: 'PENDING', // 修改后重新进入待审核状态
         reviewReason: null, // 清除之前的拒绝原因
       },
@@ -632,6 +708,15 @@ exports.deleteWork = async (req, res, next) => {
       return res.status(403).json({ error: '无权删除该作品' });
     }
 
+    // 删除封面图片
+    if (work.coverImage) {
+      try {
+        await deletePoetryCover(work.coverImage);
+      } catch (e) {
+        console.error('删除封面失败:', e);
+      }
+    }
+
     await prisma.poetryWork.delete({
       where: { id },
     });
@@ -699,6 +784,57 @@ exports.toggleLike = async (req, res, next) => {
 
       res.json({ message: isLike ? '点赞成功' : '点踩成功', isLiked: true });
     }
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * 批量生成封面（管理员）
+ * 为没有封面的作品生成封面
+ */
+exports.regenerateCovers = async (req, res, next) => {
+  try {
+    // 获取所有没有封面的作品
+    const works = await prisma.poetryWork.findMany({
+      where: {
+        OR: [
+          { coverImage: null },
+          { coverImage: '' }
+        ]
+      },
+      select: {
+        id: true,
+        title: true,
+        htmlCode: true
+      }
+    });
+
+    let successCount = 0;
+    let failCount = 0;
+    const errors = [];
+
+    for (const work of works) {
+      try {
+        const coverImage = await generatePoetryCover(work.htmlCode, work.title, work.id);
+        await prisma.poetryWork.update({
+          where: { id: work.id },
+          data: { coverImage }
+        });
+        successCount++;
+      } catch (e) {
+        failCount++;
+        errors.push({ id: work.id, title: work.title, error: e.message });
+      }
+    }
+
+    res.json({
+      message: `封面生成完成: 成功 ${successCount} 个, 失败 ${failCount} 个`,
+      total: works.length,
+      successCount,
+      failCount,
+      errors: errors.slice(0, 10) // 只返回前10个错误
+    });
   } catch (error) {
     next(error);
   }

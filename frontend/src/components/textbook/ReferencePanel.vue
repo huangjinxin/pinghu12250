@@ -1,115 +1,71 @@
 <template>
-  <div class="reference-panel" :class="{ collapsed: isCollapsed }">
-    <!-- 面板头部 -->
-    <div class="panel-header" @click="toggleCollapse">
-      <span class="header-title">
-        <n-icon size="16"><BookOutline /></n-icon>
-        即时参考
-      </span>
-      <div class="header-actions">
-        <n-button
-          v-if="referenceItem && !isCollapsed"
-          text
-          size="tiny"
-          @click.stop="clearReference"
-        >
-          清空
-        </n-button>
-        <n-icon size="16" class="collapse-icon">
-          <ChevronDownOutline v-if="!isCollapsed" />
-          <ChevronForwardOutline v-else />
+  <!-- 即时参考条 - 仅在单字典查询成功时显示 -->
+  <div
+    v-if="shouldShow"
+    class="reference-bar"
+  >
+    <!-- 汉字 -->
+    <span class="ref-char">{{ displayData.character }}</span>
+
+    <!-- 分隔符 -->
+    <span class="ref-divider">|</span>
+
+    <!-- 拼音 -->
+    <span class="ref-pinyin" v-if="displayData.pinyin">{{ displayData.pinyin }}</span>
+
+    <!-- 分隔符 -->
+    <span class="ref-divider" v-if="displayData.pinyin">|</span>
+
+    <!-- 简要释义 -->
+    <span class="ref-definition">{{ truncatedDefinition }}</span>
+
+    <!-- 操作图标组 -->
+    <div class="ref-actions">
+      <!-- 朗读 -->
+      <button
+        class="action-btn"
+        :class="{ active: speaking }"
+        @click="speakCharacter"
+        title="朗读"
+      >
+        <n-icon size="16"><VolumeHighOutline /></n-icon>
+      </button>
+
+      <!-- 引用到对话 -->
+      <button
+        class="action-btn"
+        @click="quoteToChat"
+        title="引用到对话"
+      >
+        <n-icon size="16"><ChatboxOutline /></n-icon>
+      </button>
+
+      <!-- 保存到笔记 -->
+      <button
+        class="action-btn"
+        :class="{ active: referenceItem?.saved }"
+        :disabled="saving"
+        @click="toggleSave"
+        :title="referenceItem?.saved ? '已保存' : '保存到笔记'"
+      >
+        <n-icon size="16">
+          <Bookmark v-if="referenceItem?.saved" />
+          <BookmarkOutline v-else />
         </n-icon>
-      </div>
-    </div>
-
-    <!-- 面板内容 -->
-    <div class="panel-content" v-show="!isCollapsed">
-      <!-- 有内容时 -->
-      <div v-if="referenceItem" class="reference-content">
-        <!-- 查字结果 -->
-        <template v-if="referenceItem.type === 'dict'">
-          <CharacterDetail
-            :character="referenceItem.data.character"
-            @loaded="onDataLoaded"
-          />
-        </template>
-
-        <!-- 搜索结果 -->
-        <template v-else-if="referenceItem.type === 'search'">
-          <div class="search-result">
-            <div class="search-query">分析：{{ referenceItem.data.query }}</div>
-            <div class="search-matches" v-if="referenceItem.data.matches?.length">
-              <div
-                v-for="(match, idx) in referenceItem.data.matches.slice(0, 3)"
-                :key="idx"
-                class="match-item"
-                @click="$emit('go-to-page', match.page)"
-              >
-                <span class="match-page">第{{ match.page }}页</span>
-                <span class="match-text">{{ match.text }}</span>
-              </div>
-            </div>
-            <div v-else class="no-matches">未找到匹配内容</div>
-          </div>
-        </template>
-
-        <!-- 来源页码 -->
-        <div class="reference-source" v-if="referenceItem.page">
-          <n-icon size="12"><DocumentOutline /></n-icon>
-          来源：第{{ referenceItem.page }}页
-        </div>
-
-        <!-- 操作按钮 -->
-        <div class="reference-actions">
-          <n-button
-            size="small"
-            quaternary
-            @click="quoteToChat"
-          >
-            <template #icon>
-              <n-icon><ChatboxOutline /></n-icon>
-            </template>
-            引用到对话
-          </n-button>
-          <n-button
-            size="small"
-            quaternary
-            :loading="saving"
-            @click="toggleSave"
-          >
-            <template #icon>
-              <n-icon :color="referenceItem.saved ? '#1890ff' : undefined">
-                <component :is="referenceItem.saved ? Bookmark : BookmarkOutline" />
-              </n-icon>
-            </template>
-            {{ referenceItem.saved ? '已保存' : '保存笔记' }}
-          </n-button>
-        </div>
-      </div>
-
-      <!-- 空状态 -->
-      <div v-else class="empty-state">
-        <n-icon size="24" color="#ccc"><SearchOutline /></n-icon>
-        <p>选中文字后，查询结果将显示在这里</p>
-      </div>
+      </button>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, watch } from 'vue';
+import { ref, computed, watch } from 'vue';
 import { useMessage } from 'naive-ui';
-import {
-  BookOutline,
-  ChevronDownOutline,
-  ChevronForwardOutline,
-  DocumentOutline,
-  ChatboxOutline,
-  SearchOutline,
-  Bookmark,
-  BookmarkOutline
-} from '@vicons/ionicons5';
-import CharacterDetail from './CharacterDetail.vue';
+import VolumeHighOutline from '@vicons/ionicons5/es/VolumeHighOutline'
+import ChatboxOutline from '@vicons/ionicons5/es/ChatboxOutline'
+import Bookmark from '@vicons/ionicons5/es/Bookmark'
+import BookmarkOutline from '@vicons/ionicons5/es/BookmarkOutline'
+import { lookupCharacter } from '@/api/dict';
+import { speak } from '@/utils/speechService';
 import { textbookNoteAPI } from '@/api/index';
 
 const message = useMessage();
@@ -133,50 +89,91 @@ const props = defineProps({
   }
 });
 
-const emit = defineEmits(['update:referenceItem', 'quote-to-chat', 'go-to-page', 'clear']);
+const emit = defineEmits(['update:referenceItem', 'quote-to-chat', 'clear']);
 
 // 状态
-const isCollapsed = ref(false);
 const saving = ref(false);
-const loadedData = ref(null);
+const speaking = ref(false);
+const dictData = ref(null);
+const loading = ref(false);
 
-// 折叠/展开
-const toggleCollapse = () => {
-  isCollapsed.value = !isCollapsed.value;
+// 判断是否显示 - 仅当是单字典查询且有有效数据时显示
+const shouldShow = computed(() => {
+  if (!props.referenceItem) return false;
+  if (props.referenceItem.type !== 'dict') return false;
+
+  // 需要有字典数据
+  const data = dictData.value || props.referenceItem.data;
+  if (!data) return false;
+
+  // 需要有字符
+  return !!data.character;
+});
+
+// 显示数据
+const displayData = computed(() => {
+  return dictData.value || props.referenceItem?.data || {};
+});
+
+// 截断的释义（最多显示40个字符）
+const truncatedDefinition = computed(() => {
+  const def = displayData.value?.definition || '暂无释义';
+  if (def.length > 40) {
+    return def.slice(0, 40) + '...';
+  }
+  return def;
+});
+
+// 加载字典数据
+const loadDictData = async () => {
+  if (!props.referenceItem || props.referenceItem.type !== 'dict') {
+    dictData.value = null;
+    return;
+  }
+
+  const char = props.referenceItem.data?.character;
+  if (!char) {
+    dictData.value = null;
+    return;
+  }
+
+  loading.value = true;
+  try {
+    const result = await lookupCharacter(char);
+    dictData.value = result;
+  } catch (error) {
+    console.error('加载字典数据失败:', error);
+    dictData.value = null;
+  } finally {
+    loading.value = false;
+  }
 };
 
-// 清空参考内容
-const clearReference = () => {
-  emit('clear');
+// 朗读字符
+const speakCharacter = async () => {
+  const char = displayData.value?.character;
+  if (!char) return;
+
+  speaking.value = true;
+  try {
+    await speak(char);
+  } finally {
+    speaking.value = false;
+  }
 };
 
-// 数据加载完成回调
-const onDataLoaded = (data) => {
-  loadedData.value = data;
-};
-
-// 引用到对话
+// 引用到对话 - 切换到 AI 模式并填充模板
 const quoteToChat = () => {
   if (!props.referenceItem) return;
 
-  let quoteText = '';
+  const data = displayData.value;
+  const char = data.character || '';
+  const pinyin = data.pinyin || '';
+  const definition = data.definition || '';
+  const page = props.referenceItem.page || props.currentPage;
 
-  if (props.referenceItem.type === 'dict') {
-    const data = loadedData.value || props.referenceItem.data;
-    const char = data.character || props.referenceItem.data.character;
-    const pinyin = data.pinyin || '';
-    const definition = data.definitions?.[0] || data.definition || '';
-
-    quoteText = `【引用内容】\n查字：${char}（${pinyin}）\n释义：${definition}\n来源：第 ${props.referenceItem.page || props.currentPage} 页`;
-  } else if (props.referenceItem.type === 'search') {
-    const query = props.referenceItem.data.query;
-    const matches = props.referenceItem.data.matches || [];
-    const matchText = matches.length > 0
-      ? `在第 ${matches.map(m => m.page).join(', ')} 页找到`
-      : '未找到匹配';
-
-    quoteText = `【引用内容】\n分析：${query}\n结果：${matchText}`;
-  }
+  // 构建引用模板
+  const quoteText = `关于"${char}"（${pinyin}）：${definition}\n（来源：第${page}页）\n\n请帮我进一步解释这个字的用法。`;
 
   emit('quote-to-chat', quoteText);
 };
@@ -199,14 +196,14 @@ const toggleSave = async () => {
       message.success('已取消保存');
     } else {
       // 保存笔记
-      const data = loadedData.value || props.referenceItem.data;
-      const snippet = buildSnippet(props.referenceItem.type, data);
+      const data = displayData.value;
+      const snippet = `${data.character} [${data.pinyin || ''}] ${data.definition || ''}`.slice(0, 100);
 
       const res = await textbookNoteAPI.create({
         textbookId: props.textbookId,
         sessionId: props.sessionId,
-        sourceType: props.referenceItem.type,
-        query: data.character || data.query || '',
+        sourceType: 'dict',
+        query: data.character || '',
         content: data,
         snippet,
         page: props.referenceItem.page || props.currentPage
@@ -227,186 +224,127 @@ const toggleSave = async () => {
   }
 };
 
-// 构建摘要
-const buildSnippet = (type, data) => {
-  if (type === 'dict') {
-    const char = data.character || '';
-    const pinyin = data.pinyin || '';
-    const def = data.definitions?.[0] || data.definition || '';
-    return `${char} [${pinyin}] ${def}`.slice(0, 100);
-  }
-  if (type === 'search') {
-    return `分析: ${data.query}`.slice(0, 100);
-  }
-  return '';
-};
-
-// 当有新的 referenceItem 时自动展开
+// 当 referenceItem 变化时加载数据
 watch(() => props.referenceItem, (newVal) => {
-  if (newVal) {
-    isCollapsed.value = false;
-    loadedData.value = null;
+  if (newVal && newVal.type === 'dict') {
+    loadDictData();
+  } else {
+    dictData.value = null;
   }
-});
+}, { immediate: true });
 </script>
 
 <style scoped>
-.reference-panel {
-  background: #fff;
-  border-bottom: 2px solid #d0d0d0;
+.reference-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 16px;
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  border-bottom: 1px solid #e2e8f0;
+  min-height: 40px;
   flex-shrink: 0;
 }
 
-.panel-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 12px 16px;
-  cursor: pointer;
-  user-select: none;
-  background: #f0f4f8;
-  border-bottom: 1px solid #d0d0d0;
-  transition: background 0.2s;
-}
-
-.panel-header:hover {
-  background: #e4eaf0;
-}
-
-.header-title {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 15px;
+/* 汉字 */
+.ref-char {
+  font-size: 22px;
   font-weight: 700;
-  color: #1a1a1a;
+  color: #1e293b;
+  line-height: 1;
 }
 
-.header-actions {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.collapse-icon {
-  color: #666;
-  transition: transform 0.2s;
-}
-
-.panel-content {
-  padding: 14px 16px;
-  max-height: 300px;
-  overflow-y: auto;
-  background: #fafbfc;
-}
-
-.reference-content {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.reference-source {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 13px;
-  font-weight: 500;
-  color: #666;
-  padding-top: 10px;
-  border-top: 1px solid #d0d0d0;
-}
-
-.reference-actions {
-  display: flex;
-  gap: 10px;
-  padding-top: 10px;
-}
-
-.reference-actions .n-button {
-  flex: 1;
-  font-weight: 600;
-}
-
-/* 搜索结果样式 */
-.search-result {
-  font-size: 15px;
-}
-
-.search-query {
-  font-weight: 600;
-  color: #1a1a1a;
-  margin-bottom: 10px;
-}
-
-.search-matches {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.match-item {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  padding: 10px 12px;
-  background: #fff;
-  border: 1px solid #d0d0d0;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.match-item:hover {
-  background: #e6f4ff;
-  border-color: #1890ff;
-}
-
-.match-page {
-  flex-shrink: 0;
-  font-size: 13px;
-  font-weight: 600;
-  color: #0066cc;
-  background: #e6f4ff;
-  padding: 4px 8px;
-  border-radius: 4px;
-  border: 1px solid #91caff;
-}
-
-.match-text {
-  color: #333;
+/* 分隔符 */
+.ref-divider {
+  color: #cbd5e1;
   font-size: 14px;
-  line-height: 1.6;
+}
+
+/* 拼音 */
+.ref-pinyin {
+  font-size: 15px;
+  color: #dc2626;
+  font-family: 'Times New Roman', serif;
+  font-style: italic;
+  font-weight: 500;
+}
+
+/* 释义 */
+.ref-definition {
+  flex: 1;
+  font-size: 14px;
+  color: #475569;
+  line-height: 1.4;
   overflow: hidden;
   text-overflow: ellipsis;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
+  white-space: nowrap;
 }
 
-.no-matches {
-  color: #666;
-  font-size: 14px;
-  text-align: center;
-  padding: 20px 0;
-  font-weight: 500;
+/* 操作按钮组 */
+.ref-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+  flex-shrink: 0;
 }
 
-/* 空状态 */
-.empty-state {
-  text-align: center;
-  padding: 28px 16px;
-  color: #666;
+/* 单个操作按钮 */
+.action-btn {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  color: #64748b;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
 }
 
-.empty-state p {
-  margin: 10px 0 0;
-  font-size: 14px;
-  color: #555;
+.action-btn:hover {
+  background: #e2e8f0;
+  color: #334155;
 }
 
-/* 折叠状态 */
-.reference-panel.collapsed .panel-header {
-  border-bottom: none;
+.action-btn:active {
+  transform: scale(0.95);
+}
+
+.action-btn.active {
+  color: #3b82f6;
+  background: #eff6ff;
+}
+
+.action-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* 朗读按钮激活动画 */
+.action-btn.active:first-child {
+  animation: pulse 0.8s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+}
+
+/* 响应式 - 小屏幕隐藏释义文字 */
+@media (max-width: 500px) {
+  .ref-definition {
+    display: none;
+  }
+
+  .ref-divider:last-of-type {
+    display: none;
+  }
 }
 </style>

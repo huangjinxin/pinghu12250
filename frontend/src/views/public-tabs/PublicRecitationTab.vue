@@ -58,7 +58,9 @@
 
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue';
-import { MusicalNotesOutline, PlayOutline, PauseOutline } from '@vicons/ionicons5';
+import MusicalNotesOutline from '@vicons/ionicons5/es/MusicalNotesOutline'
+import PlayOutline from '@vicons/ionicons5/es/PlayOutline'
+import PauseOutline from '@vicons/ionicons5/es/PauseOutline'
 import axios from 'axios';
 
 const loading = ref(false);

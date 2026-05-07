@@ -76,11 +76,9 @@
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue';
 import { useRouter } from 'vue-router';
-import {
-  ArrowBackOutline,
-  ExpandOutline,
-  ContractOutline,
-} from '@vicons/ionicons5';
+import ArrowBackOutline from '@vicons/ionicons5/es/ArrowBackOutline'
+import ExpandOutline from '@vicons/ionicons5/es/ExpandOutline'
+import ContractOutline from '@vicons/ionicons5/es/ContractOutline'
 
 const router = useRouter();
 const gameFrame = ref(null);

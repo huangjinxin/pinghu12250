@@ -5,22 +5,22 @@
 
 // 使用 Prisma 单例
 const prisma = require('../lib/prisma');
+const creditService = require('./creditService');
 
 class PointService {
   /**
-   * 添加积分（带每日限制检查，推荐使用）
+   * 添加积分（推荐使用）
    * @param {string} ruleId - 规则ID（如 D001, R001）
    * @param {string} userId - 用户ID
    * @param {object} options - 选项
    * @param {string} options.targetType - 关联对象类型
    * @param {string} options.targetId - 关联对象ID
    * @param {string} options.description - 自定义描述
-   * @param {boolean} options.skipDailyLimit - 是否跳过每日限制检查（奖罚模块使用）
    * @returns {Promise<{success: boolean, log: object, totalPoints: number, message?: string}>}
    */
   async addPoints(ruleId, userId, options = {}) {
     try {
-      const { targetType, targetId, description, skipDailyLimit = false } = options;
+      const { targetType, targetId, description } = options;
 
       // 1. 查询规则
       const rule = await prisma.pointRule.findUnique({
@@ -35,40 +35,15 @@ class PointService {
         return { success: false, message: `规则 ${ruleId} 未启用` };
       }
 
-      // 2. 检查每日上限（跳过检查或规则未设置上限）
-      if (!skipDailyLimit && rule.dailyLimit > 0) {
+      // 2. 检查单规则每日上限（如果规则设置了上限）
+      if (rule.dailyLimit > 0) {
         const canAdd = await this.checkDailyLimit(userId, ruleId, rule.dailyLimit);
         if (!canAdd) {
           return { success: false, message: '已达到今日上限' };
         }
       }
 
-      // 3. 如果不跳过每日限制，则检查全局每日积分上限
-      if (!skipDailyLimit && rule.points > 0) {
-        const limitStatus = await this.checkDailyPointsLimit(userId);
-
-        // 如果已达上限，不发放积分但返回成功（允许继续提交内容）
-        if (limitStatus.isMaxed) {
-          return {
-            success: true,
-            limited: true,
-            message: '已达到今日积分上限，不再获得积分',
-            totalPoints: (await prisma.user.findUnique({ where: { id: userId }, select: { totalPoints: true } }))?.totalPoints || 0,
-            pointsChanged: 0,
-            limitStatus
-          };
-        }
-
-        // 计算实际可发放的积分
-        const actualPoints = Math.min(rule.points, limitStatus.remaining);
-
-        // 如果实际发放积分少于规则积分
-        if (actualPoints < rule.points) {
-          return await this._addPointsWithLimit(userId, actualPoints, description || rule.description, targetType, targetId, ruleId);
-        }
-      }
-
-      // 4. 创建积分日志
+      // 3. 创建积分日志
       const pointLog = await prisma.pointLog.create({
         data: {
           userId,
@@ -80,13 +55,14 @@ class PointService {
         },
       });
 
-      // 5. 更新用户积分和每日限制记录
+      // 4. 更新用户积分
       const totalPoints = await this._updateUserPoints(userId, rule.points);
 
-      // 更新每日限制记录（仅当不跳过限制且积分为正时）
-      if (!skipDailyLimit && rule.points > 0) {
-        await this._updateDailyLimit(userId, rule.points);
-      }
+      // 5. 触发信用评分底层行为 (Task 4)
+      await creditService.recordBehavior(userId, 'SYSTEM', 'EARN_POINTS', {
+        description: `获得积分: ${description || rule.description}`,
+        sourceId: pointLog.id
+      }).catch(err => console.error('Credit rule error:', err));
 
       return {
         success: true,
@@ -119,6 +95,12 @@ class PointService {
     await this._updateDailyLimit(userId, points);
 
     const limitStatus = await this.checkDailyPointsLimit(userId);
+
+    // 触发信用评分底层行为
+    await creditService.recordBehavior(userId, 'SYSTEM', 'EARN_POINTS', {
+      description: `获得积分: ${description}`,
+      sourceId: pointLog.id
+    }).catch(err => console.error('Credit rule error:', err));
 
     return {
       success: true,
@@ -383,20 +365,24 @@ class PointService {
   async getUserPointLogs(userId, options = {}) {
     const { page = 1, limit = 20 } = options;
     const skip = (page - 1) * limit;
+    try {
+      const logs = await prisma.pointLog.findMany({
+        where: { userId },
+        include: {
+          rule: true,
+        },
+        orderBy: {
+          createdAt: 'desc',
+        },
+        skip,
+        take: limit,
+      });
 
-    const logs = await prisma.pointLog.findMany({
-      where: { userId },
-      include: {
-        rule: true,
-      },
-      orderBy: {
-        createdAt: 'desc',
-      },
-      skip,
-      take: limit,
-    });
-
-    return logs;
+      return logs;
+    } catch (error) {
+      console.error('[PointService] getUserPointLogs error:', error);
+      return [];
+    }
   }
 
   /**
@@ -544,8 +530,8 @@ class PointService {
    * 兼容旧版 pointServiceFull 的 getPointLogs 方法
    */
   async getPointLogs(userId, options = {}) {
+    const { page = 1, limit = 20 } = options;
     try {
-      const { page = 1, limit = 20 } = options;
       const skip = (page - 1) * limit;
 
       const [logs, total] = await Promise.all([
@@ -828,6 +814,12 @@ class PointService {
         return { log, totalPoints: user.totalPoints, pointsChanged: actualPoints };
       });
 
+      // 触发信用评分底层行为
+      await creditService.recordBehavior(userId, 'SYSTEM', 'EARN_POINTS', {
+        description: `获得积分: ${description}`,
+        sourceId: result.log.id
+      }).catch(err => console.error('Credit rule error:', err));
+
       // 如果实际发放积分少于请求积分，提示已接近上限
       const wasLimited = actualPoints < points;
 
@@ -848,30 +840,53 @@ class PointService {
 // 导出单例
 const pointService = new PointService();
 
-// 保存原始方法引用（在被覆盖之前）
-const originalDeductPoints = pointService.deductPoints.bind(pointService);
-
-// 统一的包装函数，便于外部调用
-const addPoints = async (userId, amount, type, meta = {}) => {
+// 统一的包装函数，便于外部调用（直接增加积分，不走规则）
+const addPointsDirectFn = async (userId, amount, type, meta = {}) => {
   const description = meta.description || `获得 ${amount} 积分`;
   const targetType = meta.targetType || type;
   const targetId = meta.targetId || null;
+  const points = Math.abs(amount);
 
-  return await originalDeductPoints(
-    userId,
-    -Math.abs(amount), // 使用deductPoints但传负数来增加积分
-    targetType,
-    targetId,
-    description
-  );
+  try {
+    const result = await prisma.$transaction(async (tx) => {
+      const log = await tx.pointLog.create({
+        data: {
+          userId,
+          points,
+          description,
+          targetType,
+          targetId,
+        },
+      });
+
+      const user = await tx.user.update({
+        where: { id: userId },
+        data: { totalPoints: { increment: points } },
+        select: { totalPoints: true },
+      });
+
+      await tx.userPoints.upsert({
+        where: { userId },
+        create: { userId, totalPoints: points, todayPoints: points },
+        update: { totalPoints: { increment: points }, todayPoints: { increment: points } },
+      });
+
+      return { log, totalPoints: user.totalPoints };
+    });
+
+    return { success: true, ...result };
+  } catch (error) {
+    console.error('[PointService] addPointsDirect error:', error);
+    return { success: false, error: error.message };
+  }
 };
 
-const deductPoints = async (userId, amount, type, meta = {}) => {
+const deductPointsDirectFn = async (userId, amount, type, meta = {}) => {
   const description = meta.description || `扣除 ${amount} 积分`;
   const targetType = meta.targetType || type;
   const targetId = meta.targetId || null;
 
-  return await originalDeductPoints(
+  return await pointService.deductPoints(
     userId,
     Math.abs(amount),
     targetType,
@@ -882,8 +897,8 @@ const deductPoints = async (userId, amount, type, meta = {}) => {
 
 module.exports = pointService;
 // 注意：不要覆盖类方法！使用不同的导出名称
-module.exports.addPointsDirect = addPoints;  // 直接增加积分（不走规则）
-module.exports.deductPointsDirect = deductPoints;  // 直接扣除积分（不走规则）
+module.exports.addPointsDirect = addPointsDirectFn;  // 直接增加积分（不走规则）
+module.exports.deductPointsDirect = deductPointsDirectFn;  // 直接扣除积分（不走规则）
 module.exports.getUserPointStats = async (userId, period) => {
   // 实现获取用户统计的简单版本
   const today = new Date();

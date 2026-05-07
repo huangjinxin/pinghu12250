@@ -28,7 +28,7 @@
       <div class="back-button-container">
         <n-button type="warning" size="large" @click="handleBack" class="back-btn">
           <template #icon><n-icon size="20"><ArrowBackOutline /></n-icon></template>
-          返回唐诗宋词
+          返回诗词文章
         </n-button>
       </div>
 
@@ -61,7 +61,7 @@
 
       <!-- 底部提示（悬浮显示） -->
       <div class="bottom-hint" :class="{ 'visible': showTopBar }">
-        <span>苹湖少儿空间 - 唐诗宋词作品展示</span>
+        <span>苹湖少儿空间 - 诗词文章作品展示</span>
       </div>
     </div>
   </div>
@@ -71,7 +71,8 @@
 import { ref, onMounted, onUnmounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useMessage } from 'naive-ui';
-import { ShareSocialOutline, ArrowBackOutline } from '@vicons/ionicons5';
+import ShareSocialOutline from '@vicons/ionicons5/es/ShareSocialOutline'
+import ArrowBackOutline from '@vicons/ionicons5/es/ArrowBackOutline'
 import axios from 'axios';
 
 const route = useRoute();
@@ -107,7 +108,7 @@ const loadWork = async () => {
 const renderWork = () => {
   if (!workFrame.value || !work.value) return;
 
-  // 直接使用完整的HTML代码
+  // 直接使用原始HTML代码
   workFrame.value.srcdoc = work.value.htmlCode;
 };
 
@@ -124,7 +125,7 @@ const handleMouseMove = () => {
 };
 
 const handleBack = () => {
-  // 直接返回到作品广场的唐诗宋词tab
+  // 直接返回到作品展廊的诗词文章tab
   router.push('/works');
 };
 

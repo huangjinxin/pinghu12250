@@ -58,7 +58,8 @@
 <script setup>
 import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
-import { HeartOutline, GitBranchOutline } from '@vicons/ionicons5';
+import HeartOutline from '@vicons/ionicons5/es/HeartOutline'
+import GitBranchOutline from '@vicons/ionicons5/es/GitBranchOutline'
 import axios from 'axios';
 
 const router = useRouter();

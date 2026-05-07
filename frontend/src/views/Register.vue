@@ -7,9 +7,46 @@
         </div>
         <h1 class="text-2xl font-bold text-gray-800">创建账号</h1>
         <p class="text-gray-500 mt-2">开始记录成长的每一步</p>
+        <n-alert type="info" class="mt-4 text-left" :bordered="false">
+          注册后24小时内可免审核使用系统
+        </n-alert>
       </div>
 
       <n-form ref="formRef" :model="form" :rules="rules" @submit.prevent="handleRegister">
+        <n-form-item label="邀请码" path="inviteCode">
+          <n-input
+            v-model:value="form.inviteCode"
+            placeholder="请输入邀请码"
+            size="large"
+          >
+            <template #prefix>
+              <n-icon :component="KeyOutline" />
+            </template>
+          </n-input>
+        </n-form-item>
+
+        <n-form-item label="真实姓名" path="realName">
+          <n-input
+            v-model:value="form.realName"
+            placeholder="请输入真实姓名"
+            size="large"
+          >
+            <template #prefix>
+              <n-icon :component="PersonOutline" />
+            </template>
+          </n-input>
+        </n-form-item>
+
+        <n-form-item label="出生日期" path="birthDate">
+          <n-date-picker
+            v-model:value="form.birthDate"
+            type="date"
+            placeholder="请选择出生日期"
+            size="large"
+            class="w-full"
+          />
+        </n-form-item>
+
         <n-form-item label="用户名" path="username">
           <n-input
             v-model:value="form.username"
@@ -18,7 +55,7 @@
             :input-props="{ autocomplete: 'username' }"
           >
             <template #prefix>
-              <n-icon :component="PersonOutline" />
+              <n-icon :component="AtOutline" />
             </template>
           </n-input>
         </n-form-item>
@@ -51,13 +88,16 @@
           </n-input>
         </n-form-item>
 
-        <n-form-item label="角色" path="role">
-          <n-select
-            v-model:value="form.role"
-            :options="roleOptions"
+        <n-form-item label="学号（可选）" path="studentNumber">
+          <n-input
+            v-model:value="form.studentNumber"
+            placeholder="请输入学号"
             size="large"
-            placeholder="请选择角色"
-          />
+          >
+            <template #prefix>
+              <n-icon :component="CardOutline" />
+            </template>
+          </n-input>
         </n-form-item>
 
         <n-button
@@ -87,7 +127,12 @@ import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
 import { useMessage } from 'naive-ui';
-import { PersonOutline, MailOutline, LockClosedOutline } from '@vicons/ionicons5';
+import PersonOutline from '@vicons/ionicons5/es/PersonOutline';
+import MailOutline from '@vicons/ionicons5/es/MailOutline';
+import LockClosedOutline from '@vicons/ionicons5/es/LockClosedOutline';
+import KeyOutline from '@vicons/ionicons5/es/KeyOutline';
+import AtOutline from '@vicons/ionicons5/es/AtOutline';
+import CardOutline from '@vicons/ionicons5/es/CardOutline';
 
 const router = useRouter();
 const authStore = useAuthStore();
@@ -95,21 +140,35 @@ const message = useMessage();
 
 const formRef = ref(null);
 const form = ref({
+  inviteCode: '',
+  realName: '',
+  birthDate: null,
   username: '',
   email: '',
   password: '',
+  studentNumber: '',
   role: 'STUDENT',
 });
 
 const isLoading = ref(false);
 
-const roleOptions = [
-  { label: '学生', value: 'STUDENT' },
-  { label: '家长', value: 'PARENT' },
-  { label: '老师', value: 'TEACHER' },
-];
-
 const rules = {
+  inviteCode: {
+    required: true,
+    message: '请输入邀请码',
+    trigger: ['input', 'blur'],
+  },
+  realName: {
+    required: true,
+    message: '请输入真实姓名',
+    trigger: ['input', 'blur'],
+  },
+  birthDate: {
+    required: true,
+    type: 'number',
+    message: '请选择出生日期',
+    trigger: ['change', 'blur'],
+  },
   username: {
     required: true,
     message: '请输入用户名',
@@ -123,11 +182,6 @@ const rules = {
     { required: true, message: '请输入密码', trigger: ['input', 'blur'] },
     { min: 6, message: '密码至少需要6位', trigger: ['input', 'blur'] },
   ],
-  role: {
-    required: true,
-    message: '请选择角色',
-    trigger: ['change', 'blur'],
-  },
 };
 
 const handleRegister = async () => {
@@ -140,8 +194,12 @@ const handleRegister = async () => {
   isLoading.value = true;
 
   try {
-    await authStore.register(form.value);
-    message.success('注册成功');
+    const registerData = {
+      ...form.value,
+      birthDate: new Date(form.value.birthDate).toISOString(),
+    };
+    await authStore.register(registerData);
+    message.success('注册成功，24小时内可免审核使用');
     router.push('/');
   } catch (err) {
     message.error(err.error || '注册失败，请重试');
