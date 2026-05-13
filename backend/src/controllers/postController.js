@@ -4,6 +4,7 @@
 
 const pointService = require('../services/pointService');
 const creditService = require('../services/creditService');
+const achievementEmitter = require('../lib/achievementEmitter');
 
 // 使用 Prisma 单例
 const prisma = require('../lib/prisma');
@@ -249,6 +250,12 @@ exports.createPost = async (req, res, next) => {
 
     // 注意：发布动态本身不奖励积分
     // 关联的内容（日记/作业/作品）会在各自模块创建时奖励积分
+
+    achievementEmitter.emit('task:completed', {
+      userId: req.user.id,
+      taskType: 'moments',
+      data: { contentLength: content.length, hasImages: images.length > 0 },
+    });
 
     res.status(201).json({
       message: '动态发布成功',

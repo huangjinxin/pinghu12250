@@ -65,6 +65,10 @@
             <h1 class="text-2xl font-bold text-gray-800">{{ currentTaskConfig.name }}</h1>
           </div>
           <div class="flex items-center gap-3">
+            <n-button v-if="isAdmin" type="warning" size="small" @click="openAdminDialog">
+              <template #icon><n-icon><SettingsOutline /></n-icon></template>
+              管理权限
+            </n-button>
             <router-link to="/my-growth" class="growth-entry-btn">
               📋 我的成长
             </router-link>
@@ -75,83 +79,17 @@
           </div>
         </div>
 
-        <!-- 类型选择 -->
-        <div class="card mb-4">
-          <n-tabs v-model:value="currentType" type="segment" animated>
-            <n-tab-pane name="diary" tab="日记">
-              <template #tab>
-                <div class="flex items-center gap-2">
-                  <span>📝</span>
-                  <span>日记</span>
-                </div>
-              </template>
-            </n-tab-pane>
-            <n-tab-pane name="calligraphy" tab="书法">
-              <template #tab>
-                <div class="flex items-center gap-2">
-                  <span>🖌️</span>
-                  <span>书法</span>
-                </div>
-              </template>
-            </n-tab-pane>
-            <n-tab-pane name="photo" tab="照片">
-              <template #tab>
-                <div class="flex items-center gap-2">
-                  <span>📷</span>
-                  <span>照片</span>
-                </div>
-              </template>
-            </n-tab-pane>
-          </n-tabs>
+        <!-- 无权限提示（非管理员且被禁用日记权限） -->
+        <div v-if="!diaryEnabled && !isAdmin" class="diary-disabled-overlay">
+          <div class="diary-disabled-content">
+            <div class="diary-disabled-icon">🪶</div>
+            <p class="diary-disabled-text">如果连你这一滩烂泥般的生活都懒得记录，非要偷别人的二手人生，那从此笔可以折了。一个连真实灵魂都丢了的人，没资格在本系统上留下任何属于人类的痕迹。</p>
+          </div>
         </div>
 
         <!-- 日记表单 -->
-        <div v-if="currentType === 'diary'" class="card space-y-4">
-          <!-- 模板选择（可折叠） -->
-          <div class="template-section">
-            <div class="template-header" @click="templateExpanded = !templateExpanded">
-              <div class="template-header-left">
-                <span class="template-label">📋 写作模板</span>
-                <span class="template-hint">{{ templateExpanded ? '点击收起' : '点击展开选择模板' }}</span>
-              </div>
-              <div class="template-header-right">
-                <n-button size="small" quaternary @click.stop="showSaveTemplateModal = true">
-                  + 保存为模板
-                </n-button>
-                <n-icon :class="{ 'rotate-180': templateExpanded }"><ChevronDownOutline /></n-icon>
-              </div>
-            </div>
-            <n-collapse-transition :show="templateExpanded">
-              <n-spin :show="loadingTemplates">
-                <div class="template-grid">
-                  <div
-                    v-for="template in diaryTemplates"
-                    :key="template.id"
-                    class="template-item"
-                    :class="{ 'template-active': selectedTemplate === template.id }"
-                    @click="handleSelectTemplate(template)"
-                  >
-                    <span class="template-icon">{{ template.icon }}</span>
-                    <div class="template-info">
-                      <span class="template-name">{{ template.name }}</span>
-                      <span class="template-author" v-if="template.authorName && template.id !== 'free'">
-                        ({{ template.authorName }})
-                      </span>
-                    </div>
-                    <n-button
-                      v-if="template.id !== 'free' && !template.isSystem"
-                      size="tiny"
-                      quaternary
-                      class="template-delete"
-                      @click.stop="handleDeleteTemplate(template.id)"
-                    >
-                      <n-icon><CloseOutline /></n-icon>
-                    </n-button>
-                  </div>
-                </div>
-              </n-spin>
-            </n-collapse-transition>
-          </div>
+        <div v-else class="card space-y-4">
+
 
           <n-form-item label="标题">
             <n-input v-model:value="diaryForm.title" placeholder="给日记起个标题" maxlength="50" show-count />
@@ -181,91 +119,9 @@
           </n-form-item>
         </div>
 
-        <!-- 保存模板弹窗 -->
-        <n-modal v-model:show="showSaveTemplateModal" preset="dialog" title="保存为模板">
-          <n-form>
-            <n-form-item label="模板名称">
-              <n-input v-model:value="newTemplateName" placeholder="给模板起个名字" maxlength="20" />
-            </n-form-item>
-            <n-form-item label="模板图标">
-              <div class="icon-picker">
-                <span
-                  v-for="icon in templateIcons"
-                  :key="icon"
-                  class="icon-option"
-                  :class="{ 'icon-active': newTemplateIcon === icon }"
-                  @click="newTemplateIcon = icon"
-                >{{ icon }}</span>
-              </div>
-            </n-form-item>
-          </n-form>
-          <template #action>
-            <n-button @click="showSaveTemplateModal = false">取消</n-button>
-            <n-button type="primary" @click="handleSaveTemplate">保存</n-button>
-          </template>
-        </n-modal>
 
-        <!-- 书法表单 -->
-        <div v-if="currentType === 'calligraphy'" class="card space-y-4">
-          <n-form-item label="选择字体">
-            <n-select v-model:value="calligraphyForm.fontId" :options="fontOptions" placeholder="选择练习字体" />
-          </n-form-item>
 
-          <n-form-item label="书写区域">
-            <div class="writing-area">
-              <div v-if="!calligraphyForm.imageData" class="writing-placeholder">
-                <n-icon size="48"><BrushOutline /></n-icon>
-                <p class="mt-2">点击开始书写</p>
-              </div>
-              <img v-else :src="calligraphyForm.imageData" class="max-h-full" alt="书法作品" />
-            </div>
-          </n-form-item>
 
-          <n-form-item label="描述">
-            <n-input v-model:value="calligraphyForm.description" type="textarea" placeholder="描述一下你的书法作品" :rows="2" />
-          </n-form-item>
-        </div>
-
-        <!-- 照片表单 -->
-        <div v-if="currentType === 'photo'" class="card space-y-4">
-          <n-form-item label="上传照片">
-            <n-upload
-              v-model:file-list="photoForm.files"
-              list-type="image-card"
-              :max="9"
-              accept="image/*"
-              multiple
-            >
-              <div class="flex flex-col items-center justify-center">
-                <n-icon size="24"><CameraOutline /></n-icon>
-                <span class="text-xs mt-1">上传照片</span>
-              </div>
-            </n-upload>
-          </n-form-item>
-
-          <n-form-item label="描述">
-            <n-input v-model:value="photoForm.description" type="textarea" placeholder="记录这一刻的心情" :rows="3" />
-          </n-form-item>
-
-          <n-form-item label="心情">
-            <div class="flex gap-2 flex-wrap">
-              <n-tag
-                v-for="mood in moodOptions"
-                :key="mood.value"
-                :type="photoForm.mood === mood.value ? 'primary' : 'default'"
-                :bordered="photoForm.mood !== mood.value"
-                class="cursor-pointer"
-                @click="photoForm.mood = mood.value"
-              >
-                {{ mood.emoji }} {{ mood.label }}
-              </n-tag>
-            </div>
-          </n-form-item>
-
-          <n-form-item label="标签">
-            <n-dynamic-tags v-model:value="photoForm.tags" :max="5" />
-          </n-form-item>
-        </div>
 
         <!-- 操作按钮 -->
         <div class="action-bar">
@@ -277,7 +133,6 @@
             type="primary" 
             size="large" 
             :loading="submitting" 
-            :disabled="!canSubmit"
             @click="handleSubmit"
           >
             提交审核
@@ -287,8 +142,8 @@
 
       <!-- 右侧：辅助激励区 (35%) -->
       <div class="right-panel">
-        <!-- 日记模式：详细字数统计 -->
-        <div v-if="currentType === 'diary'" class="card word-stats-card">
+        <!-- 详细字数统计 -->
+        <div class="card word-stats-card">
           <div class="card-title">📊 字数统计</div>
 
           <!-- 字数详情 -->
@@ -348,8 +203,8 @@
           </div>
         </div>
 
-        <!-- 查重检测（仅日记模式，800字以上可用） -->
-        <div v-if="currentType === 'diary'" class="card duplicate-card">
+        <!-- 查重检测（800字以上可用） -->
+        <div class="card duplicate-card">
           <div class="card-title">🔍 内容查重 <span class="card-subtitle">(都不能超过10%)</span></div>
 
           <!-- 查重按钮 -->
@@ -371,12 +226,12 @@
                 <span class="rate-number">{{ duplicateResult.overallRate }}%</span>
                 <span class="rate-label">总重复率</span>
               </div>
-              <div v-if="duplicateResult.selfRepeatRate > 0" class="duplicate-rate rate-self">
-                <span class="rate-number">{{ duplicateResult.selfRepeatRate }}%</span>
+              <div class="duplicate-rate rate-self">
+                <span class="rate-number">{{ duplicateResult.selfRepeatRate || 0 }}%</span>
                 <span class="rate-label">自身重复</span>
               </div>
-              <div v-if="duplicateResult.globalRepeatRate > 0" class="duplicate-rate rate-global">
-                <span class="rate-number">{{ duplicateResult.globalRepeatRate }}%</span>
+              <div class="duplicate-rate rate-global">
+                <span class="rate-number">{{ duplicateResult.globalRepeatRate || 0 }}%</span>
                 <span class="rate-label">全站重复</span>
               </div>
             </div>
@@ -452,13 +307,14 @@
           </div>
         </div>
 
-        <!-- 提交限制标准（所有类型可见） -->
+        <!-- 提交限制标准 -->
         <div class="card submit-tips-card">
           <div class="card-title">📋 提交标准</div>
           <ul class="submit-tips-list">
-            <li>字数：需达1200字以上</li>
-            <li v-if="currentType === 'diary'">时间词：需包含早上/上午/中午/下午/晚上/天气等</li>
+            <li>字数：需达1200字以上（包含标点）</li>
+            <li>时间词：需包含早上/上午/中午/下午/晚上/天气等</li>
             <li>字符：不能有连续5个以上相同字符</li>
+            <li>原创度：历史重复率、自身重复率、全站重复率均需低于10%</li>
           </ul>
         </div>
 
@@ -481,37 +337,56 @@
           </n-spin>
         </div>
 
-        <!-- 非日记模式：简单统计 -->
-        <div v-if="currentType !== 'diary'" class="card stats-card">
-          <div class="card-title">📊 实时数据</div>
 
-          <!-- 照片数量 -->
-          <div v-if="currentType === 'photo'" class="stat-item">
-            <span class="stat-label">照片数量</span>
-            <span class="stat-value">{{ photoForm.files.length }} / 9</span>
-          </div>
-
-          <!-- 积分预测 -->
-          <div class="points-preview">
-            <div class="points-label">预计获得</div>
-            <div class="points-value">
-              <span class="points-number" :class="{ 'points-animate': displayPoints > 0 }">
-                {{ estimatedPointsRange.min }}-{{ estimatedPointsRange.max }}
-              </span>
-              <span class="points-unit">分</span>
-            </div>
-          </div>
-        </div>
       </div>
     </div>
+
+    <!-- 管理员权限管理对话框 -->
+    <n-modal v-model:show="showAdminDialog" preset="card" title="日记编辑权限管理" style="width:800px;max-height:80vh" :mask-closable="false">
+      <template #header-extra>
+        <n-input
+          v-model:value="adminSearchKeyword"
+          placeholder="搜索用户名/邮箱/昵称..."
+          clearable
+          style="width:240px"
+          @keydown.enter="onAdminSearch"
+          @clear="onAdminSearch"
+        >
+          <template #prefix>
+            <n-icon><SearchOutline /></n-icon>
+          </template>
+        </n-input>
+      </template>
+
+      <n-spin :show="adminLoading">
+        <n-data-table
+          :columns="adminTableColumns"
+          :data="adminUsers"
+          :pagination="adminPagination"
+          :row-key="(row) => row.id"
+          size="small"
+          remote
+          @update:page="onAdminPageChange"
+        />
+      </n-spin>
+
+      <template #footer>
+        <div style="display:flex;justify-content:space-between;align-items:center;width:100%">
+          <span style="color:#6b7280;font-size:13px">点击切换按钮启用/禁用用户的日记编辑权限</span>
+          <n-button @click="showAdminDialog = false">关闭</n-button>
+        </div>
+      </template>
+    </n-modal>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, h } from 'vue';
 import { useRouter } from 'vue-router';
-import { useMessage } from 'naive-ui';
+import { useMessage, NButton, NTag } from 'naive-ui';
 import { useSubmission } from '@/composables/useSubmission';
+import { useAuthStore } from '@/stores/auth';
+import { diaryAdminAPI } from '@/api';
 import BrushOutline from '@vicons/ionicons5/es/BrushOutline'
 import CameraOutline from '@vicons/ionicons5/es/CameraOutline'
 import StarOutline from '@vicons/ionicons5/es/StarOutline'
@@ -521,9 +396,11 @@ import CloseOutline from '@vicons/ionicons5/es/CloseOutline'
 import SearchOutline from '@vicons/ionicons5/es/SearchOutline'
 import CheckmarkCircleOutline from '@vicons/ionicons5/es/CheckmarkCircleOutline'
 import SparklesOutline from '@vicons/ionicons5/es/SparklesOutline'
+import SettingsOutline from '@vicons/ionicons5/es/SettingsOutline'
 
 const router = useRouter();
 const message = useMessage();
+const authStore = useAuthStore();
 
 const {
   currentType,
@@ -567,17 +444,7 @@ const {
 // AI 分析状态
 const analyzingAI = ref(false);
 
-// 是否可以提交：需要先查重且通过
-const canSubmit = computed(() => {
-  if (currentType.value !== 'diary') return true;
-  if (detailedWordCount.value.words < 800) return true;
-  if (!duplicateResult.value) return false;
-  const { selfRepeatRate, overallRate, globalRepeatRate } = duplicateResult.value;
-  const selfRate = selfRepeatRate || 0;
-  const historyRate = overallRate - selfRate - (globalRepeatRate || 0);
-  const globalRate = globalRepeatRate || 0;
-  return selfRate < 10 && historyRate < 10 && globalRate < 10;
-});
+
 
 // 保存模板弹窗
 const showSaveTemplateModal = ref(false);
@@ -694,7 +561,124 @@ onMounted(() => {
   loadDraft();
   loadHistory();
   loadTemplates();
+  checkDiaryPermission();
 });
+
+// ========== 管理员日记权限管理 ==========
+const isAdmin = computed(() => authStore.user?.role === 'ADMIN');
+const diaryEnabled = ref(true);
+const showAdminDialog = ref(false);
+const adminLoading = ref(false);
+const adminUsers = ref([]);
+const adminSearchKeyword = ref('');
+const adminPage = ref(1);
+const adminTotal = ref(0);
+const adminPageSize = 50;
+
+const adminPagination = computed(() => ({
+  page: adminPage.value,
+  pageSize: adminPageSize,
+  itemCount: adminTotal.value,
+  showSizePicker: false,
+  showQuickJumper: false,
+}));
+
+const roleLabels = { STUDENT: '学生', PARENT: '家长', TEACHER: '老师', ADMIN: '管理员' };
+const roleColors = { STUDENT: 'info', PARENT: 'warning', TEACHER: 'success', ADMIN: 'error' };
+const statusLabels = { ACTIVE: '已激活', PENDING: '待审核', DISABLED: '已禁用' };
+const statusColors = { ACTIVE: 'success', PENDING: 'warning', DISABLED: 'error' };
+
+const adminTableColumns = [
+  { title: '用户名', key: 'username', width: 105, ellipsis: { tooltip: true } },
+  { title: '昵称', key: 'profile.nickname', width: 85, ellipsis: { tooltip: true } },
+  {
+    title: '角色', key: 'role', width: 60,
+    render(row) {
+      return h(NTag, { type: roleColors[row.role] || 'default', size: 'small', bordered: false }, { default: () => roleLabels[row.role] || row.role });
+    },
+  },
+  {
+    title: '状态', key: 'status', width: 65,
+    render(row) {
+      return h(NTag, { type: statusColors[row.status] || 'default', size: 'small', bordered: false }, { default: () => statusLabels[row.status] || row.status });
+    },
+  },
+  { title: '班级', key: 'class.name', width: 80, ellipsis: { tooltip: true } },
+  {
+    title: '注册时间', key: 'createdAt', width: 100,
+    render(row) {
+      return row.createdAt ? new Date(row.createdAt).toLocaleDateString('zh-CN') : '-';
+    },
+  },
+  {
+    title: '日记权限', key: 'diaryEnabled', width: 80,
+    render(row) {
+      return h(NTag, { type: row.diaryEnabled !== false ? 'success' : 'error', size: 'small', bordered: false },
+        { default: () => row.diaryEnabled !== false ? '已启用' : '已禁用' });
+    },
+  },
+  {
+    title: '操作', key: 'actions', width: 60,
+    render(row) {
+      return h(NButton, {
+        size: 'tiny',
+        type: row.diaryEnabled !== false ? 'error' : 'success',
+        onClick: () => handleToggleDiaryPermission(row),
+      }, { default: () => row.diaryEnabled !== false ? '禁用' : '启用' });
+    },
+  },
+];
+
+async function checkDiaryPermission() {
+  try {
+    const res = await diaryAdminAPI.checkPermission();
+    diaryEnabled.value = res.data?.diaryEnabled !== false;
+  } catch {
+    diaryEnabled.value = true;
+  }
+}
+
+async function loadAdminUsers() {
+  adminLoading.value = true;
+  try {
+    const params = { page: adminPage.value, limit: adminPageSize };
+    if (adminSearchKeyword.value) params.keyword = adminSearchKeyword.value;
+    const res = await diaryAdminAPI.getWhitelist(params);
+    adminUsers.value = res.users || [];
+    adminTotal.value = res.pagination?.total || 0;
+  } catch (e) {
+    message.error('加载用户列表失败');
+  } finally {
+    adminLoading.value = false;
+  }
+}
+
+function onAdminPageChange(page) {
+  adminPage.value = page;
+  loadAdminUsers();
+}
+
+function onAdminSearch() {
+  adminPage.value = 1;
+  loadAdminUsers();
+}
+
+function openAdminDialog() {
+  showAdminDialog.value = true;
+  adminPage.value = 1;
+  adminSearchKeyword.value = '';
+  loadAdminUsers();
+}
+
+async function handleToggleDiaryPermission(user) {
+  try {
+    await diaryAdminAPI.toggleUser(user.id);
+    message.success(`已${user.diaryEnabled !== false ? '禁用' : '启用'} ${user.username} 的日记权限`);
+    await loadAdminUsers();
+  } catch (e) {
+    message.error('操作失败');
+  }
+}
 </script>
 
 <style scoped>
@@ -1541,5 +1525,36 @@ onMounted(() => {
     gap: 12px;
     text-align: center;
   }
+}
+
+/* 日记权限禁用提示 */
+.diary-disabled-overlay {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+  padding: 48px 24px;
+}
+
+.diary-disabled-content {
+  text-align: center;
+  max-width: 600px;
+  background: #f9fafb;
+  border: 2px dashed #d1d5db;
+  border-radius: 16px;
+  padding: 48px 32px;
+}
+
+.diary-disabled-icon {
+  font-size: 48px;
+  margin-bottom: 24px;
+  opacity: 0.4;
+}
+
+.diary-disabled-text {
+  font-size: 16px;
+  line-height: 2;
+  color: #9ca3af;
+  font-style: italic;
 }
 </style>

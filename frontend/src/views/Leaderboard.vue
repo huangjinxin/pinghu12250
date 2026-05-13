@@ -1,5 +1,5 @@
 <template>
-  <div class="leaderboard-container" :class="{ 'theme-light': isLightTheme }">
+  <div class="leaderboard-container" :class="{ 'theme-light': isLightTheme, 'carousel-active': isCarouselMode }">
     <!-- 顶部导航 -->
     <header class="public-header">
       <div class="header-content">
@@ -114,53 +114,113 @@
       <p>加载中...</p>
     </div>
 
-    <!-- 排行榜卡片网格 -->
-    <div v-else class="card-grid">
-      <div
-        v-for="(student, index) in leaderboard"
-        :key="student.id"
-        class="student-card"
-        :class="getCardClass(student)"
-      >
-        <!-- 排名徽章 -->
-        <div class="rank-badge" :class="getRankClass(index)">
-          {{ index + 1 }}
-        </div>
-
-        <!-- 用户信息 -->
-        <div class="student-info">
-          <div class="avatar" :style="getAvatarStyle(student)">
-            {{ student.name?.[0] || '?' }}
+    <!-- 排行榜卡片网格 / 轮播 -->
+    <div v-else ref="containerRef">
+      <!-- 普通网格模式 -->
+      <div v-if="!isCarouselMode" class="card-grid">
+        <div
+          v-for="(student, index) in leaderboard"
+          :key="student.id"
+          class="student-card"
+          :class="getCardClass(student)"
+        >
+          <div class="rank-badge" :class="getRankClass(index)">
+            {{ index + 1 }}
           </div>
-          <div class="student-name">{{ student.name }}</div>
-        </div>
-
-        <!-- 挑战状态（一行三项，显示名字和状态） -->
-        <div class="challenges-row">
-          <div
-            v-for="challenge in student.challenges"
-            :key="challenge.id"
-            class="challenge-item"
-            :class="[`theme-${challenge.color}`, getStatusClass(challenge.status)]"
-          >
-            <div class="challenge-icon">
-              <svg v-if="challenge.status === 'APPROVED'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
-                <polyline points="20 6 9 17 4 12" />
-              </svg>
-              <svg v-else-if="challenge.status === 'PENDING'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <circle cx="12" cy="12" r="10" />
-                <polyline points="12 6 12 12 16 14" />
-              </svg>
-              <svg v-else-if="challenge.status === 'REJECTED'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
-                <line x1="18" y1="6" x2="6" y2="18" />
-                <line x1="6" y1="6" x2="18" y2="18" />
-              </svg>
-              <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <circle cx="12" cy="12" r="10" />
-              </svg>
+          <div class="student-info">
+            <div class="avatar" :style="getAvatarStyle(student)">
+              {{ student.name?.[0] || '?' }}
             </div>
-            <span class="challenge-name">{{ challenge.name }}</span>
+            <div class="student-name">{{ student.name }}</div>
           </div>
+          <div class="challenges-row">
+            <div
+              v-for="challenge in student.challenges"
+              :key="challenge.id"
+              class="challenge-item"
+              :class="[`theme-${challenge.color}`, getStatusClass(challenge.status)]"
+            >
+              <div class="challenge-icon">
+                <svg v-if="challenge.status === 'APPROVED'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                  <polyline points="20 6 9 17 4 12" />
+                </svg>
+                <svg v-else-if="challenge.status === 'PENDING'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="12" cy="12" r="10" />
+                  <polyline points="12 6 12 12 16 14" />
+                </svg>
+                <svg v-else-if="challenge.status === 'REJECTED'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                  <line x1="18" y1="6" x2="6" y2="18" />
+                  <line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+                <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="12" cy="12" r="10" />
+                </svg>
+              </div>
+              <span class="challenge-name">{{ challenge.name }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 轮播模式 -->
+      <div v-else class="carousel-wrap" @mouseenter="pause" @mouseleave="resume">
+        <div class="carousel-viewport" ref="viewportRef">
+          <div class="carousel-track" :style="{ width: totalPages * 100 + '%', transform: `translateX(-${offsetPercent}%)` }">
+            <div v-for="(page, pIdx) in pages" :key="'p'+pIdx" class="carousel-page" :style="{ width: 100 / totalPages + '%' }">
+              <div class="card-grid">
+                <div
+                  v-for="student in page"
+                  :key="student.id"
+                  class="student-card"
+                  :class="getCardClass(student)"
+                >
+                  <div class="rank-badge" :class="getRankClass(leaderboard.indexOf(student))">
+                    {{ leaderboard.indexOf(student) + 1 }}
+                  </div>
+                  <div class="student-info">
+                    <div class="avatar" :style="getAvatarStyle(student)">
+                      {{ student.name?.[0] || '?' }}
+                    </div>
+                    <div class="student-name">{{ student.name }}</div>
+                  </div>
+                  <div class="challenges-row">
+                    <div
+                      v-for="challenge in student.challenges"
+                      :key="challenge.id"
+                      class="challenge-item"
+                      :class="[`theme-${challenge.color}`, getStatusClass(challenge.status)]"
+                    >
+                      <div class="challenge-icon">
+                        <svg v-if="challenge.status === 'APPROVED'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                          <polyline points="20 6 9 17 4 12" />
+                        </svg>
+                        <svg v-else-if="challenge.status === 'PENDING'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                          <circle cx="12" cy="12" r="10" />
+                          <polyline points="12 6 12 12 16 14" />
+                        </svg>
+                        <svg v-else-if="challenge.status === 'REJECTED'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                          <line x1="18" y1="6" x2="6" y2="18" />
+                          <line x1="6" y1="6" x2="18" y2="18" />
+                        </svg>
+                        <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                          <circle cx="12" cy="12" r="10" />
+                        </svg>
+                      </div>
+                      <span class="challenge-name">{{ challenge.name }}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div v-if="totalPages > 1" class="carousel-dots">
+          <button
+            v-for="p in totalPages" :key="p"
+            class="carousel-dot"
+            :class="{ active: p - 1 === currentPage }"
+            @click="goToPage(p - 1)"
+          />
         </div>
       </div>
     </div>
@@ -181,6 +241,7 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { NIcon } from 'naive-ui';
 import MenuOutline from '@vicons/ionicons5/es/MenuOutline';
+import { useLeaderboardCarousel } from '@/composables/useLeaderboardCarousel';
 
 // 状态
 const loading = ref(false);
@@ -190,6 +251,8 @@ const updateTime = ref(null);
 const refreshCountdown = ref(30);
 const isLightTheme = ref(true); // 默认浅色主题
 const showMobileMenu = ref(false);
+
+const { containerRef, viewportRef, isCarouselMode, currentPage, totalPages, pages, columns, offsetPercent, isPaused, pause, resume, goToPage } = useLeaderboardCarousel(leaderboard)
 
 // 刷新定时器
 let refreshTimer = null;
@@ -202,14 +265,14 @@ function toggleTheme() {
 
 // 统计数据
 const completedCount = computed(() => {
-  return leaderboard.value.filter(s => s.approvedCount === 6).length;
+  return leaderboard.value.filter(s => s.approvedCount === 8).length;
 });
 
 // 进行中：只要有任何一项提交了（待审核或已通过，但未全部完成）
 const pendingCount = computed(() => {
   return leaderboard.value.filter(s => {
     const hasAnySubmission = s.approvedCount > 0 || s.pendingCount > 0;
-    const notCompleted = s.approvedCount < 6;
+    const notCompleted = s.approvedCount < 8;
     return hasAnySubmission && notCompleted;
   }).length;
 });
@@ -240,7 +303,7 @@ async function loadData() {
 
 // 获取卡片样式类
 function getCardClass(student) {
-  if (student.approvedCount === 6) return 'completed';
+  if (student.approvedCount === 8) return 'completed';
   const hasRejected = student.challenges?.some(c => c.status === 'REJECTED');
   if (hasRejected) return 'has-rejected';
   if (student.approvedCount > 0 || student.pendingCount > 0) return 'in-progress';
@@ -654,7 +717,7 @@ onUnmounted(() => {
 /* 挑战状态（两行三列） */
 .challenges-row {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 4px;
 }
 
@@ -676,6 +739,8 @@ onUnmounted(() => {
 .challenge-item.theme-pink { border-left-color: #ec4899; }
 .challenge-item.theme-teal { border-left-color: #14b8a6; }
 .challenge-item.theme-violet { border-left-color: #8b5cf6; }
+.challenge-item.theme-indigo { border-left-color: #6366f1; }
+.challenge-item.theme-sky { border-left-color: #0ea5e9; }
 
 .challenge-icon {
   width: 24px;
@@ -893,6 +958,142 @@ onUnmounted(() => {
 
 .theme-light .footer {
   color: #94a3b8;
+}
+
+/* ========== 轮播模式 ========== */
+.carousel-wrap {
+  position: relative;
+}
+
+.carousel-viewport {
+  overflow: hidden;
+  border-radius: 12px;
+  position: relative;
+}
+
+.carousel-track {
+  display: flex;
+  transition: transform 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  will-change: transform;
+}
+
+.carousel-page {
+  flex-shrink: 0;
+  width: 100%;
+}
+
+.carousel-dots {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 16px;
+  padding: 4px 0;
+}
+
+.carousel-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.25);
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  padding: 0;
+  outline: none;
+  position: relative;
+}
+
+.carousel-dot:hover {
+  background: rgba(255, 255, 255, 0.45);
+  transform: scale(1.3);
+}
+
+.carousel-dot.active {
+  width: 28px;
+  border-radius: 4px;
+  background: #a5b4fc;
+  border-color: rgba(165, 180, 252, 0.3);
+  box-shadow: 0 0 12px rgba(165, 180, 252, 0.4);
+}
+
+.theme-light .carousel-dot {
+  background: #cbd5e1;
+}
+
+.theme-light .carousel-dot:hover {
+  background: #94a3b8;
+}
+
+.theme-light .carousel-dot.active {
+  background: #6366f1;
+  border-color: rgba(99, 102, 241, 0.3);
+  box-shadow: 0 0 12px rgba(99, 102, 241, 0.3);
+}
+
+/* 轮播模式窄屏紧凑布局 */
+.carousel-active .toolbar {
+  padding: 6px 12px;
+  gap: 10px;
+}
+
+.carousel-active .stats-bar {
+  gap: 6px;
+}
+
+.carousel-active .stat-item {
+  padding: 4px 8px;
+}
+
+.carousel-active .header {
+  margin-bottom: 6px;
+}
+
+.carousel-active .card-grid {
+  gap: 8px;
+}
+
+.carousel-active .student-card {
+  padding: 10px;
+}
+
+.carousel-active .student-info {
+  margin-bottom: 6px;
+}
+
+.carousel-active .student-name {
+  font-size: 16px;
+}
+
+.carousel-active .challenges-row {
+  gap: 3px;
+}
+
+.carousel-active .challenge-item {
+  padding: 6px 4px;
+}
+
+.carousel-active .challenge-name {
+  font-size: 12px;
+}
+
+.carousel-active .footer {
+  padding: 6px;
+}
+
+/* 轮播模式下卡片入场动画 */
+.carousel-page .student-card {
+  animation: cardFadeIn 0.5s ease-out both;
+}
+
+@keyframes cardFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
 /* ========== 响应式 ========== */

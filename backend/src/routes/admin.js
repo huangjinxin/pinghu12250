@@ -564,7 +564,7 @@ router.get('/students', authenticate, isAdmin, async (req, res, next) => {
             select: { nickname: true },
           },
           // 已关联的家长数
-          parentRelations: {
+          StudentParent_StudentParent_parentIdToUser: {
             select: { id: true },
           },
         },
@@ -576,11 +576,13 @@ router.get('/students', authenticate, isAdmin, async (req, res, next) => {
     ]);
 
     res.json({
-      students: students.map(s => ({
-        ...s,
-        parentCount: s.parentRelations?.length || 0,
-        parentRelations: undefined,
-      })),
+      students: students.map(s => {
+        const { StudentParent_StudentParent_parentIdToUser: prels, ...rest } = s;
+        return {
+          ...rest,
+          parentCount: prels?.length || 0,
+        };
+      }),
       pagination: {
         page: parseInt(page),
         limit: parseInt(limit),
@@ -1066,6 +1068,97 @@ router.put('/users/:id/settings', authenticate, isAdmin, async (req, res, next) 
     }
 
     res.json({ success: true, message: '设置更新成功' });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// ========== 日记编辑权限管理 ==========
+
+// GET /api/admin/diary-whitelist - 获取所有用户的日记权限状态
+router.get('/diary-whitelist', authenticate, isAdmin, async (req, res, next) => {
+  try {
+    const { keyword, page = 1, limit = 50 } = req.query;
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+
+    const where = { status: 'ACTIVE' };
+    if (keyword) {
+      where.OR = [
+        { username: { contains: keyword } },
+        { email: { contains: keyword } },
+        { profile: { nickname: { contains: keyword } } },
+      ];
+    }
+
+    const [users, total] = await Promise.all([
+      prisma.user.findMany({
+        where,
+        select: {
+          id: true,
+          username: true,
+          email: true,
+          role: true,
+          status: true,
+          avatar: true,
+          createdAt: true,
+          diaryEnabled: true,
+          profile: { select: { nickname: true } },
+          class: { select: { name: true } },
+        },
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: parseInt(limit),
+      }),
+      prisma.user.count({ where }),
+    ]);
+
+    res.json({
+      users,
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total,
+        totalPages: Math.ceil(total / parseInt(limit)),
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// PUT /api/admin/diary-whitelist/:userId - 切换用户日记权限
+router.put('/diary-whitelist/:userId', authenticate, isAdmin, async (req, res, next) => {
+  try {
+    const { userId } = req.params;
+
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, username: true, diaryEnabled: true },
+    });
+    if (!user) {
+      return res.status(404).json({ error: '用户不存在' });
+    }
+
+    const newValue = !(user.diaryEnabled !== false);
+    const updated = await prisma.user.update({
+      where: { id: userId },
+      data: { diaryEnabled: newValue },
+      select: { id: true, username: true, diaryEnabled: true },
+    });
+
+    await prisma.activityLog.create({
+      data: {
+        userId: req.user.id,
+        action: newValue ? 'enable_diary' : 'disable_diary',
+        targetType: 'user',
+        targetId: userId,
+        description: newValue
+          ? `启用了用户 ${user.username} 的日记编辑权限`
+          : `禁用了用户 ${user.username} 的日记编辑权限`,
+      },
+    });
+
+    res.json({ success: true, data: updated });
   } catch (error) {
     next(error);
   }

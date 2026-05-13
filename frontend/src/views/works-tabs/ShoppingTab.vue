@@ -199,13 +199,32 @@
         </div>
       </template>
     </n-modal>
+
+    <!-- 任务未完成提醒弹窗 -->
+    <n-modal v-model:show="showTaskBlockModal" preset="card" :mask-closable="false" style="max-width: 440px;">
+      <div class="task-block-card">
+        <div class="block-icon">📋</div>
+        <h3 class="block-title">今日任务尚未全部完成</h3>
+        <p class="block-desc">请先完成以下任务后再来成长兑换：</p>
+        <div class="block-list">
+          <div v-for="t in blockedTaskNames" :key="t.id" class="block-item">
+            <span class="block-item-icon">⏳</span>
+            <span class="block-item-name">{{ t.name }}</span>
+            <span class="block-item-status" :class="t.status === '已拒绝' ? 'status-rejected' : t.status === '待提交' ? 'status-pending' : 'status-incomplete'">{{ t.status }}</span>
+          </div>
+        </div>
+        <n-button type="primary" block size="large" class="block-btn" @click="showTaskBlockModal = false">
+          我知道了，马上去完成
+        </n-button>
+      </div>
+    </n-modal>
   </div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted } from 'vue';
 import { useMessage } from 'naive-ui';
-import { payAPI, paymentPlanAPI } from '@/api';
+import { payAPI, paymentPlanAPI, submissionAPI, calligraphyAPI, feedAPI, typingAPI, pinyinAPI } from '@/api';
 import WalletOutline from '@vicons/ionicons5/es/WalletOutline'
 import CheckmarkCircleOutline from '@vicons/ionicons5/es/CheckmarkCircleOutline'
 import CopyOutline from '@vicons/ionicons5/es/CopyOutline'
@@ -223,6 +242,8 @@ const categories = ref([]);
 const selectedCategory = ref(null);
 const showPayModal = ref(false);
 const showSuccessModal = ref(false);
+const showTaskBlockModal = ref(false);
+const blockedTaskNames = ref([]);
 const selectedPayCode = ref(null);
 const paymentResult = ref(null);
 const paymentPassword = ref('');
@@ -236,6 +257,85 @@ const pagination = ref({
   total: 0,
   totalPages: 1,
 });
+
+// 8个任务 ID/特殊标记 定义（与 Home.vue 一致）
+const taskConfigs = [
+  { id: 'diary', templateName: '日记(审批前提项/日)' },
+  { id: 'math', templateName: '可汗学院数学进度' },
+  { id: 'poetry', templateName: '背诗' },
+  { id: 'calligraphy', isCalligraphy: true },
+  { id: 'moments', isSocial: 'moments' },
+  { id: 'questions', isSocial: 'questions' },
+  { id: 'typing', isTyping: true },
+  { id: 'pinyin', isPinyin: true },
+];
+
+async function checkTodayTasks() {
+  try {
+    const timezoneOffset = -new Date().getTimezoneOffset();
+    const templateNames = taskConfigs
+      .filter(t => !t.isCalligraphy && !t.isSocial && !t.isTyping && !t.isPinyin)
+      .map(t => t.templateName)
+      .join(',');
+
+    const [response, calligraphyRes, socialRes, typingRes, pinyinRes] = await Promise.all([
+      submissionAPI.getTodayStatus({ templateNames, timezoneOffset }),
+      calligraphyAPI.getTodayStatus({ timezoneOffset }).catch(() => ({ data: { status: 'NOT_SUBMITTED' } })),
+      feedAPI.getTodaySocial({ timezoneOffset }).catch(() => ({ data: {} })),
+      typingAPI.getTodayStatus({ timezoneOffset }).catch(() => ({ data: {} })),
+      pinyinAPI.getTodayStatus({ timezoneOffset }).catch(() => ({ data: {} })),
+    ]);
+
+    const todayStatus = response.todayStatus || {};
+    const calligraphyStatus = calligraphyRes.data?.status || 'NOT_SUBMITTED';
+    const socialStatus = socialRes.data || {};
+    const typingStatus = typingRes.data || {};
+    const pinyinStatus = pinyinRes.data || {};
+
+    const blockedTasks = [];
+    const statusLabels = {
+      pending_submit: '待提交',
+      rejected: '已拒绝',
+      pending_complete: '未完成',
+    };
+
+    for (const config of taskConfigs) {
+      let status = 'pending_submit';
+
+      if (config.isCalligraphy) {
+        status = calligraphyStatus === 'APPROVED' || calligraphyStatus === 'PENDING' ? 'done' : 'pending_submit';
+      } else if (config.isSocial) {
+        status = socialStatus[config.isSocial] ? 'completed' : 'pending_complete';
+      } else if (config.isTyping) {
+        status = typingStatus.completed ? 'completed' : 'pending_complete';
+      } else if (config.isPinyin) {
+        status = pinyinStatus.completed ? 'completed' : 'pending_complete';
+      } else {
+        const submission = todayStatus[config.templateName];
+        if (submission) {
+          status = submission.status === 'APPROVED' || submission.status === 'PENDING' ? 'done' : 'rejected';
+        }
+      }
+
+      if (status === 'pending_submit' || status === 'rejected' || status === 'pending_complete') {
+        blockedTasks.push({ id: config.id, status });
+      }
+    }
+
+    if (blockedTasks.length > 0) {
+      const nameMap = { diary: '日记', math: '数学', poetry: '背诗', calligraphy: '书写', moments: '分享生活', questions: '勤学好问', typing: '打字训练', pinyin: '拼音练习' };
+      blockedTaskNames.value = blockedTasks.map(t => ({ id: t.id, name: nameMap[t.id] || t.id, status: statusLabels[t.status] || t.status }));
+      showTaskBlockModal.value = true;
+      return false;
+    }
+
+    return true;
+  } catch (e) {
+    console.error('检查今日任务状态失败:', e);
+    message.error('检查任务状态失败，请稍后再试');
+    return false;
+  }
+}
 
 const filteredPayCodes = computed(() => {
   if (!selectedCategory.value) return payCodes.value;
@@ -314,12 +414,14 @@ const handlePageSizeChange = (newSize) => {
   loadPayCodes();
 };
 
-const handleCardClick = (payCode) => {
+const handleCardClick = async (payCode) => {
+  if (!await checkTodayTasks()) return;
   selectedPayCode.value = payCode;
   showPayModal.value = true;
 };
 
-const handlePay = (payCode) => {
+const handlePay = async (payCode) => {
+  if (!await checkTodayTasks()) return;
   selectedPayCode.value = payCode;
   showPayModal.value = true;
 };
@@ -468,6 +570,73 @@ function getAvatarColor(title) {
 <style scoped>
 .shopping-tab {
   padding: 0;
+}
+
+.task-block-card {
+  text-align: center;
+  padding: 8px 0;
+}
+.block-icon {
+  font-size: 48px;
+  margin-bottom: 12px;
+}
+.block-title {
+  font-size: 18px;
+  font-weight: bold;
+  color: #333;
+  margin: 0 0 8px;
+}
+.block-desc {
+  font-size: 14px;
+  color: #666;
+  margin: 0 0 20px;
+}
+.block-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 24px;
+  text-align: left;
+}
+.block-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  background: #fff7ed;
+  border: 1px solid #fed7aa;
+  border-radius: 10px;
+}
+.block-item-icon {
+  font-size: 20px;
+}
+.block-item-name {
+  font-size: 15px;
+  font-weight: 500;
+  color: #c2410c;
+  flex: 1;
+}
+.block-item-status {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 2px 10px;
+  border-radius: 12px;
+  white-space: nowrap;
+}
+.status-pending {
+  background: #fef3c7;
+  color: #d97706;
+}
+.status-rejected {
+  background: #fee2e2;
+  color: #dc2626;
+}
+.status-incomplete {
+  background: #e0e7ff;
+  color: #4f46e5;
+}
+.block-btn {
+  border-radius: 10px;
 }
 
 .qrcode-grid {

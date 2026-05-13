@@ -86,6 +86,18 @@ router.post('/', authenticate, async (req, res, next) => {
     const { title, content, mood, weather, tags = [], price, diaryDate, isPublic = true, wordStats, duplicateStats } = req.body;
     const userId = req.user.id;
 
+    // 检查日记编辑权限
+    const author = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { diaryEnabled: true },
+    });
+    if (author && author.diaryEnabled === false) {
+      return res.status(403).json({
+        success: false,
+        error: '您暂无日记编辑权限，请联系管理员',
+      });
+    }
+
     // 检查今天是否已提交过日记
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -729,6 +741,22 @@ router.post('/check-duplicate', authenticate, async (req, res, next) => {
         checkedGlobalDiaries: allDiaries.length,
         checkedParagraphs: paragraphs.length,
       },
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// GET /api/diaries/check-permission - 检查当前用户日记编辑权限
+router.get('/check-permission', authenticate, async (req, res, next) => {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: req.user.id },
+      select: { diaryEnabled: true },
+    });
+    res.json({
+      success: true,
+      data: { diaryEnabled: user?.diaryEnabled !== false },
     });
   } catch (error) {
     next(error);

@@ -1,4 +1,5 @@
 const prisma = require('../lib/prisma');
+const achievementEmitter = require('../lib/achievementEmitter');
 
 const TYPING_ACHIEVEMENTS = [
   {
@@ -153,6 +154,12 @@ async function createPractice(authorId, payload) {
       ...data,
       isValid: computeIsValidPractice(data),
     },
+  });
+
+  achievementEmitter.emit('task:completed', {
+    userId: authorId,
+    taskType: 'typing',
+    data: { score: data.score, wpm: data.wpm, accuracy: data.accuracy, maxCombo: data.maxCombo },
   });
 
   return practice;
@@ -327,28 +334,11 @@ async function getLeaderboard(period = 'week', page = 1, limit = 20) {
 async function getTodayStatus(authorId, timezoneOffset = -480) {
   const { queryStart, queryEnd } = getDayBoundary(timezoneOffset);
 
-  const now = new Date();
-  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const dayOfWeek = now.getDay() || 7;
-  const weekStart = new Date(todayStart);
-  weekStart.setDate(weekStart.getDate() - (dayOfWeek - 1));
-
-  const bestScoreResult = await prisma.typingPractice.aggregate({
-    where: {
-      authorId,
-      createdAt: { gte: weekStart }
-    },
-    _max: { score: true }
-  });
-  const weeklyBest = bestScoreResult._max.score || 0;
-  const threshold = weeklyBest > 0 ? weeklyBest : 1500;
-
   const latestPractice = await prisma.typingPractice.findFirst({
     where: {
       authorId,
-      score: { gte: threshold },
       createdAt: {
-        gte: weekStart,
+        gte: queryStart,
         lt: queryEnd,
       },
     },
@@ -359,7 +349,6 @@ async function getTodayStatus(authorId, timezoneOffset = -480) {
     completed: Boolean(latestPractice),
     practiceId: latestPractice?.id || null,
     createdAt: latestPractice?.createdAt || null,
-    threshold,
   };
 }
 

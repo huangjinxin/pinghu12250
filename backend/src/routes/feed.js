@@ -424,13 +424,14 @@ router.get('/today-social', authenticate, async (req, res) => {
       });
       hasQuestion = botMessageCount > 0;
 
-      // 2b. 如果没有通过 echo-bot，则检查 iMessage（外部接入）
+      // 2b. 如果没有通过 echo-bot，则检查 iMessage（外部接入），需查所有sender映射
       if (!hasQuestion) {
-        const mapping = await prisma.imessageSenderMapping.findFirst({ where: { userId } });
-        if (mapping) {
+        const mappings = await prisma.imessageSenderMapping.findMany({ where: { userId } });
+        if (mappings.length > 0) {
+          const senders = mappings.map(m => m.sender);
           const qCount = await prisma.$queryRaw`
             SELECT COUNT(*)::int as count FROM "ImessageChatLog"
-            WHERE role = 'user' AND "sender" = ${mapping.sender} AND "createdAt" >= ${todaySince}`;
+            WHERE role = 'user' AND "sender" = ANY(${senders}) AND "createdAt" >= ${todaySince}`;
           hasQuestion = (qCount[0]?.count || 0) > 0;
         }
       }

@@ -57,10 +57,9 @@ coverage/
 .AppleDouble
 .LSOverride
 
-# 上传文件和备份（不纳入版本控制）
+# 上传文件（不纳入版本控制）
 backend/uploads/
 backend/public/img-cache/
-backups/
 
 # 本地测试脚本
 check_*.js

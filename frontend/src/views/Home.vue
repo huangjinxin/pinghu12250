@@ -105,7 +105,7 @@ const taskConfigs = [
     icon: BookOutline,
     color: '#a855f7',
     bgColor: '#f3e8ff',
-    submitUrl: '/diaries/new',
+    submitUrl: '/submit',
   },
   {
     id: 'math',

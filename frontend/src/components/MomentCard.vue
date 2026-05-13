@@ -38,7 +38,7 @@
           class="image-item"
           @click.stop="previewImage(idx)"
         >
-          <img :src="getImageUrl(img)" :alt="`图片${idx + 1}`" loading="lazy" />
+          <img :src="getThumbUrl(img, 'card')" :alt="`图片${idx + 1}`" loading="lazy" />
           <div v-if="idx === 3 && moment.images.length > 4" class="more-overlay">
             +{{ moment.images.length - 4 }}
           </div>
@@ -128,6 +128,7 @@ import { ref, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { useMessage } from 'naive-ui';
 import { postAPI, photoAPI } from '@/api';
+import { useImageUrl } from '@/composables/useImageUrl';
 import EllipsisHorizontal from '@vicons/ionicons5/es/EllipsisHorizontal'
 import Heart from '@vicons/ionicons5/es/Heart'
 import ChatbubbleOutline from '@vicons/ionicons5/es/ChatbubbleOutline'
@@ -180,12 +181,7 @@ const dropdownOptions = [
 const getMoodEmoji = (mood) => moodOptions[mood] || '';
 const getPhotoTypeLabel = (type) => photoTypeLabels[type] || '';
 
-const getImageUrl = (path) => {
-  if (!path) return '';
-  if (path.startsWith('http')) return path;
-  // 使用相对路径，让浏览器自动拼接当前域名
-  return path;
-};
+const { getThumbUrl, getImageUrl } = useImageUrl();
 
 const getImageGridClass = (count) => {
   if (count === 1) return 'grid-1';

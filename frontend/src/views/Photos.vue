@@ -19,7 +19,7 @@
           @click="viewPhoto(photo)"
         >
           <div class="photo-preview">
-            <img :src="getImageUrl(photo.images[0])" :alt="photo.content" />
+            <img :src="getThumbUrl(photo.images[0], 'grid')" :alt="photo.content" />
             <div class="photo-count" v-if="photo.images.length > 1">
               +{{ photo.images.length - 1 }}
             </div>
@@ -143,13 +143,14 @@
           <img
             v-for="(img, idx) in selectedPhoto.images"
             :key="idx"
-            :src="getImageUrl(img)"
+            :src="getThumbUrl(img, 'detail')"
+
             class="detail-image"
           />
         </n-carousel>
         <img
           v-else
-          :src="getImageUrl(selectedPhoto.images[0])"
+          :src="getThumbUrl(selectedPhoto.images[0], 'detail')"
           class="detail-image single"
         />
 
@@ -214,6 +215,7 @@
 import { ref, onMounted } from 'vue';
 import { useMessage } from 'naive-ui';
 import { photoAPI } from '@/api';
+import { useImageUrl } from '@/composables/useImageUrl';
 import CameraOutline from '@vicons/ionicons5/es/CameraOutline'
 import AddOutline from '@vicons/ionicons5/es/AddOutline'
 import HeartOutline from '@vicons/ionicons5/es/HeartOutline'
@@ -261,13 +263,7 @@ const form = ref({
   isPublic: true,
 });
 
-// 获取图片URL
-const getImageUrl = (path) => {
-  if (!path) return '';
-  if (path.startsWith('http')) return path;
-  // 使用相对路径，让浏览器自动拼接当前域名
-  return path;
-};
+const { getThumbUrl, getImageUrl } = useImageUrl();
 
 // 获取心情emoji
 const getMoodEmoji = (mood) => {

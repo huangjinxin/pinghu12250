@@ -483,6 +483,7 @@ export const reviewAPI = {
   getTaskTargets: () => api.get('/review/task-targets'),
   submitReview: (data) => api.post('/review/submit', data),
   getMyReviews: (params) => api.get('/review/my-reviews', { params }),
+  skipTarget: () => api.post('/review/skip-target'),
 };
 
 // 标签系统API
@@ -1269,7 +1270,7 @@ export const imessageAPI = {
   getChatBatch: (chatIds, senders = []) => api.get('/imessage/admin/chat-batch', { params: { chatIds: chatIds.join(','), senders: senders.join(',') } }),
   getChatBySender: (sender) => api.get(`/imessage/admin/chat-by-sender/${encodeURIComponent(sender)}`),
   evaluate: (chatId, analysisType) => api.post(`/imessage/admin/evaluate/${chatId}`, { analysisType }, { timeout: 180000 }),
-  evaluateBySender: (sender, analysisType) => api.post(`/imessage/admin/evaluate-by-sender/${encodeURIComponent(sender)}`, { analysisType }, { timeout: 180000 }),
+  evaluateBySender: (sender, data) => api.post(`/imessage/admin/evaluate-by-sender/${encodeURIComponent(sender)}`, data, { timeout: 180000 }),
   getEvaluations: (chatId) => api.get(`/imessage/admin/evaluations/${chatId}`),
   getEvaluationsBySender: (sender) => api.get(`/imessage/admin/evaluations-by-sender/${encodeURIComponent(sender)}`),
   getAllEvaluations: (params) => api.get('/imessage/admin/all-evaluations', { params }),
@@ -1278,6 +1279,7 @@ export const imessageAPI = {
   deleteSenderMapping: (sender) => api.delete(`/imessage/admin/sender-mappings/${encodeURIComponent(sender)}`),
   searchUsers: (keyword) => api.get('/imessage/admin/search-users', { params: { keyword } }),
   getUserSummary: (userId) => api.get(`/imessage/user/${userId}/summary`),
+  getLinkedUsersStats: () => api.get('/imessage/admin/linked-users-stats'),
 };
 
 // 动态流 API
@@ -1403,6 +1405,25 @@ export const teacherAPI = {
 export const delegatedReviewAPI = {
   getPendingReviews: (params) => api.get('/delegated-reviews/pending', { params }),
   reviewSubmission: (id, data) => api.post(`/delegated-reviews/${id}/review`, data),
+};
+
+// 日记权限管理API（管理员）
+export const diaryAdminAPI = {
+  getWhitelist: (params) => api.get('/admin/diary-whitelist', { params }),
+  toggleUser: (userId) => api.put(`/admin/diary-whitelist/${userId}`),
+  checkPermission: () => api.get('/diaries/check-permission'),
+};
+
+// 名单导入API（管理员）
+export const rosterAPI = {
+  import: (entries) => api.post('/roster/import', { entries }),
+  getStudents: (params) => api.get('/roster/students', { params }),
+};
+
+// 互评管理员API
+export const reviewAdminAPI = {
+  getAllStudents: (params) => api.get('/review/admin/all-students', { params }),
+  getStudentDetail: (studentId, params) => api.get(`/review/admin/student/${studentId}`, { params }),
 };
 
 export default api;

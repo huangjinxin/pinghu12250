@@ -20,6 +20,8 @@ const CHALLENGE_ITEMS = [
   { id: 'calligraphy', name: '书写练习', color: 'pink', isCalligraphy: true },
   { id: 'moments', name: '发朋友圈', color: 'teal', isSocial: 'moments' },
   { id: 'questions', name: '勤学好问', color: 'violet', isSocial: 'questions' },
+  { id: 'typing', name: '打字训练', color: 'indigo', isTyping: true },
+  { id: 'pinyin', name: '拼音练习', color: 'sky', isPinyin: true },
 ];
 
 // 状态分值（用于排序）
@@ -141,6 +143,32 @@ router.get('/leaderboard', async (req, res) => {
       });
     }
 
+    // 查询今日打字训练（有任意练习记录即视为完成）
+    const typingPractices = await prisma.typingPractice.findMany({
+      where: {
+        authorId: { in: studentIds },
+        createdAt: { gte: queryStart, lt: queryEnd }
+      },
+      select: { authorId: true },
+    });
+
+    // 查询今日拼音练习（charCount >= 20, accuracy >= 80 视为有效练习）
+    const pinyinPractices = await prisma.pinyinPractice.findMany({
+      where: {
+        authorId: { in: studentIds },
+        charCount: { gte: 20 },
+        accuracy: { gte: 80 },
+        createdAt: { gte: queryStart, lt: queryEnd }
+      },
+      select: { authorId: true },
+    });
+
+    const typingByUser = new Set();
+    typingPractices.forEach(p => typingByUser.add(p.authorId));
+
+    const pinyinByUser = new Set();
+    pinyinPractices.forEach(p => pinyinByUser.add(p.authorId));
+
     // 4. 按用户分组提交记录
     const submissionsByUser = {};
     for (const sub of submissions) {
@@ -183,6 +211,10 @@ router.get('/leaderboard', async (req, res) => {
           status = momentsByUser.has(student.id) ? 'APPROVED' : 'NOT_SUBMITTED';
         } else if (item.isSocial === 'questions') {
           status = questionsByUser.has(student.id) ? 'APPROVED' : 'NOT_SUBMITTED';
+        } else if (item.isTyping) {
+          status = typingByUser.has(student.id) ? 'APPROVED' : 'NOT_SUBMITTED';
+        } else if (item.isPinyin) {
+          status = pinyinByUser.has(student.id) ? 'APPROVED' : 'NOT_SUBMITTED';
         } else {
           status = userSubmissions[item.templateName] || 'NOT_SUBMITTED';
         }

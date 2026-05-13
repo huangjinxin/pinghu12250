@@ -26,7 +26,7 @@ exports.getCurrentUser = async (req, res, next) => {
             school: { select: { id: true, name: true } },
           },
         },
-        parentRelations: {
+        StudentParent_StudentParent_parentIdToUser: {
           include: {
             parent: {
               select: {
@@ -38,7 +38,7 @@ exports.getCurrentUser = async (req, res, next) => {
             },
           },
         },
-        childRelations: {
+        StudentParent_StudentParent_childIdToUser: {
           include: {
             child: {
               select: {
@@ -61,9 +61,14 @@ exports.getCurrentUser = async (req, res, next) => {
     const joinedDays = Math.floor((Date.now() - user.createdAt.getTime()) / (1000 * 60 * 60 * 24));
 
     // 获取打卡统计
-    const checkInStats = await getCheckInStats(user.id);
+    let checkInStats = null;
+    try {
+      checkInStats = await getCheckInStats(user.id);
+    } catch (e) {
+      console.error('获取打卡统计失败:', e.message);
+    }
 
-    const { password: _, ...userWithoutPassword } = user;
+    const { password: _, StudentParent_StudentParent_parentIdToUser: parentRels, StudentParent_StudentParent_childIdToUser: childRels, ...userWithoutPassword } = user;
 
     // 更新 profile 中的 joinedDays
     if (user.profile && user.profile.joinedDays !== joinedDays) {
@@ -76,6 +81,8 @@ exports.getCurrentUser = async (req, res, next) => {
 
     res.json({
       ...userWithoutPassword,
+      parentRelations: parentRels,
+      childRelations: childRels,
       checkInStats,
     });
   } catch (error) {

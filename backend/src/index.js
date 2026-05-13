@@ -94,12 +94,17 @@ const pushTokenRoutes = require('./routes/pushTokens');
 const imgProxyRoutes = require('./routes/imgProxy');
 const teacherRoutes = require('./routes/teacher');
 const delegatedReviewRoutes = require('./routes/delegatedReviews');
+const rosterRoutes = require('./routes/roster');
 
 // 导入服务
 const challengeService = require('./services/challengeService');
 const diaryAchievementService = require('./services/diaryAchievementService');
+const { initAchievements: initTaskAchievements } = require('../prisma/seed_achievements');
 const { startQueueConsumer: startEmbeddingQueue } = require('./services/embeddingQueueService');
 const { startAutomationTaskConsumer } = require('./services/aiAutomationService');
+
+// 初始化成就事件监听
+const achievementService = require('./services/achievementService');
 
 // 导入中间件
 const { errorHandler } = require('./middleware/errorHandler');
@@ -239,6 +244,7 @@ app.use('/api/push-tokens', pushTokenRoutes);
 app.use('/api/img-proxy', imgProxyRoutes);
 app.use('/api/teacher', teacherRoutes);
 app.use('/api/delegated-reviews', delegatedReviewRoutes);
+app.use('/api/roster', rosterRoutes);
 app.use('/api/backup', require('./routes/backup'));
 
 // 404处理
@@ -672,6 +678,15 @@ httpServer.listen(PORT, () => {
     })
     .catch(err => {
       console.warn('⚠️ 日记成就初始化失败:', err.message);
+    });
+
+  // 初始化8大任务成就定义 + 成就事件监听
+  initTaskAchievements()
+    .then(() => {
+      console.log('✓ 任务成就定义已初始化');
+    })
+    .catch(err => {
+      console.warn('⚠️ 任务成就初始化失败:', err.message);
     });
 
   // 启动 Embedding 队列消费者（RAG 功能）

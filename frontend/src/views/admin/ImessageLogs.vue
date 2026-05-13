@@ -59,6 +59,7 @@
     <n-tabs v-model:value="activeTab" type="line" class="mb-4">
       <n-tab name="logs">消息列表</n-tab>
       <n-tab name="chats">按会话查看</n-tab>
+      <n-tab name="users">按用户查看</n-tab>
       <n-tab name="evaluations">AI分析记录</n-tab>
     </n-tabs>
 
@@ -138,6 +139,11 @@
       <div class="flex justify-end mt-3">
         <n-pagination v-model:page="evalPage" :page-count="Math.ceil(evalTotal / evalPageSize)" size="small" @update:page="loadAllEvaluations" />
       </div>
+    </template>
+
+    <!-- 按用户查看 -->
+    <template v-if="activeTab === 'users'">
+      <LinkedUserCards />
     </template>
 
     <!-- 会话详情弹窗 -->
@@ -253,6 +259,7 @@ import { ref, reactive, computed, onMounted, onUnmounted, h, nextTick, watch } f
 import { useMessage } from 'naive-ui';
 import { imessageAPI } from '@/api';
 import { marked } from 'marked';
+import LinkedUserCards from './LinkedUserCards.vue';
 import * as echarts from 'echarts/core';
 import { LineChart, BarChart, PieChart } from 'echarts/charts';
 import { GridComponent, TooltipComponent, LegendComponent } from 'echarts/components';
@@ -531,6 +538,8 @@ const analysisTypeOptions = [
   { value: 'psychology', icon: '🧠', label: '心理分析', desc: '深度分析情绪特征、社交模式、自信心与心理韧性' },
   { value: 'interest', icon: '💡', label: '兴趣分析', desc: '挖掘核心兴趣领域、学习风格与天赋潜能' },
   { value: 'negative', icon: '🛡️', label: '负面情况排查', desc: '排查情绪异常、不良倾向、社交问题与网络安全' },
+  { value: 'values', icon: '⚖️', label: '三观分析', desc: '评估世界观、人生观、价值观发展状况' },
+  { value: 'teaching', icon: '📖', label: '教学建议', desc: '学习能力评估、学科优势分析、个性化教学策略' },
 ];
 
 // 发送者-用户关联
@@ -671,7 +680,7 @@ async function confirmEvaluate() {
   try {
     let res;
     if (chat.merged) {
-      res = await imessageAPI.evaluateBySender(chat.sender, selectedAnalysisType.value);
+      res = await imessageAPI.evaluateBySender(chat.sender, { analysisType: selectedAnalysisType.value });
     } else {
       res = await imessageAPI.evaluate(chat.chatId, selectedAnalysisType.value);
     }

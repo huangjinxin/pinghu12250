@@ -8,6 +8,7 @@ const prisma = require('../lib/prisma');
 const { authenticate, optionalAuth } = require('../middleware/auth');
 const aiService = require('../services/aiService');
 const pointService = require('../services/pointService');
+const achievementEmitter = require('../lib/achievementEmitter');
 const { createCalligraphyAutomationTask } = require('../services/aiAutomationService');
 const path = require('path');
 const fs = require('fs').promises;
@@ -388,6 +389,12 @@ router.post('/', authenticate, async (req, res) => {
           }
         }
       }
+    });
+
+    achievementEmitter.emit('task:completed', {
+      userId: req.user.id,
+      taskType: 'calligraphy',
+      data: { title, charCount: charCount || 0 },
     });
 
     res.json({ success: true, data: work });

@@ -22,7 +22,7 @@ import PersonOutline from '@vicons/ionicons5/es/PersonOutline'
 
 export const baseMenuItems = [
   { key: 'home', path: '/', label: '每日任务', icon: HomeOutline },
-  { key: 'submit', path: '/submit', label: '提交beta', icon: AddCircleOutline },
+  { key: 'submit', path: '/submit', label: '日记提交', icon: AddCircleOutline },
   {
     key: 'social', label: '学习动态', icon: PeopleOutline,
     children: [

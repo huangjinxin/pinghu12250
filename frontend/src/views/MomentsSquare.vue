@@ -51,7 +51,7 @@
                 </div>
                 <p v-if="item.content" class="unified-text">{{ item.content }}</p>
                 <div v-if="item.images?.length > 0" class="unified-images">
-                  <img :src="item.images[0]" />
+                  <img :src="getThumbUrl(item.images[0], 'square')" />
                   <span v-if="item.images.length > 1" class="image-count">+{{ item.images.length - 1 }}</span>
                 </div>
                 <div class="unified-stats">
@@ -64,7 +64,7 @@
               <div v-else class="work-card" @click="openDetail(item)">
                 <div class="work-card-inner">
                   <div v-if="item.preview || item.images?.[0]" class="work-preview">
-                    <img :src="item.preview || item.images[0]" />
+                    <img :src="item.preview || getThumbUrl(item.images[0], 'square')" />
                   </div>
                   <div v-else class="work-icon" :class="getWorkTypeClass(item.type)">
                     <n-icon :size="28">
@@ -160,7 +160,7 @@
             <div class="work-card-inner">
               <!-- 预览图/图标 -->
               <div v-if="item.preview" class="work-preview">
-                <img :src="item.preview" />
+                <img :src="getThumbUrl(item.preview, 'square')" />
               </div>
               <div v-else class="work-icon" :class="getWorkTypeClass(item.type)">
                 <n-icon :size="28">
@@ -441,6 +441,7 @@ import { useRouter } from 'vue-router';
 import { useMessage } from 'naive-ui';
 import { useAuthStore } from '@/stores/auth';
 import { postAPI, photoAPI, publicAPI, feedAPI } from '@/api';
+import { useImageUrl } from '@/composables/useImageUrl';
 import api from '@/api';
 import MomentCard from '@/components/MomentCard.vue';
 import AvatarText from '@/components/AvatarText.vue';
@@ -465,6 +466,7 @@ import SearchOutline from '@vicons/ionicons5/es/SearchOutline'
 const router = useRouter();
 const message = useMessage();
 const authStore = useAuthStore();
+const { getThumbUrl } = useImageUrl();
 
 // 状态
 const loading = ref(false);

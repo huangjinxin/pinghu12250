@@ -504,25 +504,32 @@ export function useSubmission() {
       return false;
     }
 
-    // 检查重复率（需要800字以上）
-    if (detailedWordCount.value.words >= 800 && duplicateResult.value) {
-      const { selfRepeatRate, overallRate, globalRepeatRate } = duplicateResult.value;
-      const selfRate = selfRepeatRate || 0;
-      const historyRate = overallRate - selfRate - (globalRepeatRate || 0);
-      const globalRate = globalRepeatRate || 0;
+    if (diaryForm.value.content.trim().length < 1200) {
+      message.warning('日记字数需达1200字以上才能提交审核~');
+      return false;
+    }
 
-      if (selfRate >= 10) {
-        message.warning('自身重复率需低于10%才能提交');
-        return false;
-      }
-      if (historyRate >= 10) {
-        message.warning('历史重复率需低于10%才能提交');
-        return false;
-      }
-      if (globalRate >= 10) {
-        message.warning('全站重复率需低于10%才能提交');
-        return false;
-      }
+    if (!duplicateResult.value) {
+      message.warning('请先点击"检测重复内容"进行查重~');
+      return false;
+    }
+
+    const { selfRepeatRate, overallRate, globalRepeatRate } = duplicateResult.value;
+    const selfRate = selfRepeatRate || 0;
+    const historyRate = overallRate - selfRate - (globalRepeatRate || 0);
+    const globalRate = globalRepeatRate || 0;
+
+    if (selfRate >= 10) {
+      message.warning('自身重复率需低于10%才能提交');
+      return false;
+    }
+    if (historyRate >= 10) {
+      message.warning('历史重复率需低于10%才能提交');
+      return false;
+    }
+    if (globalRate >= 10) {
+      message.warning('全站重复率需低于10%才能提交');
+      return false;
     }
 
     const result = await diaryAPI.createDiary({

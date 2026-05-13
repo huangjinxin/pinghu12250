@@ -286,7 +286,7 @@ async function createSubmissionAutomationTask(submissionId) {
 
   if (!submission || submission.status !== 'APPROVED') return null;
 
-  const existing = await prisma.task.findFirst({
+  const existing = await prisma.aiAutomationTask.findFirst({
     where: {
       submissionId,
       taskType: 'submission_analysis',
@@ -295,7 +295,7 @@ async function createSubmissionAutomationTask(submissionId) {
   });
   if (existing) return existing;
 
-  return prisma.task.create({
+  return prisma.aiAutomationTask.create({
     data: {
       taskType: 'submission_analysis',
       sourceType: 'rule_submission',
@@ -327,7 +327,7 @@ async function createCalligraphyAutomationTask(workId) {
 
   if (!work || work.status !== 'APPROVED') return null;
 
-  const existing = await prisma.task.findFirst({
+  const existing = await prisma.aiAutomationTask.findFirst({
     where: {
       calligraphyWorkId: workId,
       taskType: 'calligraphy_analysis',
@@ -336,7 +336,7 @@ async function createCalligraphyAutomationTask(workId) {
   });
   if (existing) return existing;
 
-  return prisma.task.create({
+  return prisma.aiAutomationTask.create({
     data: {
       taskType: 'calligraphy_analysis',
       sourceType: 'calligraphy_work',
@@ -378,17 +378,17 @@ async function summarizeTask(task) {
 
 async function getTaskSummary() {
   const [pending, processing, success, error, last24hSuccess, last24hError] = await Promise.all([
-    prisma.task.count({ where: { status: 'pending' } }),
-    prisma.task.count({ where: { status: 'processing' } }),
-    prisma.task.count({ where: { status: 'success' } }),
-    prisma.task.count({ where: { status: 'error' } }),
-    prisma.task.count({
+    prisma.aiAutomationTask.count({ where: { status: 'pending' } }),
+    prisma.aiAutomationTask.count({ where: { status: 'processing' } }),
+    prisma.aiAutomationTask.count({ where: { status: 'success' } }),
+    prisma.aiAutomationTask.count({ where: { status: 'error' } }),
+    prisma.aiAutomationTask.count({
       where: {
         status: 'success',
         processedAt: { gte: new Date(Date.now() - 24 * 60 * 60 * 1000) }
       }
     }),
-    prisma.task.count({
+    prisma.aiAutomationTask.count({
       where: {
         status: 'error',
         updatedAt: { gte: new Date(Date.now() - 24 * 60 * 60 * 1000) }
@@ -409,7 +409,7 @@ async function getTasks(params = {}) {
   if (params.sourceType) where.sourceType = params.sourceType;
 
   const [items, total] = await Promise.all([
-    prisma.task.findMany({
+    prisma.aiAutomationTask.findMany({
       where,
       include: {
         aiConfig: {
@@ -434,7 +434,7 @@ async function getTasks(params = {}) {
       skip: (page - 1) * limit,
       take: limit
     }),
-    prisma.task.count({ where })
+    prisma.aiAutomationTask.count({ where })
   ]);
 
   return {
@@ -599,14 +599,14 @@ async function processTask(task) {
 }
 
 async function processPendingTasks() {
-  const task = await prisma.task.findFirst({
+  const task = await prisma.aiAutomationTask.findFirst({
     where: { status: 'pending' },
     orderBy: { createdAt: 'asc' }
   });
 
   if (!task) return false;
 
-  const claimed = await prisma.task.updateMany({
+  const claimed = await prisma.aiAutomationTask.updateMany({
     where: { id: task.id, status: 'pending' },
     data: { status: 'processing' }
   });
@@ -615,7 +615,7 @@ async function processPendingTasks() {
 
   try {
     const result = await processTask(task);
-    await prisma.task.update({
+    await prisma.aiAutomationTask.update({
       where: { id: task.id },
       data: {
         status: 'success',
@@ -627,7 +627,7 @@ async function processPendingTasks() {
     });
   } catch (error) {
     const retryCount = task.retryCount + 1;
-    await prisma.task.update({
+    await prisma.aiAutomationTask.update({
       where: { id: task.id },
       data: {
         status: retryCount >= 3 ? 'error' : 'pending',
@@ -655,10 +655,10 @@ function startAutomationTaskConsumer() {
 }
 
 async function retryTask(taskId) {
-  const task = await prisma.task.findUnique({ where: { id: taskId } });
+  const task = await prisma.aiAutomationTask.findUnique({ where: { id: taskId } });
   if (!task) throw new Error('任务不存在');
 
-  return prisma.task.update({
+  return prisma.aiAutomationTask.update({
     where: { id: taskId },
     data: {
       status: 'pending',

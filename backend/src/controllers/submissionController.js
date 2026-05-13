@@ -5,6 +5,13 @@ const pointService = require('../services/pointService');
 const { createSubmissionAutomationTask } = require('../services/aiAutomationService');
 const delegatedReviewController = require('./delegatedReviewController');
 const teacherIncentiveService = require('../services/teacherIncentiveService');
+const achievementEmitter = require('../lib/achievementEmitter');
+
+const SUBMISSION_TASK_MAP = {
+  '可汗学院数学进度': 'math',
+  '背诗': 'poetry',
+  '日记(审批前提项/日)': 'diary',
+};
 
 // ========== 用户提交管理 ==========
 
@@ -129,6 +136,16 @@ async function createSubmission(req, res) {
 
     // 触发代办任务创建（异步不阻塞）
     delegatedReviewController.createDelegatedReviewTask(submission.id, userId);
+
+    // 触发任务成就检查（数学/背诗/日记）
+    const taskType = SUBMISSION_TASK_MAP[submission.template?.name];
+    if (taskType) {
+      achievementEmitter.emit('task:completed', {
+        userId,
+        taskType,
+        data: { contentLength: (content || '').length, submissionId: submission.id },
+      });
+    }
 
     res.json({ submission });
   } catch (error) {

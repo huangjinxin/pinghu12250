@@ -1,22 +1,14 @@
 const prisma = require('../lib/prisma');
 const creditService = require('./creditService');
 
+const DIMENSIONS = ['MORALITY', 'INTELLIGENCE', 'PHYSIQUE', 'AESTHETICS', 'LABOR', 'SOCIETY'];
+const DIMENSION_LABELS = {
+  MORALITY: '品德', INTELLIGENCE: '智慧', PHYSIQUE: '体质',
+  AESTHETICS: '审美', LABOR: '劳动', SOCIETY: '社交'
+};
+
 function getTodayStr() {
   return new Date().toISOString().split('T')[0];
-}
-
-function isValidChineseContent(content) {
-  const chineseCharCount = (content.match(/[\u4e00-\u9fa5]/g) || []).length;
-  return chineseCharCount >= 8;
-}
-
-function detectAbuse(content) {
-  if (!content || content.trim().length < 8) return true;
-  const charSet = new Set(content);
-  if (charSet.size < 3 && content.length > 20) return true;
-  const repeated = content.match(/(.)\1{5,}/g);
-  if (repeated && repeated.join('').length > content.length * 0.5) return true;
-  return false;
 }
 
 async function getRandomTargets(currentUserId, excludeIds = [], limit = 2) {
@@ -33,7 +25,7 @@ async function getRandomTargets(currentUserId, excludeIds = [], limit = 2) {
 
   const baseWhere = {
     id: { not: currentUserId, notIn: [...excludeIds, ...recentToIds] },
-    status: 'ACTIVE',
+    status: { in: ['ACTIVE', 'PENDING'] },
     role: 'STUDENT'
   };
 
@@ -46,8 +38,8 @@ async function getRandomTargets(currentUserId, excludeIds = [], limit = 2) {
   if (candidates.length < limit) {
     const fallback = await prisma.user.findMany({
       where: {
-        id: { not: currentUserId },
-        status: 'ACTIVE',
+        id: { not: currentUserId, notIn: excludeIds },
+        status: { in: ['ACTIVE', 'PENDING'] },
         role: 'STUDENT'
       },
       select: { id: true, _count: { select: { PeerReview_PeerReview_toUserIdToUser: true } } },
@@ -56,7 +48,19 @@ async function getRandomTargets(currentUserId, excludeIds = [], limit = 2) {
     candidates = [...candidates, ...fallback];
   }
 
-  // Deduplicate
+  // Ultimate fallback: any active user
+  if (candidates.length < limit) {
+    const fallback2 = await prisma.user.findMany({
+      where: {
+        id: { not: currentUserId },
+        status: { in: ['ACTIVE', 'PENDING'] }
+      },
+      select: { id: true },
+      take: limit
+    });
+    candidates = [...candidates, ...fallback2];
+  }
+
   const uniqueCandidates = [];
   const seen = new Set();
   for (const c of candidates) {
@@ -66,9 +70,8 @@ async function getRandomTargets(currentUserId, excludeIds = [], limit = 2) {
     }
   }
 
-  // Sort by PeerReview_PeerReview_toUserIdToUser ascending, then randomly
   uniqueCandidates.sort((a, b) => {
-    if (a._count.PeerReview_PeerReview_toUserIdToUser !== b._count.PeerReview_PeerReview_toUserIdToUser) {
+    if (a._count?.PeerReview_PeerReview_toUserIdToUser !== b._count?.PeerReview_PeerReview_toUserIdToUser) {
       return a._count.PeerReview_PeerReview_toUserIdToUser - b._count.PeerReview_PeerReview_toUserIdToUser;
     }
     return Math.random() - 0.5;
@@ -79,8 +82,6 @@ async function getRandomTargets(currentUserId, excludeIds = [], limit = 2) {
 
 async function getOrCreateDailyTask(userId) {
   const today = getTodayStr();
-  console.log('[ReviewService] getOrCreateDailyTask for user:', userId, 'date:', today);
-  
   let task = await prisma.dailyReviewTask.findUnique({
     where: {
       userId_date_taskType: {
@@ -91,22 +92,34 @@ async function getOrCreateDailyTask(userId) {
     }
   });
 
+  // If task exists but targets are stale, recreate
+  if (task && task.completedCount < 2) {
+    const validTargets = await prisma.user.findMany({
+      where: { id: { in: task.targetUserIds } },
+      select: { id: true }
+    });
+    const validIds = validTargets.map(u => u.id);
+    if (validIds.length === 0) {
+      await prisma.dailyReviewTask.delete({ where: { id: task.id } });
+      task = null;
+    } else if (validIds.length < task.targetUserIds.length) {
+      task = await prisma.dailyReviewTask.update({
+        where: { id: task.id },
+        data: { targetUserIds: validIds }
+      });
+    }
+  }
+
   if (!task) {
-    console.log('[ReviewService] No task found, creating new one');
     const targets = await getRandomTargets(userId, [], 2);
-    console.log('[ReviewService] Got random targets:', targets);
-    
     if (targets.length === 0) {
-      console.log('[ReviewService] No random targets, falling back to all students');
       const users = await prisma.user.findMany({
-        where: { id: { not: userId }, status: 'ACTIVE', role: 'STUDENT' },
+        where: { id: { not: userId }, status: { in: ['ACTIVE', 'PENDING'] } },
         select: { id: true },
         take: 2
       });
       targets.push(...users.map(u => u.id));
-      console.log('[ReviewService] Fallback targets:', targets);
     }
-    
     if (targets.length > 0) {
       task = await prisma.dailyReviewTask.create({
         data: {
@@ -118,10 +131,7 @@ async function getOrCreateDailyTask(userId) {
           completedCount: 0
         }
       });
-      console.log('[ReviewService] Created task:', task.id);
     }
-  } else {
-    console.log('[ReviewService] Found existing task:', task.id, 'targets:', task.targetUserIds);
   }
 
   if (!task) {
@@ -153,24 +163,60 @@ async function getTaskTargets(userId) {
       fromUserId: userId,
       createdAt: { gte: new Date(new Date().setHours(0, 0, 0, 0)) }
     },
-    select: { toUserId: true }
+    select: { toUserId: true, dimension: true }
   });
-  const submittedIds = submittedToday.map(r => r.toUserId);
 
+  const submittedByTarget = {};
+  submittedToday.forEach(r => {
+    if (!submittedByTarget[r.toUserId]) submittedByTarget[r.toUserId] = [];
+    if (r.dimension) submittedByTarget[r.toUserId].push(r.dimension);
+  });
+
+  const submittedIds = Object.keys(submittedByTarget);
   const targets = await prisma.user.findMany({
-    where: { id: { in: task.targetUserIds, notIn: submittedIds } },
-    select: { id: true, username: true, avatar: true }
+    where: { id: { in: task.targetUserIds } },
+    select: { id: true, username: true, realName: true, avatar: true }
   });
 
-  return targets;
+  return targets.map(t => ({
+    ...t,
+    reviewedDimensions: submittedByTarget[t.id] || [],
+    remainingDimensions: DIMENSIONS.filter(d => !(submittedByTarget[t.id] || []).includes(d))
+  }));
 }
 
-async function submitReview(fromUserId, toUserId, content, tags = [], scores = null, category = null) {
-  if (!isValidChineseContent(content)) {
-    throw new Error('评价内容至少需要8个中文字符');
+async function skipTarget(userId) {
+  const task = await getOrCreateDailyTask(userId);
+  const skipped = task.skippedUserIds || [];
+  const allTargets = task.targetUserIds || [];
+
+  const newTargetId = await getRandomTargets(userId, [...allTargets, ...skipped], 1);
+  if (newTargetId.length === 0) {
+    throw new Error('没有更多可评价的同学了');
   }
-  if (detectAbuse(content)) {
-    throw new Error('内容检测异常，请重新输入');
+
+  const newTarget = await prisma.user.findUnique({
+    where: { id: newTargetId[0] },
+    select: { id: true, username: true, realName: true, avatar: true }
+  });
+
+  await prisma.dailyReviewTask.update({
+    where: { id: task.id },
+    data: {
+      skippedUserIds: [...skipped, ...allTargets.filter(t => t !== newTargetId[0])],
+      targetUserIds: { push: newTargetId[0] }
+    }
+  });
+
+  return { ...newTarget, reviewedDimensions: [], remainingDimensions: [...DIMENSIONS] };
+}
+
+async function submitReview(fromUserId, toUserId, dimension, score, detail = {}) {
+  if (!DIMENSIONS.includes(dimension)) {
+    throw new Error('无效的评价维度');
+  }
+  if (!Number.isInteger(score) || score < 1 || score > 5) {
+    throw new Error('评分必须在1-5之间');
   }
 
   const task = await getOrCreateDailyTask(fromUserId);
@@ -178,19 +224,20 @@ async function submitReview(fromUserId, toUserId, content, tags = [], scores = n
     throw new Error('今日评价任务中不包含该用户');
   }
 
-  const existing = await prisma.peerReview.findFirst({
+  const existingToday = await prisma.peerReview.findFirst({
     where: {
       fromUserId,
       toUserId,
+      dimension,
       createdAt: { gte: new Date(new Date().setHours(0, 0, 0, 0)) }
     }
   });
-  if (existing) {
-    throw new Error('今日已评价过该用户');
+  if (existingToday) {
+    throw new Error('今日已评价过该用户的此项维度');
   }
 
   const review = await prisma.peerReview.create({
-    data: { fromUserId, toUserId, content, tags, scores, category },
+    data: { fromUserId, toUserId, dimension, score, detail, content: detail.content || '' },
     include: { toUser: { select: { id: true, username: true, avatar: true } } }
   });
 
@@ -210,13 +257,40 @@ async function submitReview(fromUserId, toUserId, content, tags = [], scores = n
     data: { fromUserId, toUserId, reviewId: review.id, action: 'submit' }
   });
 
-  // 触发信用评分 (Task 4)
   await creditService.recordBehavior(fromUserId, 'SOCIAL', 'PEER_REVIEW', {
-    description: `评价了用户 ${review.toUser?.username || toUserId}`,
+    description: `评价了用户 ${review.toUser?.username || toUserId} 的${DIMENSION_LABELS[dimension]}`,
     sourceId: review.id
   }).catch(err => console.error('Credit error:', err));
 
   return review;
+}
+
+function aggregateDimensionStats(reviews) {
+  const dimScores = {};
+  DIMENSIONS.forEach(d => { dimScores[d] = []; });
+
+  reviews.forEach(r => {
+    if (r.dimension && r.score != null) {
+      const dim = r.dimension;
+      if (dimScores[dim]) dimScores[dim].push(r.score);
+    }
+  });
+
+  const averages = {};
+  DIMENSIONS.forEach(d => {
+    const scores = dimScores[d];
+    if (scores.length > 0) {
+      averages[d] = Number((scores.reduce((a, b) => a + b, 0) / scores.length).toFixed(1));
+    }
+  });
+
+  const totalReviews = reviews.filter(r => r.dimension != null).length;
+  const dimensionReviewCount = {};
+  DIMENSIONS.forEach(d => {
+    dimensionReviewCount[d] = dimScores[d].length;
+  });
+
+  return { averages, total: totalReviews, dimensionReviewCount };
 }
 
 async function getMyReviews(userId, limit = 20, offset = 0) {
@@ -230,60 +304,97 @@ async function getMyReviews(userId, limit = 20, offset = 0) {
     skip: offset
   });
 
-  const anonymousReviews = reviews.map(r => ({
-    ...r,
-    fromUser: { id: 'anonymous', username: '匿名同学', avatar: null }
-  }));
-
   const allReviews = await prisma.peerReview.findMany({
     where: { toUserId: userId },
-    select: {
-      tags: true,
-      scores: true
-    }
+    select: { dimension: true, score: true }
   });
-  
-  const stats = calculateReviewStats(allReviews);
+
+  const stats = aggregateDimensionStats(allReviews);
   const total = await prisma.peerReview.count({ where: { toUserId: userId } });
 
-  return { reviews: anonymousReviews, isAnonymous: true, stats, hasMore: offset + reviews.length < total };
+  return { reviews, isAnonymous: true, stats, hasMore: offset + reviews.length < total };
 }
 
-function calculateReviewStats(reviews) {
-  if (reviews.length === 0) {
-    return { total: 0, tagsCount: {}, averageScores: {} };
-  }
+async function getAllStudentReviews({ status, schoolId, classId, page = 1, limit = 24 }) {
+  const skip = (page - 1) * limit;
+  const where = { role: 'STUDENT' };
+  if (status && status !== 'ALL') where.status = status;
+  if (schoolId) where.schoolId = schoolId;
+  if (classId) where.classId = classId;
 
-  const tagsCount = {};
-  const scoreSums = { attitude: 0, cooperation: 0 };
-  let validScoreCount = 0;
+  const [students, total] = await Promise.all([
+    prisma.user.findMany({
+      where,
+      select: {
+        id: true, realName: true, username: true, avatar: true, status: true,
+        school: { select: { name: true } },
+        class: { select: { grade: true, name: true } },
+        _count: { select: { PeerReview_PeerReview_toUserIdToUser: true } }
+      },
+      skip, take: limit,
+      orderBy: { createdAt: 'desc' }
+    }),
+    prisma.user.count({ where })
+  ]);
 
-  reviews.forEach(r => {
-    // 统计标签
-    if (Array.isArray(r.tags)) {
-      r.tags.forEach(tag => {
-        tagsCount[tag] = (tagsCount[tag] || 0) + 1;
-      });
-    }
-
-    // 统计评分
-    if (r.scores && typeof r.scores === 'object') {
-      if (r.scores.attitude) scoreSums.attitude += r.scores.attitude;
-      if (r.scores.cooperation) scoreSums.cooperation += r.scores.cooperation;
-      validScoreCount++;
-    }
+  const studentIds = students.map(s => s.id);
+  const allReviews = await prisma.peerReview.findMany({
+    where: { toUserId: { in: studentIds } },
+    select: { toUserId: true, dimension: true, score: true, updatedAt: true }
   });
 
-  const averageScores = {};
-  if (validScoreCount > 0) {
-    averageScores.attitude = Number((scoreSums.attitude / validScoreCount).toFixed(1));
-    averageScores.cooperation = Number((scoreSums.cooperation / validScoreCount).toFixed(1));
+  const reviewsByUser = {};
+  for (const r of allReviews) {
+    if (!reviewsByUser[r.toUserId]) reviewsByUser[r.toUserId] = [];
+    reviewsByUser[r.toUserId].push(r);
   }
 
+  const result = students.map(s => ({
+    id: s.id,
+    realName: s.realName,
+    username: s.username,
+    avatar: s.avatar,
+    status: s.status,
+    school: s.school,
+    class: s.class,
+    reviewCount: s._count.PeerReview_PeerReview_toUserIdToUser,
+    reviewStats: aggregateDimensionStats(reviewsByUser[s.id] || []),
+    lastReviewedAt: reviewsByUser[s.id]?.length > 0
+      ? reviewsByUser[s.id].reduce((max, r) => r.updatedAt > max ? r.updatedAt : max, reviewsByUser[s.id][0].updatedAt)
+      : null
+  }));
+
+  return { students: result, total, page, limit, totalPages: Math.ceil(total / limit) };
+}
+
+async function getStudentReviewDetail(studentId, limit = 20, offset = 0) {
+  const [reviews, allReviews, total] = await Promise.all([
+    prisma.peerReview.findMany({
+      where: { toUserId: studentId },
+      include: { fromUser: { select: { id: true, username: true, avatar: true } } },
+      orderBy: { createdAt: 'desc' },
+      take: limit, skip: offset
+    }),
+    prisma.peerReview.findMany({
+      where: { toUserId: studentId },
+      select: { dimension: true, score: true }
+    }),
+    prisma.peerReview.count({ where: { toUserId: studentId } })
+  ]);
+
+  const student = await prisma.user.findUnique({
+    where: { id: studentId },
+    select: { id: true, realName: true, username: true, avatar: true, status: true,
+      school: { select: { name: true } },
+      class: { select: { grade: true, name: true } } }
+  });
+
   return {
-    total: reviews.length,
-    tagsCount,
-    averageScores
+    student,
+    reviews,
+    stats: aggregateDimensionStats(allReviews),
+    total,
+    hasMore: offset + reviews.length < total
   };
 }
 
@@ -300,7 +411,12 @@ async function recordViewAction(userId) {
 module.exports = {
   getTodayTaskStatus,
   getTaskTargets,
+  skipTarget,
   submitReview,
   getMyReviews,
-  recordViewAction
+  getAllStudentReviews,
+  getStudentReviewDetail,
+  recordViewAction,
+  DIMENSIONS,
+  DIMENSION_LABELS
 };

@@ -169,7 +169,7 @@
           <span class="slider-value">{{ formData.temperature }}</span>
         </n-form-item>
         <n-form-item v-if="formData.configType === 'llm'" label="最大 Token">
-          <n-input-number v-model:value="formData.maxTokens" :min="100" :max="512000" :step="100" style="width: 100%;" />
+          <n-input-number v-model:value="formData.maxTokens" :min="100" :max="1048576" :step="100" style="width: 100%;" />
         </n-form-item>
         <n-form-item v-if="formData.configType === 'embedding'" label="启用心理RAG">
           <n-switch v-model:value="formData.enablePsychologyRAG" />

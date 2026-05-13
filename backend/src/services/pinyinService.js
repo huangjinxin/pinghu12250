@@ -3,6 +3,7 @@
  */
 
 const prisma = require('../lib/prisma');
+const achievementEmitter = require('../lib/achievementEmitter');
 const { pinyin } = require('pinyin-pro');
 
 /**
@@ -46,7 +47,7 @@ function convertToPinyin(text) {
 async function createPractice(authorId, data) {
   const { title, charCount, content, totalKeys, correctKeys, accuracy, duration } = data;
 
-  return prisma.pinyinPractice.create({
+  const practice = await prisma.pinyinPractice.create({
     data: {
       authorId,
       title,
@@ -58,6 +59,14 @@ async function createPractice(authorId, data) {
       duration,
     },
   });
+
+  achievementEmitter.emit('task:completed', {
+    userId: authorId,
+    taskType: 'pinyin',
+    data: { charCount, accuracy, duration },
+  });
+
+  return practice;
 }
 
 /**

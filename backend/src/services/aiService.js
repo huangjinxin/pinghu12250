@@ -292,7 +292,7 @@ class AiService {
         model: apiConfig.model || 'default',
         messages,
         temperature: apiConfig.temperature || 0.7,
-        max_tokens: apiConfig.maxTokens || 2000,
+        max_tokens: Math.min(apiConfig.maxTokens || 2000, 16384),
         stream: false
       };
 

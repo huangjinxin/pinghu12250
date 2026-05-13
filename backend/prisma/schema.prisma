@@ -620,6 +620,7 @@ model DailyReviewTask {
   taskType       String
   status         String   @default("pending")
   targetUserIds  String[]
+  skippedUserIds String[] @default([])
   completedCount Int      @default(0)
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
@@ -1538,18 +1539,25 @@ model PeerReview {
   id                               String          @id @default(uuid())
   fromUserId                       String
   toUserId                         String
-  content                          String
+  content                          String          @default("")
   createdAt                        DateTime        @default(now())
   updatedAt                        DateTime @updatedAt
   category                         String?
   scores                           Json?
   tags                             String[]
+
+  // 新版单维度评价
+  dimension                        String?         // 'MORALITY'|'INTELLIGENCE'|'PHYSIQUE'|'AESTHETICS'|'LABOR'|'SOCIETY'
+  score                            Int?            // 1-5
+  detail                           Json?           // { content, dropdownValue, emoji, sticker, tags, starRating }
+
   fromUser User            @relation("PeerReview_fromUserIdToUser", fields: [fromUserId], references: [id], onDelete: Cascade)
   toUser   User            @relation("PeerReview_toUserIdToUser", fields: [toUserId], references: [id], onDelete: Cascade)
   ReviewSession                    ReviewSession[]
 
   @@index([createdAt])
   @@index([toUserId])
+  @@index([dimension])
 }
 
 model PinyinPractice {
@@ -2255,6 +2263,7 @@ model User {
   friendRequestMessage                           String?
   inviteCodeId                                   Int?
   needsReview                                    Boolean                 @default(true)
+  diaryEnabled                                   Boolean                 @default(true)
   paymentPassword                                String?
   realName                                       String?
   registeredAt                                   DateTime                @default(now())
@@ -2352,8 +2361,9 @@ model User {
   UserBookshelf                                  UserBookshelf[]
   UserCreditHistory                              UserCreditHistory[]
   UserCreditProfile                              UserCreditProfile?
-  UserDiaryAchievement                           UserDiaryAchievement[]
-  UserDiaryPrompt                                UserDiaryPrompt?
+  UserDiaryAchievement                         UserDiaryAchievement[]
+  UserDiaryPrompt                              UserDiaryPrompt?
+  UserTaskProgress                             UserTaskProgress[]
   UserEvent                                      UserEvent[]
   UserFollow_UserFollow_followerIdToUser         UserFollow[]            @relation("UserFollow_followerIdToUser")
   UserFollow_UserFollow_followingIdToUser        UserFollow[]            @relation("UserFollow_followingIdToUser")
@@ -2482,6 +2492,21 @@ model UserDiaryPrompt {
   updatedAt    DateTime @updatedAt
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@index([userId])
+}
+
+model UserTaskProgress {
+  id            String    @id @default(uuid())
+  userId        String
+  taskType      String    // diary|math|poetry|calligraphy|moments|questions|typing|pinyin
+  currentStreak Int       @default(0)
+  bestStreak    Int       @default(0)
+  totalCount    Int       @default(0)
+  lastDate      DateTime? // 归一化到 UTC 00:00:00.000Z，判断连续性
+  updatedAt     DateTime  @updatedAt
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, taskType])
   @@index([userId])
 }
 

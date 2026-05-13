@@ -47,7 +47,7 @@
 
               <!-- 图片预览 -->
               <div v-if="getPreviewImage(moment)" class="mini-images">
-                <img :src="getImageUrl(getPreviewImage(moment))" :alt="moment.content || moment.title" />
+                <img :src="getThumbUrl(getPreviewImage(moment), 'carousel')" :alt="moment.content || moment.title" />
                 <span v-if="moment.images?.length > 1" class="image-count">+{{ moment.images.length - 1 }}</span>
               </div>
 
@@ -98,6 +98,7 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { publicAPI } from '@/api';
+import { useImageUrl } from '@/composables/useImageUrl';
 import People from '@vicons/ionicons5/es/People'
 import Heart from '@vicons/ionicons5/es/Heart'
 import ChatbubbleOutline from '@vicons/ionicons5/es/ChatbubbleOutline'
@@ -146,12 +147,7 @@ const getPreviewImage = (moment) => {
   return null;
 };
 
-const getImageUrl = (path) => {
-  if (!path) return '';
-  if (path.startsWith('http')) return path;
-  // 使用相对路径，让浏览器自动拼接当前域名
-  return path;
-};
+const { getThumbUrl } = useImageUrl();
 
 // 轮播轨道样式（支持拖动偏移）
 const trackStyle = computed(() => {

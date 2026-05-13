@@ -1,5 +1,6 @@
 const prisma = require('../lib/prisma');
 const botService = require('./botService');
+const achievementEmitter = require('../lib/achievementEmitter');
 
 // 获取或创建会话
 async function getOrCreateConversation(userId, botId) {
@@ -82,6 +83,16 @@ async function sendMessage(userId, botId, { msgType = 'text', content, cardData 
     where: { id: conv.id },
     data: { lastMessageAt: new Date() },
   });
+
+  // 触发勤学好问成就检查（仅对有效文本提问）
+  if (msgType === 'text' && content && botReply) {
+    const replyLength = botReply.content ? botReply.content.length : 0;
+    achievementEmitter.emit('task:completed', {
+      userId,
+      taskType: 'questions',
+      data: { contentLength: content.length, replyLength },
+    });
+  }
 
   return { userMsg, botReply };
 }

@@ -640,26 +640,18 @@ const initAdminRadarChart = () => {
           padding: [3, 5]
         },
         splitLine: { lineStyle: { color: '#e5e7eb' } },
-        splitArea: { areaStyle: { color: ['#f9fafb', '#fff'] } },
+        splitArea: { areaStyle: { color: ['rgba(79,70,229,0.03)', 'rgba(79,70,229,0.07)'] } },
         axisLine: { lineStyle: { color: '#d1d5db' } }
       },
       series: [{
         name: '信用分布',
         type: 'radar',
+        areaStyle: { color: 'rgba(79, 70, 229, 0.5)' },
         data: [{
           value: scores,
           name: '当前得分',
           symbol: 'circle',
           symbolSize: 8,
-          areaStyle: {
-            color: (params) => {
-              const color = new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-                { offset: 0, color: 'rgba(79, 70, 229, 0.6)' },
-                { offset: 1, color: 'rgba(79, 70, 229, 0.2)' }
-              ]);
-              return color;
-            }
-          },
           lineStyle: { color: '#4f46e5', width: 3 },
           itemStyle: { color: '#4f46e5', borderWidth: 2, borderColor: '#fff' }
         }]
